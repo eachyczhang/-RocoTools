@@ -56,15 +56,16 @@ IMG_DIRS = {
     "image_fruit":   os.path.join(PUBLIC_DIR, "fruit"),
     "image_egg":     os.path.join(PUBLIC_DIR, "egg"),
 }
+ABILITY_ICON_DIR = os.path.join(PUBLIC_DIR, "abilities")
 
 HEADERS = {
     "User-Agent": "RocoDataBot/1.0 (personal data collection)"
 }
 
-REQUEST_DELAY = 0.5
+REQUEST_DELAY = 1.0
 MAX_RETRIES = 5
 RETRY_WAIT = 60
-CONCURRENCY = 5  # 并发线程数
+CONCURRENCY = 3  # 并发线程数
 
 session = requests.Session()
 session.headers.update(HEADERS)
@@ -110,6 +111,14 @@ def parse_detail(html: str) -> dict:
     attr_el = soup.select_one(".rocom_sprite_grament_attributes")
     if attr_el:
         detail["element"] = attr_el.get_text(strip=True)
+
+    # 特性图标
+    ability_icon_el = soup.select_one(".rocom_sprite_info_characteristic_content_icon img")
+    if ability_icon_el:
+        src = ability_icon_el.get("src", "")
+        detail["ability_icon"] = _fix_url(src) if src else None
+    else:
+        detail["ability_icon"] = None
 
     # 立绘图片（4个 li 顺序固定：本体、异色、果实、宠物蛋）
     img_section = soup.select_one(".rocom_sprite_grament_img")
@@ -534,6 +543,37 @@ def main():
             print()
             print(f"[INFO] 下载{label}（{len(items)} 张）...")
             batch_download(items, save_dir, label=f"{label} ")
+
+    # 下载特性图标
+    ability_items = []
+    for uid, pet in pets_result.items():
+        detail = pet.get("detail") or {}
+        url = detail.get("ability_icon")
+        if url:
+            ability_items.append({"url": url, "filename": f"{uid}_ability.png"})
+    if ability_items:
+        print()
+        print(f"[INFO] 下载特性图标（{len(ability_items)} 张）...")
+        batch_download(ability_items, ABILITY_ICON_DIR, label="特性图标 ")
+
+    # 更新所有图片 URL 为本地路径
+    for uid, pet in pets_result.items():
+        # 顶层缩略图
+        if pet.get("image_url"):
+            pet["image_url"] = f"/public/pets/thumbnails/{uid}.png"
+        # detail 内的立绘 + 特性图标
+        detail = pet.get("detail") or {}
+        for img_key in ("image_default", "image_shiny", "image_fruit", "image_egg"):
+            if detail.get(img_key):
+                suffix = img_key.replace("image_", "")
+                detail[img_key] = f"/public/pets/{suffix}/{uid}_{suffix}.png"
+        if detail.get("ability_icon"):
+            detail["ability_icon"] = f"/public/pets/abilities/{uid}_ability.png"
+
+    # 重新保存（含本地路径）
+    with open(JSON_OUTPUT, "w", encoding="utf-8") as f:
+        json.dump(output, f, ensure_ascii=False, indent=2)
+    print("[INFO] 图片路径已更新为本地路径")
 
     # 生成校验报告
     sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "utils"))

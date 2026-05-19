@@ -108,14 +108,16 @@ def parse_pet_list(html: str) -> list[dict]:
         # col[1]: 精灵名称
         name = cells[1].get_text(strip=True) or name_from_link
 
-        # col[2]: 属性（从 img alt 提取）
-        attr_img = cells[2].find("img")
-        element = ""
-        if attr_img:
+        # col[2]: 属性（从 img alt 提取，支持多属性）
+        attr_imgs = cells[2].find_all("img")
+        elements_raw = []
+        for attr_img in attr_imgs:
             alt = attr_img.get("alt", "")
             match = re.search(r"属性\s+(.+?)\.png", alt)
             if match:
-                element = match.group(1).strip()
+                elements_raw.append(match.group(1).strip())
+        element = elements_raw[0] if elements_raw else ""
+        sub_element = elements_raw[1] if len(elements_raw) > 1 else None
 
         # col[3]: 精灵编号
         pet_id = cells[3].get_text(strip=True)
@@ -140,6 +142,7 @@ def parse_pet_list(html: str) -> list[dict]:
             "pet_id": pet_id,
             "name": name,
             "element": element,
+            "sub_element": sub_element,
             "ability_name": ability_name,
             "ability_desc": ability_desc,
             "hp": hp,
@@ -258,13 +261,21 @@ def main():
                 "color": obj.get("color", ""),
                 "icon": obj.get("icon", ""),
             }
-        # 替换每个精灵的 element 字段
+        # 替换每个精灵的 element 和 sub_element 字段
         for pet in pets:
             name = pet.get("element", "")
             if name in elem_lookup:
                 pet["element"] = elem_lookup[name]
             else:
                 pet["element"] = {"id": None, "key": None, "name": name, "color": "", "icon": ""}
+            # 副属性
+            sub_name = pet.get("sub_element")
+            if sub_name and sub_name in elem_lookup:
+                pet["sub_element"] = elem_lookup[sub_name]
+            elif sub_name:
+                pet["sub_element"] = {"id": None, "key": None, "name": sub_name, "color": "", "icon": ""}
+            else:
+                pet["sub_element"] = None
         print(f"[INFO] element 已映射为结构化引用（{len(elem_lookup)} 种属性）")
     else:
         print("[WARN] 未找到属性结构化数据，element 保持字符串格式")
@@ -297,6 +308,14 @@ def main():
     thumb_items = [{"url": p["image_url"], "filename": f"{p['uid']}.png"}
                    for p in pets if p.get("image_url")]
     batch_download(thumb_items, THUMB_DIR, label="缩略图 ")
+
+    # 更新 image_url 为本地路径
+    for pet in pets:
+        if pet.get("image_url"):
+            pet["image_url"] = f"/public/pets/thumbnails/{pet['uid']}.png"
+
+    # 重新保存（含本地路径）
+    save_json(pets, JSON_OUTPUT)
 
     # 统计
     has_img = sum(1 for p in pets if p["image_url"])

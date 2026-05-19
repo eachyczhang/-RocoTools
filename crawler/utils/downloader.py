@@ -94,10 +94,10 @@ def batch_download(
     save_dir: str,
     url_key: str = "url",
     name_key: str = "filename",
-    delay: float = 0.1,
+    delay: float = 0.3,
     skip_existing: bool = True,
     label: str = "",
-    max_workers: int = 10,
+    max_workers: int = 5,
 ) -> int:
     """
     批量并发下载图片

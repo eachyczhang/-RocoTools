@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// 洛克王国标题字体（仅用于标题/Logo）
+@font-face {
+  font-family: 'MIANFEIZITI';
+  src: url('//game.gtimg.cn/images/rocom/web202409/font-origin/MIANFEIZITI.ttf');
+  font-display: swap;
+}
+
+// Google Noto Sans SC（正文清晰字体）
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply font-sans text-sm leading-relaxed transition-colors duration-200;
+  }
+
+  // 亮色主题（默认）
+  body {
+    @apply bg-surface-light-alt text-gray-800;
+  }
+
+  // 暗色主题
+  body.dark {
+    @apply bg-surface-dark text-gray-100;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl p-4 shadow-sm transition-all duration-200;
+    @apply bg-surface-light-card border border-surface-light-border;
+    @apply hover:shadow-md hover:-translate-y-0.5;
+
+    .dark & {
+      @apply bg-surface-dark-card border-surface-dark-border;
+      @apply hover:shadow-lg hover:shadow-primary-500/5;
+    }
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150;
+    @apply active:scale-95;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-500 text-white hover:bg-primary-600;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-gray-100;
+    .dark & {
+      @apply hover:bg-white/5;
+    }
+  }
+
+  .input {
+    @apply rounded-lg px-4 py-2 text-sm outline-none transition-all duration-150;
+    @apply bg-white border border-surface-light-border;
+    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+
+    .dark & {
+      @apply bg-surface-dark-alt border-surface-dark-border text-white;
+      @apply focus:border-primary-400 focus:ring-primary-400/20;
+    }
+  }
+
+  .select {
+    @apply input appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium;
+  }
+
+  .text-muted {
+    @apply text-gray-500;
+    .dark & {
+      @apply text-gray-400;
+    }
+  }
+}

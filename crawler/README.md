@@ -61,11 +61,8 @@ python crawler/scrapers/fetch_pet_detail.py
 `run.py` 执行完成后会自动触发以下行为：
 
 1. **各脚本独立校验**：每个爬虫脚本（skill/pet_list/pet_detail）运行结束后，自动生成对应的 `*_report.md` 校验报告
-2. **汇总完整性分析**：`run.py` 所有步骤完成后，在终端末尾打印全局数据完整性汇总，包括：
-   - 各数据集记录数（属性/技能/精灵）
-   - 关键字段缺失统计
-   - 图片资源文件计数
-   - 整体数据量汇总
+2. **汇总完整性分析**：`run.py` 所有步骤完成后，在终端末尾打印全局数据完整性汇总
+3. **数据库自动同步**：若检测到 `app/server/node_modules` 存在，自动执行 `init.js` + `import.js` 将最新 JSON 数据同步到 SQLite（未安装依赖时跳过）
 
 ### 校验报告位置
 

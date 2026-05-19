@@ -201,7 +201,7 @@ def main():
                 break
 
         # 步骤间冷却
-        time.sleep(2)
+        time.sleep(5)
 
     # 总结
     elapsed = time.time() - start_time
@@ -224,6 +224,40 @@ def main():
     # 数据完整性汇总分析
     print()
     print_integrity_summary()
+
+    # 同步数据库
+    sync_database()
+
+
+def sync_database():
+    """爬虫完成后自动同步 JSON → SQLite"""
+    server_dir = os.path.join(PROJECT_ROOT, "app", "server")
+    node_modules = os.path.join(server_dir, "node_modules")
+
+    if not os.path.exists(node_modules):
+        print("[SYNC] 跳过数据库同步（app/server 未安装依赖，请先执行 cd app/server && npm install）")
+        return
+
+    print()
+    print("=" * 60)
+    print("[SYNC] 同步数据到 SQLite")
+    print("=" * 60)
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    # 初始化 + 导入
+    init_script = os.path.join(server_dir, "src", "db", "init.js")
+    import_script = os.path.join(server_dir, "src", "db", "import.js")
+
+    for label, script in [("初始化数据库", init_script), ("导入数据", import_script)]:
+        print(f"[SYNC] {label}...")
+        result = subprocess.run(["node", script], cwd=server_dir, env=env)
+        if result.returncode != 0:
+            print(f"[SYNC] {label} 失败")
+            return
+
+    print("[SYNC] 数据库同步完成！")
 
 
 def print_integrity_summary():

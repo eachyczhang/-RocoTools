@@ -356,6 +356,15 @@ def main():
 
     batch_download(icon_items, ICON_DIR, label="属性图标 ")
 
+    # 更新 icon 为本地路径
+    for i, elem in enumerate(ALL_ELEMENTS, start=1):
+        for row in data:
+            if row["element"] == elem:
+                row["icon"] = f"/public/elements/icons/elem_{i}.png"
+
+    # 重新保存（含本地路径）
+    save_json(data, JSON_OUTPUT)
+
     # 生成校验报告
     sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "utils"))
     from report import generate_report
