@@ -106,7 +106,7 @@ def fetch_page_html(page_title: str) -> str:
 # 已知属性名列表（按长度降序，优先匹配长的）
 _KNOWN_ELEMENTS = [
     "普通", "草", "火", "水", "冰", "电", "光", "暗", "恶",
-    "翼", "地", "毒", "龙", "虫", "岩", "机械", "妖", "武",
+    "翼", "地", "毒", "龙", "虫", "岩", "机械", "萌", "武", "幻", "幽",
 ]
 _KNOWN_ELEMENTS_SORTED = sorted(_KNOWN_ELEMENTS, key=len, reverse=True)
 
