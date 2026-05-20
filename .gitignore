@@ -57,8 +57,6 @@ data/**/_update_filter.json
 # 部署文档（仅本地使用）
 # ============================================================
 DEPLOY.md
-nginx.conf
-deploy.sh
 
 # 根路径静态文件（验证文件、证书等，仅服务器使用）
 app/server/root-static/*
