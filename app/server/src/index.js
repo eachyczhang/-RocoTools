@@ -39,22 +39,26 @@ app.get('/api', (req, res) => {
   });
 });
 
+// 根路径静态文件（验证文件、证书等）
+const ROOT_STATIC_DIR = path.join(__dirname, '..', 'root-static');
+const fs = require('fs');
+if (fs.existsSync(ROOT_STATIC_DIR)) {
+  app.use(express.static(ROOT_STATIC_DIR));
+}
+
 // 前端静态文件（build 产物）挂载到 /rocotools/
 const DIST_DIR = path.join(__dirname, '..', 'public');
-const fs = require('fs');
 if (fs.existsSync(DIST_DIR)) {
   app.use('/rocotools', express.static(DIST_DIR));
-  // SPA fallback: /rocotools 下非 API/public 的请求都返回 index.html
+  // SPA fallback
   app.get('/rocotools/*', (req, res) => {
     res.sendFile(path.join(DIST_DIR, 'index.html'));
   });
-  // 根路径重定向到 /rocotools/
-  app.get('/', (req, res) => {
-    res.redirect('/rocotools/');
-  });
 } else {
   app.use((req, res) => {
-    res.status(404).json({ error: 'Not Found' });
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/public')) {
+      res.status(404).json({ error: 'Not Found' });
+    }
   });
 }
 
