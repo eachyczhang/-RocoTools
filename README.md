@@ -1,10 +1,36 @@
 # Roco Tools - 洛克王国世界数据工具
 
-洛克王国世界（Roco World）游戏数据爬取、存储与展示工具集。
+洛克王国世界（Roco World）游戏数据查询与分析工具，提供精灵图鉴、技能查询、属性克制、打击面分析等功能。
 
-**在线体验**：待部署  
-**数据来源**：[洛克王国世界 BWIKI](https://wiki.biligame.com/rocom)  
-**源码仓库**：[GitHub](https://github.com/zycSelf/-RocoTools)
+🌐 **在线体验**：[https://eachz.cn/rocotools/](https://eachz.cn/rocotools/)  
+📖 **数据来源**：[洛克王国世界 BWIKI](https://wiki.biligame.com/rocom)
+
+---
+
+## 功能预览
+
+| 页面 | 路由 | 功能 |
+|------|------|------|
+| 首页 | `/rocotools/` | 数据概览、快速导航 |
+| 精灵图鉴 | `/rocotools/pets` | 搜索/属性筛选/排序/分页，支持异色预览 |
+| 精灵详情 | `/rocotools/pets/:uid` | 立绘切换、种族值雷达图、属性克制、技能列表 |
+| 技能列表 | `/rocotools/skills` | 按属性/分类/应对/效果关键词筛选 |
+| 技能详情 | `/rocotools/skills/:uid` | 技能数据 + 可学习精灵（按来源分类） |
+| 打击面分析 | `/rocotools/coverage` | 选属性组合 → 查匹配精灵（含血脉） |
+| 蛋组 | `/rocotools/eggs` | 15 种蛋组及其精灵成员 |
+| 属性克制 | `/rocotools/elements` | 克制表(18×18)、双属性表、详细查询 |
+
+---
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 爬虫 | Python 3, requests, BeautifulSoup4, 并发线程池 |
+| 后台 | Node.js, Express, better-sqlite3, API 内存缓存 |
+| 前端 | Vue 3, Vue Router, Vite, TailwindCSS, Sass |
+| 数据库 | SQLite3（轻量单文件） |
+| 部署 | Nginx (HTTP/2) + PM2 + Let's Encrypt SSL |
 
 ---
 
@@ -21,149 +47,129 @@
 │   ├── skills/             # 技能数据（469+）
 │   ├── eggs/               # 蛋组数据（15 组）
 │   ├── pets/               # 精灵数据（466+）
-│   ├── public/             # 图片静态资源
-│   ├── FIELDS.md           # 字段对照表
-│   └── STRUCTURE_RULES.md  # 数据结构化规则
-├── app/                    # 应用层
+│   └── public/             # 图片静态资源
+├── app/
 │   ├── server/             # Express 后台（SQLite + RESTful API）
-│   └── client/             # Vue3 前端（Vite + TailwindCSS + Sass）
-│       └── RESPONSIVE.md   # 移动端适配规范
-└── .ai-memory.md           # AI 协作记忆文件（跨设备同步用）
+│   │   ├── src/            # 路由、Service、数据库
+│   │   ├── gen_thumbnails.js  # 缩略图生成
+│   │   ├── gen_webp.js     # WebP 批量转换
+│   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入）
+│   └── client/             # Vue3 前端（Vite + TailwindCSS）
+│       └── RESPONSIVE.md   # 响应式适配规范
+├── nginx.conf              # Nginx 站点配置
+└── deploy.sh               # 一键部署脚本
 ```
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 爬虫 | Python 3, requests, BeautifulSoup4, 并发线程池 |
-| 后台 | Node.js, Express, better-sqlite3 |
-| 前端 | Vue 3, Vue Router, Vite, TailwindCSS, Sass |
-| 数据库 | SQLite3（轻量单文件） |
-| 部署 | 前端 build → server/public/，单服务部署 |
-
----
-
-## 功能一览
-
-| 页面 | 路由 | 功能 |
-|------|------|------|
-| 首页 | `/` | 数据概览、快速导航、版权声明 |
-| 精灵图鉴 | `/pets` | 搜索/属性筛选/排序/分页 |
-| 精灵详情 | `/pets/:uid` | 立绘切换、种族值雷达图、属性克制、打击面分析、技能列表 |
-| 技能列表 | `/skills` | 按属性/分类/应对/效果关键词筛选 |
-| 技能详情 | `/skills/:uid` | 技能数据 + 可学习精灵（按来源分类） |
-| 打击面分析 | `/coverage` | 选属性组合 → 查匹配精灵（含血脉） |
-| 蛋组 | `/eggs` | 15 种蛋组及其精灵成员 |
-| 属性克制 | `/elements` | 克制表(18×18)、双属性表(171行)、详细查询 |
 
 ---
 
 ## 快速开始
 
+### 环境要求
+
+- Node.js 18+
+- Python 3.10+
+- npm
+
+### 本地开发
+
 ```bash
-# 1. 爬虫 - 爬取数据
+# 1. 克隆仓库
+git clone https://github.com/zycSelf/-RocoTools.git
+cd -RocoTools
+
+# 2. 爬取数据（首次需要）
 pip install -r crawler/requirements.txt
 python crawler/run.py --full
 
-# 2. 后台 - 初始化数据库
+# 3. 初始化后台
 cd app/server
-npm install && npm run setup
+npm install
+node sync_db.js          # 生成缩略图 + WebP + 建库导入
 
-# 3. 前端 - 开发模式
-cd app/client
-npm install && npm run dev
+# 4. 启动后台
+npm run dev              # http://localhost:3000
 
-# 4. 生产部署（单服务）
+# 5. 启动前端（另一个终端）
+cd ../client
+npm install
+npm run dev              # http://localhost:5173
+```
+
+### 生产部署
+
+```bash
+# 构建前端
 cd app/client && npm run build
-cd ../server && npm run dev    # http://localhost:3000
+
+# PM2 启动（零停机）
+pm2 start app/server/src/index.js --name roco -i 2
+pm2 save && pm2 startup
+
+# 一键更新
+./deploy.sh
 ```
 
 ---
 
 ## 数据流
 
-数据源自 [洛克王国世界 BWIKI](https://wiki.biligame.com/rocom)，由自动化爬虫采集、清洗、结构化后同步至 SQLite，前端通过 API 读取展示。
-
 ```
-BWIKI → crawler(采集+清洗) → data/(JSON+图片) → SQLite(结构化入库) → API → 前端展示
+BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLite → API → 前端
 ```
 
 ---
 
-## 爬虫执行顺序
+## 性能优化
 
-| 步骤 | 脚本 | 说明 |
-|------|------|------|
-| 1 | fetch_element_chart.py | 属性克制关系 |
-| 2 | process_element_chart.py | 属性结构化 + 图标本地化 |
-| 3 | fetch_skill_list.py | 技能列表 + 图标 |
-| 4 | fetch_egg_group.py | 蛋组归属数据 |
-| 5 | fetch_pet_list.py | 精灵列表 + 缩略图 + 注入 egg_groups |
-| 6 | fetch_pet_detail.py | 精灵详情 + 立绘 + 映射刷新 |
-
----
-
-## 核心数据模型
-
-4 层关联：**属性(18) → 技能(469+) → 蛋组(15) → 精灵(466+)**
-
-详见：
-- [data/FIELDS.md](./data/FIELDS.md) — 字段对照表
-- [data/STRUCTURE_RULES.md](./data/STRUCTURE_RULES.md) — 数据结构化规则
-
-### 属性克制计算
-
-属性克制关系**不从 BWIKI 爬取**（页面模板不统一），而是通过 `element_chart.json` + 精灵属性**实时计算**。
-
-**规则（双属性乘积法）**：
-- A 的 `strong_against` 含目标 → ×2
-- 目标的 `resistant_to` 含 A → ×0.5
-- 双重克制(2×2) → ×3（`double_strong`）
-- 双重抵抗(0.5×0.5) → ×0.25（`double_resist`）
+| 优化项 | 说明 |
+|--------|------|
+| HTTP/2 | 多路复用，消除并发连接限制 |
+| WebP 自动返回 | Nginx 检测浏览器支持，透明返回 WebP |
+| 图片懒加载 | IntersectionObserver + 并发队列（max 6） |
+| API 缓存 | 内存缓存 5-10 分钟，减少 DB 查询 |
+| Gzip 压缩 | 文本资源全量压缩 |
+| 长缓存 | Vite 带 hash 的 assets 缓存 1 年 |
+| 代码分割 | Vue 框架独立 chunk |
+| 系统字体 | 不加载网络字体，零额外请求 |
 
 ---
 
-## 开发规范
+## 响应式适配
 
-### 前端适配规范
+支持手机、平板、桌面三端，采用 Mobile-first 渐进增强：
+
+- `sm:` (640px) — 手机 → 平板过渡
+- `md:` (768px) — 导航栏切换
+- `lg:` (1024px) — 平板 → 桌面过渡
 
 详见 [app/client/RESPONSIVE.md](./app/client/RESPONSIVE.md)
 
-核心原则：
-- **Mobile-first**：先写移动端样式，用 `md:` (768px) 覆盖桌面端
-- 导航栏：移动端汉堡菜单，桌面端水平导航
-- 表格：移动端用卡片替代或横滚
-- 统一使用 Tailwind 响应式断点
+---
 
-### 数据规范
+## API 接口
 
-- 空值使用 `null`，不用空字符串
-- 图片路径统一 `/public/...` 格式
-- UID 格式：`elem_{id}`、`skill_{N}`、`pet_{id}` 或 `pet_{id}_{N}`
-- 增量判断通过 `version` 字段
-- 执行顺序严格按依赖关系
-
-### 代码规范
-
-- Service 层独立于 Express，可复用到 Electron IPC
-- 前端组件单文件 `.vue`，TailwindCSS 优先
-- 暗色模式通过 `body.dark` 类切换
-- 主题色：`#D69F23`（primary-500）
+| 路由 | 说明 |
+|------|------|
+| `GET /api/elements` | 属性列表 |
+| `GET /api/elements/multipliers` | 伤害倍率矩阵 |
+| `GET /api/skills?page&limit&search&category&element_id&keyword` | 技能列表 |
+| `GET /api/skills/:uid` | 技能详情 + 学习者 |
+| `GET /api/eggs` | 蛋组列表 |
+| `GET /api/eggs/:id` | 蛋组精灵 |
+| `GET /api/pets?page&limit&search&element_id&sort_by&order` | 精灵列表 |
+| `GET /api/pets/:uid` | 精灵完整详情 |
+| `GET /api/pets/shiny` | 异色精灵列表 |
 
 ---
 
 ## 版权声明
 
-© 2026 Roco Tools Developed by [@eachzhang](https://github.com/zycSelf)
+© 2026 **Roco Tools** — Developed by [@eachzhang](https://github.com/zycSelf)
 
-- 本项目部分数据与内容引用自 [B站洛克王国Wiki](https://wiki.biligame.com/rocom/)，其版权归哔哩哔哩游戏wiki所有。
-- 洛克王国游戏及相关IP版权归腾讯公司所有。
-- 本项目仅用于学习交流，非官方应用，无任何商业用途。
+- 数据引用自 [B站洛克王国Wiki](https://wiki.biligame.com/rocom/)，版权归哔哩哔哩游戏wiki所有
+- 洛克王国游戏及相关IP版权归腾讯公司所有
+- 本项目仅用于学习交流，非官方应用，无任何商业用途
 
 ## 协议
 
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) — 数据来自洛克王国世界 BWIKI，非商业用途。
-
-详见 [LICENSE](./LICENSE)。
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)
