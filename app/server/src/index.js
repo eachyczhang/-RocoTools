@@ -46,6 +46,11 @@ if (fs.existsSync(ROOT_STATIC_DIR)) {
   app.use(express.static(ROOT_STATIC_DIR));
 }
 
+// 根路径重定向到工具站
+app.get('/', (req, res) => {
+  res.redirect('/rocotools/');
+});
+
 // 前端静态文件（build 产物）挂载到 /rocotools/
 const DIST_DIR = path.join(__dirname, '..', 'public');
 if (fs.existsSync(DIST_DIR)) {
