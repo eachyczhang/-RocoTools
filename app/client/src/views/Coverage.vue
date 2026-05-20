@@ -46,7 +46,7 @@
 
     <!-- 分析结果 -->
     <div class="card" v-if="selectedElements.length">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">
         打击面结果
         <span class="text-xs md:text-sm text-muted font-normal ml-2">{{ coveredElems.length }} / {{ elements.length }} 属性可克制</span>
       </h2>
@@ -80,7 +80,7 @@
 
     <!-- 可组合精灵 - 自学 -->
     <div class="card mt-4 md:mt-6" v-if="matchingPets.normal && matchingPets.normal.length">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">
         可组合此打击面的精灵
         <span class="text-xs md:text-sm text-muted font-normal ml-2">({{ matchingPets.normal.length }})</span>
       </h2>
@@ -103,7 +103,7 @@
 
     <!-- 可组合精灵 - 需要血脉（按血脉属性分组） -->
     <div class="card mt-4 md:mt-6" v-if="matchingPets.bloodline && matchingPets.bloodline.length">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">
         需修改血脉才可组合
         <span class="text-xs md:text-sm text-muted font-normal ml-2">({{ matchingPets.bloodline.length }})</span>
       </h2>

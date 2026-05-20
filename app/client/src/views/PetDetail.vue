@@ -98,7 +98,7 @@
 
     <!-- 种族值 -->
     <div class="card mb-4 md:mb-6">
-      <h3 class="text-sm md:text-base font-medium mb-3 md:mb-4">种族值 <span class="text-primary-500 font-bold ml-2">{{ pet.total }}</span></h3>
+      <h3 class="font-roco text-sm md:text-base mb-3 md:mb-4">种族值 <span class="text-primary-500 font-bold ml-2">{{ pet.total }}</span></h3>
       <div class="flex flex-col md:flex-row items-center gap-4 md:gap-6">
         <div class="flex-1 w-full space-y-2 md:space-y-3">
           <div v-for="s in statsBarList" :key="s.key" class="flex items-center gap-2 md:gap-3">

@@ -1,37 +1,50 @@
 <template>
   <div>
-    <h1 class="font-roco text-2xl md:text-3xl text-primary-500 mb-6 md:mb-8">洛克王国世界 数据工具</h1>
+    <!-- 标题 -->
+    <h1 class="font-roco text-2xl md:text-3xl text-primary-500 mb-4 md:mb-5">洛克王国世界 数据工具</h1>
+
+    <!-- 官方链接 -->
+    <div class="flex flex-wrap gap-3 md:gap-4 mb-6 md:mb-8">
+      <a href="https://rocom.qq.com/" target="_blank" rel="noopener noreferrer"
+        class="card group flex items-center gap-2 px-4 py-3 hover:border-primary-500/30 transition-colors">
+        <span class="font-roco text-sm md:text-base group-hover:text-primary-500 transition-colors">🎮 洛克王国世界官网</span>
+      </a>
+      <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer"
+        class="card group flex items-center gap-2 px-4 py-3 hover:border-primary-500/30 transition-colors">
+        <span class="font-roco text-sm md:text-base group-hover:text-primary-500 transition-colors">📖 BWIKI 百科</span>
+      </a>
+    </div>
 
     <!-- 数据概览 -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-10">
       <div class="card text-center" v-for="stat in stats" :key="stat.label">
-        <div class="text-2xl md:text-3xl font-bold text-primary-500">{{ stat.value }}</div>
+        <div class="font-roco text-2xl md:text-3xl text-primary-500">{{ stat.value }}</div>
         <div class="text-muted text-xs mt-1">{{ stat.label }}</div>
       </div>
     </div>
 
     <!-- 快速导航 -->
-    <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">快速导航</h2>
+    <h2 class="font-roco text-lg md:text-xl text-primary-500 mb-3 md:mb-4">快速导航</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8 md:mb-10">
       <router-link v-for="item in navCards" :key="item.path" :to="item.path" class="card group">
-        <div class="text-sm md:text-base font-medium group-hover:text-primary-500 transition-colors">{{ item.title }}</div>
+        <div class="font-roco text-sm md:text-base group-hover:text-primary-500 transition-colors">{{ item.title }}</div>
         <div class="text-muted text-xs mt-1.5 md:mt-2">{{ item.desc }}</div>
       </router-link>
     </div>
 
     <!-- 数据来源与声明 -->
     <div class="card">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">数据来源与声明</h2>
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">数据来源与声明</h2>
 
       <div class="space-y-3 md:space-y-4 text-sm md:text-base leading-relaxed">
         <!-- 数据来源 -->
         <div>
           <h3 class="font-medium text-sm md:text-base mb-1">📖 数据来源</h3>
           <p class="text-muted">
-            本站所有精灵、技能、属性、蛋组等数据均来源于
+            本站数据源自
             <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer"
               class="text-primary-500 hover:text-primary-600 underline underline-offset-2">洛克王国世界 BWIKI</a>，
-            由社区玩家共同维护。数据通过自动化程序抓取并整理入库，仅供学习和交流使用。
+            由自动化爬虫采集、清洗、结构化后同步至数据库，仅供学习和交流使用。
           </p>
         </div>
 
@@ -48,9 +61,9 @@
         <div>
           <h3 class="font-medium text-sm md:text-base mb-1">📜 内容协议</h3>
           <p class="text-muted">
-            BWIKI 的内容遵循
+            BWIKI 内容遵循
             <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer"
-              class="text-primary-500 hover:text-primary-600 underline underline-offset-2">CC BY-NC-SA 4.0（知识共享-署名-非商业性使用-相同方式共享 4.0 国际）</a>
+              class="text-primary-500 hover:text-primary-600 underline underline-offset-2">CC BY-NC-SA 4.0</a>
             协议。本站作为非商业性质的数据展示工具，遵循该协议进行内容引用与再分发。
           </p>
         </div>
@@ -59,7 +72,7 @@
         <div>
           <h3 class="font-medium text-sm md:text-base mb-1">©️ 版权声明</h3>
           <div class="text-muted space-y-1.5">
-            <p>© 2026 Roco Tools Developed by <a href="https://github.com/zycSelf" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">@eachzhang</a></p>
+            <p>© 2026 <span class="font-roco text-primary-500">Roco Tools</span> Developed by <a href="https://github.com/zycSelf" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">@eachzhang</a></p>
             <p>本项目部分数据与内容引用自 <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">B站洛克王国Wiki</a>，其版权归哔哩哔哩游戏wiki所有。</p>
             <p>洛克王国游戏及相关IP版权归腾讯公司所有。</p>
             <p>本项目仅用于学习交流，非官方应用，无任何商业用途。</p>

@@ -1,6 +1,6 @@
 <template>
   <div :class="title ? 'card mb-6' : ''">
-    <h2 v-if="title" class="font-medium text-base md:text-lg mb-3">{{ title }}</h2>
+    <h2 v-if="title" class="font-roco text-base md:text-lg text-primary-500 mb-3">{{ title }}</h2>
     <div class="space-y-2 md:space-y-2.5">
       <div v-for="skill in skills" :key="skill.id"
         class="flex items-start gap-2 md:gap-4 p-2.5 md:p-4 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">

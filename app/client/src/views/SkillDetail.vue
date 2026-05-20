@@ -46,11 +46,11 @@
 
     <!-- 可学习精灵（分类展示） -->
     <div class="card" v-if="skill.learners && skill.learners.length">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">可学习精灵 <span class="text-sm text-muted font-normal">({{ skill.learners.length }})</span></h2>
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">可学习精灵 <span class="text-sm text-muted font-normal">({{ skill.learners.length }})</span></h2>
 
       <!-- 自然升级学习 -->
       <div v-if="learnersByType.skills.length" class="mb-4 md:mb-6">
-        <h3 class="text-sm md:text-base font-medium mb-2 md:mb-3 text-muted">自然升级学习 ({{ learnersByType.skills.length }})</h3>
+        <h3 class="font-roco text-sm md:text-base mb-2 md:mb-3 text-muted">自然升级学习 ({{ learnersByType.skills.length }})</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
           <router-link v-for="pet in learnersByType.skills" :key="pet.uid"
             :to="`/pets/${pet.uid}`"
@@ -68,7 +68,7 @@
 
       <!-- 血脉学习 -->
       <div v-if="learnersByType.bloodline_skills.length" class="mb-4 md:mb-6">
-        <h3 class="text-sm md:text-base font-medium mb-2 md:mb-3 text-muted">血脉学习 ({{ learnersByType.bloodline_skills.length }})</h3>
+        <h3 class="font-roco text-sm md:text-base mb-2 md:mb-3 text-muted">血脉学习 ({{ learnersByType.bloodline_skills.length }})</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
           <router-link v-for="pet in learnersByType.bloodline_skills" :key="pet.uid"
             :to="`/pets/${pet.uid}`"
@@ -86,7 +86,7 @@
 
       <!-- 技能石学习 -->
       <div v-if="learnersByType.learnable_stones.length">
-        <h3 class="text-sm md:text-base font-medium mb-2 md:mb-3 text-muted">技能石学习 ({{ learnersByType.learnable_stones.length }})</h3>
+        <h3 class="font-roco text-sm md:text-base mb-2 md:mb-3 text-muted">技能石学习 ({{ learnersByType.learnable_stones.length }})</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
           <router-link v-for="pet in learnersByType.learnable_stones" :key="pet.uid"
             :to="`/pets/${pet.uid}`"

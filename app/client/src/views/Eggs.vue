@@ -20,7 +20,7 @@
 
     <!-- 精灵列表 -->
     <div class="card" v-if="selectedGroup && pets.length">
-      <h2 class="text-base md:text-lg font-medium mb-3 md:mb-4">
+      <h2 class="font-roco text-base md:text-lg text-primary-500 mb-3 md:mb-4">
         {{ selectedGroup.name }}
         <span class="text-xs md:text-sm text-muted font-normal ml-2">({{ pets.length }})</span>
       </h2>

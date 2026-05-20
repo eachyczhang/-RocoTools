@@ -1,7 +1,7 @@
 <template>
   <div class="card mb-4 md:mb-6">
     <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 md:mb-4">
-      <h3 class="text-base md:text-lg font-medium">打击面分析</h3>
+      <h3 class="font-roco text-base md:text-lg text-primary-500">打击面分析</h3>
       <div class="flex items-center gap-1 sm:ml-4">
         <button @click="mode = 'auto'"
           class="px-2.5 py-1 md:px-3 md:py-1.5 rounded-md text-xs md:text-sm transition-colors"
