@@ -28,6 +28,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "natures")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "nature_list.json")
+REPORT_OUTPUT = os.path.join(OUTPUT_DIR, "nature_report.md")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
@@ -113,6 +114,82 @@ def parse_natures(html):
     return natures
 
 
+def generate_report(natures, up_counter):
+    """生成完整性校验报告"""
+    from datetime import datetime
+
+    # 字段完整性检查
+    fields = ["name", "stat_up", "stat_down", "sub_natures"]
+    field_stats = {}
+    for field in fields:
+        filled = sum(1 for n in natures if n.get(field))
+        missing = len(natures) - filled
+        field_stats[field] = (filled, missing)
+
+    # 子性格数量检查
+    sub_counts = [len(n["sub_natures"]) for n in natures]
+    sub_missing = [n["name"] for n in natures if len(n["sub_natures"]) < 5]
+
+    lines = [
+        "# 性格数据 - 完整性校验报告\n",
+        f"- 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"- 数据来源：https://wiki.biligame.com/rocom/性格",
+        f"- 总记录数：{len(natures)}",
+        f"- 预期总数：30（6属性 x 5种）",
+        "",
+        "## 字段完整性\n",
+        "| 字段 | 有值 | 缺失 | 缺失率 | 状态 |",
+        "|------|------|------|--------|------|",
+    ]
+
+    for field in fields:
+        filled, missing = field_stats[field]
+        rate = f"{missing / len(natures) * 100:.1f}%"
+        status = "OK" if missing == 0 else "!"
+        lines.append(f"| {field} | {filled} | {missing} | {rate} | {status} |")
+
+    # 子性格完整性
+    lines.append(f"| sub_natures(=5个) | {len(natures) - len(sub_missing)} | {len(sub_missing)} | {len(sub_missing) / len(natures) * 100:.1f}% | {'OK' if not sub_missing else '!'} |")
+
+    if sub_missing:
+        lines.append(f"\n### 子性格不足5个的性格\n")
+        for name in sub_missing:
+            lines.append(f"- {name}")
+
+    # 属性分布
+    lines.append("\n## 属性增加分布\n")
+    lines.append("| 属性 | 性格数 | 状态 |")
+    lines.append("|------|--------|------|")
+    for stat in ["物攻", "物防", "魔攻", "魔防", "速度", "生命"]:
+        count = up_counter.get(stat, 0)
+        status = "OK" if count == 5 else "!"
+        lines.append(f"| {stat} | {count} | {status} |")
+
+    # 属性减少分布
+    from collections import Counter
+    down_counter = Counter(n["stat_down"] for n in natures)
+    lines.append("\n## 属性减少分布\n")
+    lines.append("| 属性 | 性格数 | 状态 |")
+    lines.append("|------|--------|------|")
+    for stat in ["物攻", "物防", "魔攻", "魔防", "速度", "生命"]:
+        count = down_counter.get(stat, 0)
+        status = "OK" if count == 5 else "!"
+        lines.append(f"| {stat} | {count} | {status} |")
+
+    # 完整性格列表
+    lines.append("\n## 完整性格列表\n")
+    lines.append("| ID | 名称 | 增加 | 减少 | 子性格数 |")
+    lines.append("|-----|------|------|------|----------|")
+    for n in natures:
+        lines.append(f"| {n['id']} | {n['name']} | {n['stat_up']} | {n['stat_down']} | {len(n['sub_natures'])} |")
+
+    report = "\n".join(lines)
+    with open(REPORT_OUTPUT, "w", encoding="utf-8") as f:
+        f.write(report)
+
+    print(f"[性格] 报告已生成 -> {REPORT_OUTPUT}")
+
+
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -146,6 +223,9 @@ def main():
     from collections import Counter
     up_counter = Counter(n["stat_up"] for n in natures)
     print(f"[性格] 按属性增加分布: {dict(up_counter)}")
+
+    # 生成完整性报告
+    generate_report(natures, up_counter)
 
 
 if __name__ == "__main__":
