@@ -24,7 +24,7 @@ const OUT_DIR = path.join(DATA_DIR, 'public', 'pets', 'thumbs');
 const PET_LIST_PATH = path.join(DATA_DIR, 'pets', 'pet_list.json');
 
 const THUMB_SIZE = 128;
-const QUALITY = 80;
+const QUALITY = 60;
 
 async function main() {
   console.log('============================================================');

@@ -20,5 +20,12 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, '..', 'server', 'public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+        },
+      },
+    },
   },
 })

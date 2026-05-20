@@ -7,6 +7,7 @@ const elementsRouter = require('./routes/elements');
 const skillsRouter = require('./routes/skills');
 const eggsRouter = require('./routes/eggs');
 const petsRouter = require('./routes/pets');
+const { apiCache } = require('./middleware/apiCache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,11 +20,11 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// RESTful API 路由（按 data 目录结构做前缀）
-app.use('/api/elements', elementsRouter);
-app.use('/api/skills', skillsRouter);
-app.use('/api/eggs', eggsRouter);
-app.use('/api/pets', petsRouter);
+// RESTful API 路由（带缓存：5 分钟）
+app.use('/api/elements', apiCache(600), elementsRouter);
+app.use('/api/skills', apiCache(300), skillsRouter);
+app.use('/api/eggs', apiCache(600), eggsRouter);
+app.use('/api/pets', apiCache(300), petsRouter);
 
 // 健康检查
 app.get('/api', (req, res) => {
