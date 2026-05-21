@@ -46,7 +46,7 @@
           </button>
           <!-- 汉堡菜单（仅手机/小平板） -->
           <button @click="mobileMenuOpen = !mobileMenuOpen"
-            class="md:hidden btn-icon">
+            class="btn-icon md:!hidden">
             <span v-if="mobileMenuOpen">✕</span>
             <span v-else>☰</span>
           </button>
