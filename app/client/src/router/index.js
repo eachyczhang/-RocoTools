@@ -26,7 +26,9 @@ const routes = [
   { path: '/admin/eggs', name: 'AdminEggs', component: () => import('@/views/admin/AdminEggs.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/seasons', name: 'AdminSeasons', component: () => import('@/views/admin/AdminSeasons.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/events', name: 'AdminEvents', component: () => import('@/views/admin/AdminEvents.vue'), meta: { hidden: true, requiresAdmin: true } },
+  { path: '/admin/pika', name: 'AdminPikaMonthlies', component: () => import('@/views/admin/AdminPikaMonthlies.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/conflicts', name: 'AdminConflicts', component: () => import('@/views/admin/AdminConflicts.vue'), meta: { hidden: true, requiresAdmin: true } },
+  { path: '/admin/nav-tabs', name: 'AdminNavTabs', component: () => import('@/views/admin/AdminNavTabs.vue'), meta: { hidden: true, requiresAdmin: true } },
 ]
 
 const router = createRouter({

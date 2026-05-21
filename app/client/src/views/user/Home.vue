@@ -81,10 +81,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { petsApi, skillsApi, elementsApi, eggsApi, naturesApi } from '@/api'
+import { statsApi } from '@/api'
 
 const stats = ref([])
 const navCards = [
+  { path: '/events', title: '活动日历', desc: '当前赛季活动、大量出没、常驻课题' },
   { path: '/pets', title: '精灵图鉴', desc: '查看所有精灵数据、种族值、技能、蛋组' },
   { path: '/skills', title: '技能大全', desc: '按属性、分类筛选所有技能' },
   { path: '/coverage', title: '打击面分析', desc: '选择属性组合，查找最优打击面精灵' },
@@ -94,19 +95,17 @@ const navCards = [
 ]
 
 onMounted(async () => {
-  const [pets, skills, elements, eggs, naturesData] = await Promise.all([
-    petsApi.list({ limit: 1 }),
-    skillsApi.list({ limit: 1 }),
-    elementsApi.list(),
-    eggsApi.list(),
-    naturesApi.list(),
-  ])
-  stats.value = [
-    { label: '精灵', value: pets.total },
-    { label: '技能', value: skills.total },
-    { label: '属性', value: elements.total },
-    { label: '蛋组', value: eggs.total },
-    { label: '性格', value: naturesData.total },
-  ]
+  try {
+    const data = await statsApi.get()
+    stats.value = [
+      { label: '精灵', value: data.pets ?? 0 },
+      { label: '技能', value: data.skills ?? 0 },
+      { label: '属性', value: data.elements ?? 0 },
+      { label: '蛋组', value: data.eggs ?? 0 },
+      { label: '性格', value: data.natures ?? 0 },
+    ]
+  } catch (e) {
+    console.error('加载统计数据失败', e)
+  }
 })
 </script>

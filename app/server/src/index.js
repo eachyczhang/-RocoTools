@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
+const fs = require('fs');
 
 const elementsRouter = require('./routes/elements');
 const skillsRouter = require('./routes/skills');
@@ -14,6 +15,12 @@ const seasonsRouter = require('./routes/seasons');
 const eventsRouter = require('./routes/events');
 const adminRouter = require('./routes/admin');
 const { apiCache } = require('./middleware/apiCache');
+
+const Database = require('better-sqlite3');
+// __dirname = app/server/src，3个.. 到项目根目录，-RocoTools/
+const DB_PATH = path.join(__dirname, '..', '..', '..', 'data', 'roco.db');
+// 确保 data 目录存在
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +49,23 @@ app.use('/api/pets', apiCache(300), petsRouter);
 // 管理端 API（不缓存）
 app.use('/api/admin', adminRouter);
 
+// 统计数据（首页概览）
+app.get('/api/stats', (req, res) => {
+  const db = new Database(DB_PATH, { readonly: true });
+  try {
+    const pets = db.prepare('SELECT COUNT(*) as c FROM pets').get().c;
+    const skills = db.prepare('SELECT COUNT(*) as c FROM skills').get().c;
+    const elements = db.prepare('SELECT COUNT(*) as c FROM elements').get().c;
+    const eggs = db.prepare('SELECT COUNT(*) as c FROM egg_groups').get().c;
+    const natures = db.prepare('SELECT COUNT(*) as c FROM natures').get().c;
+    db.close();
+    res.json({ pets, skills, elements, eggs, natures });
+  } catch (err) {
+    db.close();
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 健康检查
 app.get('/api', (req, res) => {
   res.json({
@@ -58,7 +82,6 @@ app.get('/api', (req, res) => {
 
 // 根路径静态文件（验证文件、证书等）
 const ROOT_STATIC_DIR = path.join(__dirname, '..', 'root-static');
-const fs = require('fs');
 if (fs.existsSync(ROOT_STATIC_DIR)) {
   app.use(express.static(ROOT_STATIC_DIR));
 }

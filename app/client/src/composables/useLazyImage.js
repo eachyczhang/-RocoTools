@@ -93,3 +93,27 @@ export const vLazySrc = {
   },
 }
 
+/**
+ * Vue 自定义指令 v-click-outside
+ * 用法：<div v-click-outside="handler" />
+ */
+export const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutsideHandler = (e) => {
+      if (!el.contains(e.target)) {
+        const fn = typeof binding.value === 'function' ? binding.value : () => {
+          el[binding.value]()
+        }
+        fn.call(el, e)
+      }
+    }
+    document.addEventListener('click', el._clickOutsideHandler, true)
+  },
+  beforeUnmount(el) {
+    if (el._clickOutsideHandler) {
+      document.removeEventListener('click', el._clickOutsideHandler, true)
+      delete el._clickOutsideHandler
+    }
+  },
+}
+

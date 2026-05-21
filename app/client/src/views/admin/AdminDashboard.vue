@@ -169,6 +169,8 @@ const navCards = [
   { path: '/admin/eggs', title: '蛋组管理', desc: '编辑蛋组成员' },
   { path: '/admin/seasons', title: '赛季管理', desc: '配置通行证/限定/异色精灵' },
   { path: '/admin/events', title: '活动管理', desc: '配置当前赛季活动日历' },
+  { path: '/admin/pika', title: '皮卡月刊', desc: '配置角色时装、绑定精灵' },
+  { path: '/admin/nav-tabs', title: '导航标签', desc: '管理用户端顶部导航栏标签显示' },
   { path: '/admin/conflicts', title: '数据审查', desc: '处理爬虫与手动编辑的数据冲突' },
 ]
 

@@ -46,7 +46,8 @@
       <div class="card">
         <h2 class="font-roco text-base text-primary-500 font-bold mb-3">赛季封面</h2>
         <div class="flex items-center gap-4">
-          <div class="w-32 h-20 md:w-48 md:h-28 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center overflow-hidden">
+          <div class="w-32 h-20 md:w-48 md:h-28 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center overflow-hidden cursor-zoom-in hover:rounded-none transition-rounded"
+            @click="openPreview(form.image)">
             <img v-if="form.image" :src="form.image" class="w-full h-full object-cover rounded-lg" />
             <span v-else class="text-xs text-muted">无封面</span>
           </div>
@@ -152,6 +153,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { adminApi } from '@/api/admin'
 import { useModal } from '@/composables/useModal'
+import { useImagePreview } from '@/composables/useImagePreview'
 import PetPicker from '@/components/shared/PetPicker.vue'
 
 const modal = useModal()
@@ -163,6 +165,8 @@ const showCreate = ref(false)
 const saving = ref(false)
 
 const newSeason = reactive({ id: '', name: '', is_current: 0 })
+
+const { openPreview } = useImagePreview()
 
 const form = reactive({
   name: '', is_current: 0, image: '', start_date: '', end_date: '', note: '',

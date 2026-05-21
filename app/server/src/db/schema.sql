@@ -162,6 +162,31 @@ CREATE TABLE IF NOT EXISTS season_events (
   FOREIGN KEY (season_id) REFERENCES seasons(id)
 );
 
+-- 皮卡月刊（角色时装）- 主表
+CREATE TABLE IF NOT EXISTS pika_monthlies (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  period      TEXT NOT NULL,              -- 期数标识，如 202605
+  name        TEXT NOT NULL,              -- 时装名称
+  concept_male TEXT,                       -- 期数概念图（男）
+  concept_female TEXT,                     -- 期数概念图（女）
+  start_date  TEXT,                       -- 上架日期
+  end_date    TEXT,                       -- 下架日期
+  row_order   INTEGER DEFAULT 0           -- 排序
+);
+
+-- 皮卡月刊-精灵关联表（一期月刊可配置多个精灵）
+CREATE TABLE IF NOT EXISTS pika_monthly_pets (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  monthly_id  INTEGER NOT NULL,          -- 关联 pika_monthlies.id
+  pet_uid     TEXT NOT NULL,              -- 精灵 uid
+  pet_name    TEXT NOT NULL,              -- 精灵名称（冗余）
+  pet_icon    TEXT,                       -- 精灵图标（冗余）
+  locke_male  TEXT,                       -- 该精灵的男洛克时装图片
+  locke_female TEXT,                      -- 该精灵的女洛克时装图片
+  sort_order  INTEGER DEFAULT 0,          -- 精灵排序
+  FOREIGN KEY (monthly_id) REFERENCES pika_monthlies(id) ON DELETE CASCADE
+);
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_pets_pet_id ON pets(pet_id);
 CREATE INDEX IF NOT EXISTS idx_pets_element ON pets(element_id);
@@ -171,3 +196,17 @@ CREATE INDEX IF NOT EXISTS idx_pet_skills_type ON pet_skills(skill_type);
 CREATE INDEX IF NOT EXISTS idx_pet_egg_groups_pet ON pet_egg_groups(pet_uid);
 CREATE INDEX IF NOT EXISTS idx_pet_egg_groups_group ON pet_egg_groups(egg_group_id);
 CREATE INDEX IF NOT EXISTS idx_variants_map_pet_id ON variants_map(pet_id);
+
+-- 用户端导航标签配置
+CREATE TABLE IF NOT EXISTS nav_tabs (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  tab_key     TEXT    NOT NULL UNIQUE,   -- 唯一标识，如 'home', 'season'
+  label       TEXT    NOT NULL,            -- 显示名称
+  route       TEXT    NOT NULL,            -- 路由路径（父级可为空，但此处保持 NOT NULL，父级填 '#' 或首子项路由）
+  icon        TEXT,                       -- 图标（可选）
+  parent_key  TEXT    DEFAULT NULL,       -- 父级 tab_key（NULL 为顶级）
+  is_visible  INTEGER DEFAULT 1,         -- 是否显示（1显示/0隐藏）
+  sort_order  INTEGER DEFAULT 0,         -- 排序权重（越大越靠前）
+  created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+  updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+);

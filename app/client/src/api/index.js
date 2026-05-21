@@ -54,6 +54,8 @@ export const seasonsApi = {
   current: () => request(`${BASE}/seasons/current`),
 }
 
+export { adminApi } from './admin.js'
+
 export const eventsApi = {
   list: (seasonId, all) => {
     const params = {}
@@ -64,4 +66,8 @@ export const eventsApi = {
     }
     return request(`${BASE}/events`, params)
   },
+}
+
+export const statsApi = {
+  get: () => request(`${BASE}/stats`),
 }

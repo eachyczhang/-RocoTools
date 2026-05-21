@@ -11,7 +11,7 @@
 
 | 页面 | 路由 | 功能 |
 |------|------|------|
-| 首页 | `/rocotools/` | 数据概览、快速导航 |
+| 首页 | `/rocotools/` | 数据概览（调用 /api/stats）、快速导航、版权声明 |
 | 赛季 | `/rocotools/season` | 赛季封面+精灵展示，支持过往赛季切换 |
 | 活动日历 | `/rocotools/events` | 当前赛季活跃活动时间轴 |
 | 精灵图鉴 | `/rocotools/pets` | 搜索/属性筛选/排序/分页，支持异色预览 |
@@ -153,6 +153,7 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 
 | 路由 | 说明 |
 |------|------|
+| `GET /api/stats` | 统计数据（pets/skills/elements/eggs/natures 数量） |
 | `GET /api/elements` | 属性列表 |
 | `GET /api/elements/multipliers` | 伤害倍率矩阵 |
 | `GET /api/skills?page&limit&search&category&element_id&keyword` | 技能列表 |

@@ -76,6 +76,19 @@ export const adminApi = {
   delete: (table, id) => adminRequest(`/data/${table}/${id}`, {
     method: 'DELETE',
   }),
+  
+  // 皮卡月刊专用接口
+  createPikaMonthly: (data) => adminRequest('/pika-monthlies', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  updatePikaMonthly: (id, data) => adminRequest(`/pika-monthlies/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deletePikaMonthly: (id) => adminRequest(`/pika-monthlies/${id}`, {
+    method: 'DELETE',
+  }),
 
   // 图片上传
   upload: (file, type, uid) => {
@@ -107,4 +120,24 @@ export const adminApi = {
   rejectConflict: (index) => adminRequest(`/conflicts/${index}/reject`, { method: 'POST' }),
   acceptAllConflicts: () => adminRequest('/conflicts/accept-all', { method: 'POST' }),
   rejectAllConflicts: () => adminRequest('/conflicts/reject-all', { method: 'POST' }),
+
+  // 批量更新
+  batchUpdate: (table, updates) => adminRequest(`/data/${table}/batch`, {
+    method: 'POST',
+    body: JSON.stringify({ updates }),
+  }),
+
+  // 导航标签管理
+  navTabs: () => adminRequest('/nav-tabs'),
+  updateNavTab: (id, data) => adminRequest(`/nav-tabs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  createNavTab: (data) => adminRequest('/nav-tabs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  deleteNavTab: (id) => adminRequest(`/nav-tabs/${id}`, {
+    method: 'DELETE',
+  }),
 }

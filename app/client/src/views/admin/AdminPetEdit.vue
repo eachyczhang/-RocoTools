@@ -13,7 +13,8 @@
 
       <!-- 立绘预览 + 切换 -->
       <div class="flex flex-col items-center mb-4">
-        <div class="w-40 h-40 md:w-52 md:h-52 bg-gray-50 dark:bg-white/5 rounded-xl flex items-center justify-center mb-3">
+        <div class="w-40 h-40 md:w-52 md:h-52 bg-gray-50 dark:bg-white/5 rounded-xl flex items-center justify-center mb-3 cursor-zoom-in hover:rounded-none transition-rounded"
+          @click="openPreview(currentPreviewUrl)">
           <img v-if="currentPreviewUrl" :src="currentPreviewUrl" class="w-full h-full object-contain rounded-xl" />
           <span v-else class="text-sm text-muted">无图片</span>
         </div>
@@ -22,7 +23,8 @@
           <button v-for="img in imageSlots" :key="img.type" @click="previewType = img.type"
             class="flex flex-col items-center gap-0.5 transition-opacity cursor-pointer"
             :class="previewType === img.type ? 'opacity-100' : 'opacity-40 hover:opacity-70'">
-            <div class="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded flex items-center justify-center">
+            <div class="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded flex items-center justify-center cursor-zoom-in hover:rounded-none transition-rounded"
+              @click.stop="openPreview(img.url)">
               <img v-if="img.url" :src="img.url" class="w-full h-full object-contain rounded" />
               <span v-else class="text-[8px] text-muted">无</span>
             </div>
@@ -109,7 +111,8 @@
         </div>
       </div>
       <div class="mt-3 flex items-center gap-4">
-        <div class="w-12 h-12 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center">
+        <div class="w-12 h-12 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center cursor-zoom-in hover:rounded-none transition-rounded"
+          @click="openPreview(abilityIconUrl)">
           <img v-if="abilityIconUrl" :src="abilityIconUrl" class="w-full h-full object-contain rounded-lg" />
           <span v-else class="text-[8px] text-muted">无图标</span>
         </div>
@@ -167,6 +170,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
 import { adminApi } from '@/api/admin'
 import { useModal } from '@/composables/useModal'
+import { useImagePreview } from '@/composables/useImagePreview'
 
 const route = useRoute()
 const router = useRouter()
@@ -184,11 +188,23 @@ const ok = ref(false)
 const previewType = ref('pet_default')
 const formVariant = ref('')
 
-const form = ref({
+const { openPreview } = useImagePreview()
+
+const detailForm = ref({ height: '', weight: '', location: '' })
   pet_id: '', name: '', element_id: null, sub_element_id: null,
   ability_name: '', ability_desc: '', version: '',
   hp: 0, atk: 0, def: 0, matk: 0, mdef: 0, speed: 0, total: 0,
 })
+
+// 图片预览状态
+const showPreview = ref(false)
+const previewSrc = ref('')
+
+function openPreview(src) {
+  if (!src) return
+  previewSrc.value = src
+  showPreview.value = true
+}
 
 const detailForm = ref({ height: '', weight: '', location: '' })
 

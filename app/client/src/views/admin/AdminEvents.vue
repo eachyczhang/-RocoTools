@@ -12,7 +12,7 @@
 
     <!-- Tab 切换 -->
     <div class="card mb-4 !p-0">
-      <div class="flex border-b border-surface-light-border dark:border-surface-dark-border bg-gray-50 dark:bg-white/3">
+      <div class="flex border-b border-surface-light-border dark:border-surface-dark-border bg-surface-light dark:bg-surface-dark">
         <button v-for="tab in tabs" :key="tab.value"
           @click="activeTab = tab.value"
           class="flex-1 py-3 text-sm font-medium transition-colors"
@@ -31,7 +31,7 @@
 
         <!-- 活动列表（支持拖拽排序） -->
         <div class="drag-hint text-xs text-muted mb-2">拖拽活动可调整排序</div>
-        <draggable v-model="filteredEvents" tag="table" class="w-full text-sm" handle=".drag-handle" @end="saveOrder">
+        <table class="w-full text-sm">
           <thead>
             <tr class="text-left text-muted text-xs bg-gray-50 dark:bg-white/3">
               <th class="py-2.5 px-3 w-8"></th>
@@ -42,8 +42,15 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="event in filteredEvents" :key="event.id"
-              class="border-t border-surface-light-border/50 dark:border-surface-dark-border/50">
+            <tr
+              v-for="(event, index) in filteredEvents"
+              :key="event.id"
+              class="border-t border-surface-light-border/50 dark:border-surface-dark-border/50"
+              draggable="true"
+              @dragstart="onDragStart($event, index)"
+              @dragover.prevent
+              @drop="onDrop($event, index)"
+            >
               <td class="py-2.5 px-3">
                 <div class="drag-handle cursor-grab text-muted text-xl">⋮⋮</div>
               </td>
@@ -51,7 +58,13 @@
               <td class="py-2.5 px-3 text-xs">
                 <template v-if="activeTab === 'mass_outbreak' && event.pet_name">
                   <div class="flex items-center gap-1">
-                    <img v-if="event.pet_icon" :src="event.pet_icon" class="w-5 h-5 rounded" />
+                    <div 
+                      v-if="event.pet_icon" 
+                      class="w-8 h-8 rounded cursor-zoom-in hover:rounded-none transition-rounded flex items-center justify-center"
+                      @click="openPreview(event.pet_icon)"
+                    >
+                      <img :src="event.pet_icon" class="w-5 h-5 rounded" />
+                    </div>
                     <span>{{ event.pet_name }}</span>
                   </div>
                 </template>
@@ -73,14 +86,14 @@
               <td colspan="5" class="py-8 text-center text-muted text-sm">暂无活动数据</td>
             </tr>
           </tbody>
-        </draggable>
+        </table>
       </div>
     </div>
 
     <!-- 新增弹窗 -->
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="closeAdd">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+      <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div class="sticky top-0 bg-surface-light dark:bg-surface-dark border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
           <h3 class="font-roco text-lg text-primary-500">新增活动</h3>
           <button @click="closeAdd" class="text-muted hover:text-foreground text-xl leading-none">&times;</button>
         </div>
@@ -176,13 +189,14 @@
             </button>
           </div>
         </div>
+
       </div>
     </div>
 
     <!-- 编辑弹窗 -->
     <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="closeEdit">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+      <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div class="sticky top-0 bg-surface-light dark:bg-surface-dark border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
           <h3 class="font-roco text-lg text-primary-500">编辑活动</h3>
           <button @click="closeEdit" class="text-muted hover:text-foreground text-xl leading-none">&times;</button>
         </div>
@@ -259,7 +273,11 @@
           <div v-if="editForm.category === 'version'">
             <label class="text-xs text-muted">活动图片</label>
             <div v-if="editForm.image && !editForm.imageFile" class="mb-2">
-              <img :src="`/uploads/events/event_${editForm.id}.png`" class="h-12 rounded" />
+              <img 
+                :src="`/uploads/events/event_${editForm.id}.png`" 
+                class="h-12 rounded cursor-zoom-in hover:rounded-none transition-rounded"
+                @click="openPreview(`/uploads/events/event_${editForm.id}.png`)"
+              />
             </div>
             <div class="flex items-center gap-2">
               <input type="file" ref="editFileInput" accept="image/*" class="hidden" @change="handleEditFileSelect" />
@@ -280,18 +298,19 @@
             </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { adminApi } from '@/api/admin'
 import { seasonsApi, eventsApi, petsApi } from '@/api'
 import { useModal } from '@/composables/useModal'
+import { useImagePreview } from '@/composables/useImagePreview'
 import PetPicker from '@/components/shared/PetPicker.vue'
-import draggable from 'vuedraggable'
 
 const modal = useModal()
 const currentSeason = ref(null)
@@ -350,6 +369,8 @@ const SUB_TYPE_LABELS = {
   pika: '皮卡摄影委托',
 }
 
+const { openPreview } = useImagePreview()
+
 // 按 Tab 过滤后的活动列表（双向绑定用）
 const events = ref([])
 const filteredEvents = computed({
@@ -369,6 +390,36 @@ const filteredEvents = computed({
     }
   },
 })
+
+// 拖拽状态
+const draggedIndex = ref(-1)
+
+function onDragStart(event, index) {
+  draggedIndex.value = index
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', '') // 需要设置数据才能拖拽
+}
+
+function onDrop(event, targetIndex) {
+  if (draggedIndex.value === -1 || draggedIndex.value === targetIndex) {
+    draggedIndex.value = -1
+    return
+  }
+
+  // 只在 all tab 时允许拖拽排序
+  if (activeTab.value !== 'all') {
+    draggedIndex.value = -1
+    return
+  }
+
+  const newEvents = [...events.value]
+  const [dragged] = newEvents.splice(draggedIndex.value, 1)
+  newEvents.splice(targetIndex, 0, dragged)
+  events.value = newEvents
+
+  draggedIndex.value = -1
+  saveOrder()
+}
 
 function getCategoryCount(cat) {
   if (cat === 'all') return events.value.length
@@ -574,6 +625,8 @@ async function openEdit(event) {
   } catch {
     editForm.periodsArr = [{ start: '', end: '' }]
   }
+  // 使用 nextTick 确保 category 设置后 DOM 更新，v-if 条件满足时再打开弹窗
+  await nextTick()
   showEditModal.value = true
 }
 

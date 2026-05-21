@@ -219,10 +219,12 @@ async function loadInitial() {
   } catch {}
 }
 
+// 使用 immediate: true 的 watch 来处理初始值和后续变化
 watch(() => props.modelValue, (val) => {
-  if (!val) selectedPet.value = null
-  else if (!selectedPet.value || selectedPet.value.uid !== val) loadInitial()
-})
-
-onMounted(loadInitial)
+  if (!val) {
+    selectedPet.value = null
+  } else if (!selectedPet.value || selectedPet.value.uid !== val) {
+    loadInitial()
+  }
+}, { immediate: true })
 </script>

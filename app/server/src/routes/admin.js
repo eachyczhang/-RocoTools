@@ -7,13 +7,32 @@ const Database = require('better-sqlite3');
 
 const { authAdmin, signAdminToken } = require('../middleware/authAdmin');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'data', 'roco.db');
+const DB_PATH = path.join(__dirname, '..', '..', '..', '..', 'data', 'roco.db');
 const DATA_DIR = path.join(__dirname, '..', '..', '..', '..', 'data');
 const PUBLIC_DIR = path.join(DATA_DIR, 'public');
 const BACKUP_DIR = path.join(__dirname, '..', '..', 'data', 'backups');
 
 // 管理员密码（环境变量）
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'roco2026';
+
+// ============================================================
+// 公开 API - 用户端导航标签（不需要鉴权）
+// ============================================================
+router.get('/nav-tabs/public', (req, res) => {
+  const db = new Database(DB_PATH, { readonly: true });
+  try {
+    const tabs = db.prepare('SELECT id, tab_key, label, route, icon, parent_key, sort_order FROM nav_tabs WHERE is_visible = 1 ORDER BY sort_order DESC').all();
+    res.json({ tabs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    db.close();
+  }
+});
+
+// ============================================================
+// 以下接口都需要鉴权
+// ============================================================
 
 // ============================================================
 // 登录
@@ -29,6 +48,73 @@ router.post('/login', (req, res) => {
 
 // 以下接口都需要鉴权
 router.use(authAdmin);
+
+// ============================================================
+// 导航标签管理
+// ============================================================
+router.get('/nav-tabs', (req, res) => {
+  const db = new Database(DB_PATH, { readonly: true });
+  try {
+    const tabs = db.prepare('SELECT * FROM nav_tabs ORDER BY sort_order DESC').all();
+    res.json({ tabs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    db.close();
+  }
+});
+
+router.put('/nav-tabs/:id', (req, res) => {
+  const { id } = req.params;
+  const { tab_key, label, route, icon, parent_key, is_visible, sort_order } = req.body;
+  const db = new Database(DB_PATH);
+  try {
+    const result = db.prepare(
+      'UPDATE nav_tabs SET tab_key = ?, label = ?, route = ?, icon = ?, parent_key = ?, is_visible = ?, sort_order = ?, updated_at = datetime(\'now\', \'localtime\') WHERE id = ?'
+    ).run(tab_key, label, route, icon || '', parent_key || '', is_visible ? 1 : 0, sort_order || 0, id);
+    db.close();
+    if (result.changes === 0) return res.status(404).json({ error: '记录不存在' });
+    res.json({ success: true });
+  } catch (err) {
+    db.close();
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/nav-tabs', (req, res) => {
+  const { tab_key, label, route, icon, parent_key, is_visible, sort_order } = req.body;
+  if (!tab_key || !label || !route) {
+    return res.status(400).json({ error: '缺少必填字段: tab_key, label, route' });
+  }
+  const db = new Database(DB_PATH);
+  try {
+    const result = db.prepare(
+      'INSERT INTO nav_tabs (tab_key, label, route, icon, parent_key, is_visible, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(tab_key, label, route, icon || '', parent_key || '', is_visible ? 1 : 0, sort_order || 0);
+    db.close();
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err) {
+    db.close();
+    if (err.message.includes('UNIQUE')) {
+      return res.status(409).json({ error: `标签键「${tab_key}」已存在` });
+    }
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/nav-tabs/:id', (req, res) => {
+  const { id } = req.params;
+  const db = new Database(DB_PATH);
+  try {
+    const result = db.prepare('DELETE FROM nav_tabs WHERE id = ?').run(id);
+    db.close();
+    if (result.changes === 0) return res.status(404).json({ error: '记录不存在' });
+    res.json({ success: true });
+  } catch (err) {
+    db.close();
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================================
 // 通用 CRUD
@@ -62,7 +148,13 @@ const EDITABLE_TABLES = {
     label: '赛季活动',
     primaryKey: 'id',
     autoIncrement: true,
-    editableFields: ['season_id', 'category', 'name', 'start_date', 'end_date', 'periods', 'image', 'row_order'],
+    editableFields: ['season_id', 'category', 'name', 'sub_type', 'pet_uid', 'pet_name', 'pet_icon', 'start_date', 'end_date', 'periods', 'image', 'row_order'],
+  },
+  pika_monthlies: {
+    label: '皮卡月刊',
+    primaryKey: 'id',
+    autoIncrement: true,
+    editableFields: ['period', 'name', 'pet_uid', 'pet_name', 'pet_icon', 'locke_male', 'locke_female', 'concept_male', 'concept_female', 'start_date', 'end_date'],
   },
   pet_details: {
     label: '精灵详情',
@@ -73,6 +165,12 @@ const EDITABLE_TABLES = {
     label: '蛋组',
     primaryKey: 'id',
     editableFields: ['name'],
+  },
+  nav_tabs: {
+    label: '用户端导航标签',
+    primaryKey: 'id',
+    autoIncrement: true,
+    editableFields: ['tab_key', 'label', 'route', 'icon', 'parent_key', 'is_visible', 'sort_order'],
   },
   seasons: {
     label: '赛季',
@@ -112,7 +210,23 @@ router.get('/data/:table', (req, res) => {
   }
 
   const total = db.prepare(`SELECT COUNT(*) as c FROM ${table} ${whereClause}`).get(...params).c;
-  const rows = db.prepare(`SELECT * FROM ${table} ${whereClause} LIMIT ? OFFSET ?`).all(...params, +limit, offset);
+  
+  // 皮卡月刊按 period 降序排序（最新的在前面）
+  let orderClause = '';
+  if (table === 'pika_monthlies') {
+    orderClause = 'ORDER BY period DESC';
+  }
+  
+  const rows = db.prepare(`SELECT * FROM ${table} ${whereClause} ${orderClause} LIMIT ? OFFSET ?`).all(...params, +limit, offset);
+  
+  // 对于 pika_monthlies，附带查询关联的 pika_monthly_pets
+  if (table === 'pika_monthlies' && rows.length > 0) {
+    for (const row of rows) {
+      const pets = db.prepare(`SELECT pet_uid, pet_name, pet_icon, locke_male, locke_female, sort_order FROM pika_monthly_pets WHERE monthly_id = ? ORDER BY sort_order`).all(row.id);
+      row.pets = JSON.stringify(pets);
+    }
+  }
+  
   db.close();
 
   res.json({ total, page: +page, limit: +limit, rows });
@@ -213,6 +327,101 @@ router.post('/data/:table', (req, res) => {
   }
 });
 
+// ============================================================
+// 皮卡月刊专用接口（处理关联表 pika_monthly_pets）
+// ============================================================
+
+// POST /api/admin/pika-monthlies — 新增皮卡月刊
+router.post('/pika-monthlies', (req, res) => {
+  const { period, name, start_date, end_date, row_order, concept_male, concept_female, pets } = req.body;
+  
+  if (!period || !name) {
+    return res.status(400).json({ error: '缺少必填字段: period, name' });
+  }
+  
+  const db = new Database(DB_PATH);
+  try {
+    // 插入主表
+    const result = db.prepare(`
+      INSERT INTO pika_monthlies (period, name, start_date, end_date, row_order, concept_male, concept_female)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(period, name, start_date || '', end_date || '', row_order || 0, concept_male || '', concept_female || '');
+    
+    const monthlyId = result.lastInsertRowid;
+    
+    // 解析 pets JSON 并插入关联表
+    if (pets && typeof pets === 'string') {
+      const petList = JSON.parse(pets);
+      for (const pet of petList) {
+        db.prepare(`
+          INSERT INTO pika_monthly_pets (monthly_id, pet_uid, pet_name, pet_icon, locke_male, locke_female, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(monthlyId, pet.pet_uid, pet.pet_name || '', pet.pet_icon || '', pet.locke_male || '', pet.locke_female || '', pet.sort_order || 0);
+      }
+    }
+    
+    db.close();
+    res.json({ success: true, id: monthlyId });
+  } catch (err) {
+    db.close();
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/pika-monthlies/:id — 更新皮卡月刊
+router.put('/pika-monthlies/:id', (req, res) => {
+  const { id } = req.params;
+  const { period, name, start_date, end_date, row_order, concept_male, concept_female, pets } = req.body;
+  
+  const db = new Database(DB_PATH);
+  try {
+    // 更新主表
+    const updateFields = [];
+    const updateValues = [];
+    if (period !== undefined) { updateFields.push('period = ?'); updateValues.push(period); }
+    if (name !== undefined) { updateFields.push('name = ?'); updateValues.push(name); }
+    if (start_date !== undefined) { updateFields.push('start_date = ?'); updateValues.push(start_date || ''); }
+    if (end_date !== undefined) { updateFields.push('end_date = ?'); updateValues.push(end_date || ''); }
+    if (row_order !== undefined) { updateFields.push('row_order = ?'); updateValues.push(row_order); }
+    if (concept_male !== undefined) { updateFields.push('concept_male = ?'); updateValues.push(concept_male || ''); }
+    if (concept_female !== undefined) { updateFields.push('concept_female = ?'); updateValues.push(concept_female || ''); }
+    
+    if (updateFields.length > 0) {
+      db.prepare(`UPDATE pika_monthlies SET ${updateFields.join(', ')} WHERE id = ?`).run(...updateValues, id);
+    }
+    
+    // 删除旧的关联数据，重新插入
+    db.prepare(`DELETE FROM pika_monthly_pets WHERE monthly_id = ?`).run(id);
+    
+    if (pets && typeof pets === 'string') {
+      const petList = JSON.parse(pets);
+      for (const pet of petList) {
+        db.prepare(`
+          INSERT INTO pika_monthly_pets (monthly_id, pet_uid, pet_name, pet_icon, locke_male, locke_female, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(id, pet.pet_uid, pet.pet_name || '', pet.pet_icon || '', pet.locke_male || '', pet.locke_female || '', pet.sort_order || 0);
+      }
+    }
+    
+    db.close();
+    res.json({ success: true });
+  } catch (err) {
+    db.close();
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/pika-monthlies/:id — 删除皮卡月刊
+router.delete('/pika-monthlies/:id', (req, res) => {
+  const { id } = req.params;
+  const db = new Database(DB_PATH);
+  const result = db.prepare(`DELETE FROM pika_monthlies WHERE id = ?`).run(id);
+  db.close();
+  
+  if (result.changes === 0) return res.status(404).json({ error: '记录不存在' });
+  res.json({ success: true, changes: result.changes });
+});
+
 // DELETE /api/admin/data/:table/:id — 删除记录
 router.delete('/data/:table/:id', (req, res) => {
   const { table, id } = req.params;
@@ -279,6 +488,11 @@ const IMAGE_TYPES = {
   pet_ability: { dir: 'pets/abilities', suffix: '_ability.png' },
   season_cover: { dir: 'uploads/seasons', suffix: '_cover.png', isUpload: true },
   event_image: { dir: 'uploads/events', suffix: '.png', isUpload: true },
+  pika_concept: { dir: 'uploads/pika', suffix: '_concept.png', isUpload: true },
+  pika_locke_male: { dir: 'uploads/pika', suffix: '_locke_male.png', isUpload: true },
+  pika_locke_female: { dir: 'uploads/pika', suffix: '_locke_female.png', isUpload: true },
+  pika_concept_male: { dir: 'uploads/pika', suffix: '_concept_male.png', isUpload: true },
+  pika_concept_female: { dir: 'uploads/pika', suffix: '_concept_female.png', isUpload: true },
   skill_icon: { dir: 'skills/icons', suffix: '.png' },
   element_icon: { dir: 'elements/icons', suffix: '.png' },
 };
@@ -314,6 +528,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
   const dir = path.join(baseDir, imageConfig.dir);
   fs.mkdirSync(dir, { recursive: true });
 
+  // 文件名：uid + suffix（uid 已经包含了足够的区分信息）
   const filename = `${uid}${imageConfig.suffix}`;
   const filepath = path.join(dir, filename);
   const publicPath = imageConfig.isUpload
@@ -322,7 +537,8 @@ router.post('/upload', upload.single('file'), (req, res) => {
 
   fs.writeFileSync(filepath, req.file.buffer);
 
-  // 更新数据库对应字段
+  // 更新数据库对应字段（仅对非 pika_locke/pika_concept 类型）
+  // pika_locke/pika_concept 类型的图片路径存储在 JSON 中，不在这里更新数据库
   const fieldMap = {
     pet_default: { table: 'pet_details', field: 'image_default', key: 'pet_uid' },
     pet_shiny: { table: 'pet_details', field: 'image_shiny', key: 'pet_uid' },

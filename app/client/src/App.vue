@@ -12,26 +12,35 @@
 
         <!-- 用户端桌面导航 -->
         <div v-if="!isAdminRoute" class="hidden md:flex flex-1 items-center gap-1 lg:gap-2">
-          <router-link to="/" class="nav-link" exact>首页</router-link>
-          <router-link to="/season" class="nav-link">赛季</router-link>
-          <router-link to="/events" class="nav-link">活动</router-link>
-          <router-link to="/pets" class="nav-link">精灵</router-link>
-          <div class="relative" @mouseenter="skillMenuOpen = true" @mouseleave="skillMenuOpen = false">
-            <button class="nav-link" :class="{ 'router-link-active': $route.path.startsWith('/skills') || $route.path === '/coverage' }">
-              技能 <span class="text-xs opacity-60 ml-0.5">▼</span>
-            </button>
-            <div v-show="skillMenuOpen"
-              class="absolute top-full left-0 pt-1">
-              <div class="py-1 rounded-lg shadow-lg min-w-[140px] border"
-                :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
-                <router-link to="/skills" class="dropdown-item" @click="skillMenuOpen = false">技能列表</router-link>
-                <router-link to="/coverage" class="dropdown-item" @click="skillMenuOpen = false">打击面分析</router-link>
+          <template v-for="tab in navTabsGrouped" :key="tab.tab_key">
+            <!-- 有子标签：下拉菜单 -->
+            <div v-if="tab.children && tab.children.length > 0"
+              class="relative"
+              @mouseenter="openMenus[tab.tab_key] = true" @mouseleave="openMenus[tab.tab_key] = false">
+              <!-- 有路由：可点击跳转 -->
+              <router-link v-if="tab.route" :to="tab.route"
+                class="nav-link inline-flex items-center gap-1"
+                :class="{ 'router-link-active': isTabActive(tab) }">
+                {{ tab.label }} <span class="text-xs opacity-60 ml-0.5">▼</span>
+              </router-link>
+              <!-- 无路由：仅下拉触发器 -->
+              <button v-else
+                class="nav-link inline-flex items-center gap-1"
+                :class="{ 'router-link-active': isTabActive(tab) }">
+                {{ tab.label }} <span class="text-xs opacity-60 ml-0.5">▼</span>
+              </button>
+              <div v-show="openMenus[tab.tab_key]"
+                class="absolute top-full left-0 pt-1">
+                <div class="py-1 rounded-lg shadow-lg min-w-[140px] border"
+                  :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
+                  <router-link v-for="child in tab.children" :key="child.tab_key"
+                    :to="child.route" class="dropdown-item" @click="openMenus[tab.tab_key] = false">{{ child.label }}</router-link>
+                </div>
               </div>
             </div>
-          </div>
-          <router-link to="/eggs" class="nav-link">蛋组</router-link>
-          <router-link to="/natures" class="nav-link">性格</router-link>
-          <router-link to="/elements" class="nav-link">属性</router-link>
+            <!-- 无子标签：普通链接 -->
+            <router-link v-else :to="tab.route" class="nav-link">{{ tab.label }}</router-link>
+          </template>
         </div>
 
         <!-- 管理端桌面导航 -->
@@ -43,6 +52,8 @@
           <router-link to="/admin/eggs" class="nav-link">蛋组</router-link>
           <router-link to="/admin/seasons" class="nav-link">赛季</router-link>
           <router-link to="/admin/events" class="nav-link">活动</router-link>
+          <router-link to="/admin/pika" class="nav-link">皮卡</router-link>
+          <router-link to="/admin/nav-tabs" class="nav-link">标签</router-link>
           <router-link to="/admin/conflicts" class="nav-link">审查</router-link>
         </div>
 
@@ -73,19 +84,29 @@
         </div>
       </div>
 
-      <!-- 移动端导航菜单 -->
+        <!-- 移动端导航菜单 -->
       <div v-show="mobileMenuOpen" class="md:hidden border-t px-4 py-2 space-y-0.5"
         :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
         <template v-if="!isAdminRoute">
-          <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">首页</router-link>
-          <router-link to="/season" class="mobile-nav-link" @click="mobileMenuOpen = false">赛季</router-link>
-          <router-link to="/events" class="mobile-nav-link" @click="mobileMenuOpen = false">活动</router-link>
-          <router-link to="/pets" class="mobile-nav-link" @click="mobileMenuOpen = false">精灵</router-link>
-          <router-link to="/skills" class="mobile-nav-link" @click="mobileMenuOpen = false">技能列表</router-link>
-          <router-link to="/coverage" class="mobile-nav-link" @click="mobileMenuOpen = false">打击面分析</router-link>
-          <router-link to="/eggs" class="mobile-nav-link" @click="mobileMenuOpen = false">蛋组</router-link>
-          <router-link to="/natures" class="mobile-nav-link" @click="mobileMenuOpen = false">性格</router-link>
-          <router-link to="/elements" class="mobile-nav-link" @click="mobileMenuOpen = false">属性</router-link>
+          <template v-for="tab in navTabsGrouped" :key="tab.tab_key">
+            <!-- 有子标签：可展开 -->
+            <div v-if="tab.children && tab.children.length > 0">
+              <button @click="mobileExpanded[tab.tab_key] = !mobileExpanded[tab.tab_key]"
+                class="mobile-nav-link w-full text-left flex items-center justify-between">
+                <span>{{ tab.label }}</span>
+                <span class="text-xs opacity-60">{{ mobileExpanded[tab.tab_key] ? '▲' : '▼' }}</span>
+              </button>
+              <div v-show="mobileExpanded[tab.tab_key]" class="pl-4 space-y-0.5">
+                <router-link v-if="tab.route" :to="tab.route" class="mobile-nav-link text-sm"
+                  @click="mobileMenuOpen = false; mobileExpanded = {}">{{ tab.label }}（首页）</router-link>
+                <router-link v-for="child in tab.children" :key="child.tab_key"
+                  :to="child.route" class="mobile-nav-link text-sm"
+                  @click="mobileMenuOpen = false; mobileExpanded = {}">{{ child.label }}</router-link>
+              </div>
+            </div>
+            <!-- 无子标签：普通链接 -->
+            <router-link v-else :to="tab.route" class="mobile-nav-link" @click="mobileMenuOpen = false">{{ tab.label }}</router-link>
+          </template>
         </template>
         <template v-else>
           <router-link to="/admin/dashboard" class="mobile-nav-link" @click="mobileMenuOpen = false">总览</router-link>
@@ -95,6 +116,8 @@
           <router-link to="/admin/eggs" class="mobile-nav-link" @click="mobileMenuOpen = false">蛋组</router-link>
           <router-link to="/admin/seasons" class="mobile-nav-link" @click="mobileMenuOpen = false">赛季</router-link>
           <router-link to="/admin/events" class="mobile-nav-link" @click="mobileMenuOpen = false">活动</router-link>
+          <router-link to="/admin/pika" class="mobile-nav-link" @click="mobileMenuOpen = false">皮卡月刊</router-link>
+          <router-link to="/admin/nav-tabs" class="mobile-nav-link" @click="mobileMenuOpen = false">导航标签</router-link>
           <router-link to="/admin/conflicts" class="mobile-nav-link" @click="mobileMenuOpen = false">审查</router-link>
           <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">回到用户端</router-link>
         </template>
@@ -124,24 +147,85 @@
       @confirm="modalConfirm"
       @cancel="modalCancel"
     />
+
+    <!-- 管理端全局图片预览 -->
+    <ImagePreview v-if="isAdminRoute" v-model="showPreview" :src="previewSrc" @close="closePreview" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
 import { useModalState } from '@/composables/useModal'
+import { useImagePreview } from '@/composables/useImagePreview'
 import ModalDialog from '@/components/shared/ModalDialog.vue'
+import ImagePreview from '@/components/shared/ImagePreview.vue'
 
 const route = useRoute()
+const router = useRouter()
 const { isDark, toggle } = useTheme()
-const skillMenuOpen = ref(false)
 const mobileMenuOpen = ref(false)
+const mobileExpanded = reactive({})  // 移动端二级菜单展开状态
+const navTabs = ref([])
+const openMenus = reactive({})
 
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 
 const { state: modalState, onConfirm: modalConfirm, onCancel: modalCancel } = useModalState()
+
+// 全局图片预览（仅管理端）
+const { showPreview, previewSrc, closePreview } = useImagePreview()
+
+// 分组导航标签（父子结构）
+const navTabsGrouped = computed(() => {
+  const topLevel = navTabs.value.filter(t => !t.parent_key)
+  const childrenMap = {}
+  const children = navTabs.value.filter(t => t.parent_key)
+  for (const child of children) {
+    if (!childrenMap[child.parent_key]) childrenMap[child.parent_key] = []
+    childrenMap[child.parent_key].push(child)
+  }
+  return topLevel.map(tab => ({
+    ...tab,
+    children: childrenMap[tab.tab_key] || []
+  })).sort((a, b) => (b.sort_order || 0) - (a.sort_order || 0))
+})
+
+// 判断标签是否激活（含子标签）
+function isTabActive(tab) {
+  if (tab.children && tab.children.length > 0) {
+    return tab.children.some(c => route.path.startsWith(c.route) || route.path === c.route)
+  }
+  return route.path.startsWith(tab.route) || route.path === tab.route
+}
+
+// 加载用户端导航标签
+async function loadNavTabs() {
+  try {
+    const res = await fetch('/api/admin/nav-tabs/public')
+    if (res.ok) {
+      const data = await res.json()
+      navTabs.value = data.tabs || []
+    }
+  } catch (e) {
+    console.error('加载导航标签失败', e)
+    navTabs.value = []
+  }
+}
+
+onMounted(() => {
+  if (!isAdminRoute.value) {
+    loadNavTabs()
+  }
+})
+
+// 关闭移动端菜单时重置展开状态
+watch(mobileMenuOpen, (val) => {
+  if (!val) {
+    for (const key in mobileExpanded) delete mobileExpanded[key]
+  }
+})
 </script>
 
 <style lang="scss" scoped>
