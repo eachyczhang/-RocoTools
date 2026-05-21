@@ -90,10 +90,9 @@ const routineEvents = computed(() => events.value.filter(e => e.category === 'ro
 async function loadPetsByUids(uids) {
   if (!uids || !uids.length) return {}
   const result = {}
-  const promises = uids.map(uid => petsApi.get(uid))
-  const res = await Promise.all(promises)
-  res.forEach((pet, i) => {
-    if (pet) result[uids[i]] = pet
+  const settled = await Promise.allSettled(uids.map(uid => petsApi.get(uid)))
+  settled.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value) result[uids[i]] = r.value
   })
   return result
 }
@@ -118,7 +117,9 @@ onMounted(async () => {
         petMap.value = await loadPetsByUids(massOutbreakUids)
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error('[Events] 加载失败:', err)
+  }
   loaded.value = true
 })
 </script>

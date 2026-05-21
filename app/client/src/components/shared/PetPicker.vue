@@ -172,7 +172,7 @@ async function openBrowser() {
     try {
       const res = await elementsApi.list()
       elements.value = res.elements || []
-    } catch {}
+    } catch (err) { console.error("[PetPicker]", err) }
   }
   browsePage.value = 1
   browsePets.value = []
@@ -189,7 +189,7 @@ async function browseFetch() {
     })
     browsePets.value = res.pets || []
     browseTotal.value = res.total || 0
-  } catch {}
+  } catch (err) { console.error("[PetPicker]", err) }
 }
 
 async function browseMore() {
@@ -201,7 +201,7 @@ async function browseMore() {
       limit: 60, page: browsePage.value,
     })
     browsePets.value.push(...(res.pets || []))
-  } catch {}
+  } catch (err) { console.error("[PetPicker]", err) }
 }
 
 function selectFromBrowser(pet) {
@@ -216,7 +216,7 @@ async function loadInitial() {
   try {
     const pet = await petsApi.get(props.modelValue)
     if (pet) selectedPet.value = pet
-  } catch {}
+  } catch (err) { console.error("[PetPicker]", err) }
 }
 
 // 使用 immediate: true 的 watch 来处理初始值和后续变化

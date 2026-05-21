@@ -448,7 +448,7 @@ async function loadList() {
       ...row,
       pets: row.pets ? JSON.parse(row.pets) : [],
     }))
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
   loading.value = false
 }
 
@@ -525,7 +525,7 @@ async function loadPetsList() {
   try {
     const res = await petsApi.list({ limit: 1000 })
     petsList.value = res.rows || []
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
 }
 
 async function saveForm() {

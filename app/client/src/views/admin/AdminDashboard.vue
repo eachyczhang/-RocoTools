@@ -198,7 +198,7 @@ async function loadBackups() {
     tempBackups.value = res.temp || []
     seasons.value = res.seasons || []
     snapshots.value = res.snapshots || []
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
 }
 
 async function createBackup() {
@@ -291,6 +291,6 @@ onMounted(async () => {
       { label: '属性', value: elements.total },
       { label: '蛋组', value: eggs.total },
     ]
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
 })
 </script>

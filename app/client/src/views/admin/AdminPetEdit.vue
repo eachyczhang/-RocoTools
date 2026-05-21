@@ -190,21 +190,11 @@ const formVariant = ref('')
 
 const { openPreview } = useImagePreview()
 
-const detailForm = ref({ height: '', weight: '', location: '' })
+const form = ref({
   pet_id: '', name: '', element_id: null, sub_element_id: null,
   ability_name: '', ability_desc: '', version: '',
   hp: 0, atk: 0, def: 0, matk: 0, mdef: 0, speed: 0, total: 0,
 })
-
-// 图片预览状态
-const showPreview = ref(false)
-const previewSrc = ref('')
-
-function openPreview(src) {
-  if (!src) return
-  previewSrc.value = src
-  showPreview.value = true
-}
 
 const detailForm = ref({ height: '', weight: '', location: '' })
 

@@ -318,6 +318,7 @@ const activeTab = ref('all')
 const saving = ref(false)
 const msg = ref('')
 const msgOk = ref(false)
+const fileInput = ref(null)
 
 const tabs = [
   { value: 'all', label: '全部活动' },
@@ -433,6 +434,10 @@ function handleFileSelect(e) {
   if (!file) return
   form.value.imageFile = file
   form.value.imageName = file.name
+  // 释放旧的 ObjectURL 防止内存泄漏
+  if (form.value.imagePreview && form.value.imagePreview.startsWith('blob:')) {
+    URL.revokeObjectURL(form.value.imagePreview)
+  }
   form.value.imagePreview = URL.createObjectURL(file)
   form.value.image = true
 }
@@ -513,7 +518,7 @@ async function openAddModal() {
 
 function closeAdd() {
   showAddModal.value = false
-  if ($refs.fileInput) $refs.fileInput.value = ''
+  if (fileInput.value) fileInput.value.value = ''
 }
 
 async function createEvent() {

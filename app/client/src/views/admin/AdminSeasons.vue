@@ -180,7 +180,7 @@ async function loadList() {
   try {
     const res = await adminApi.list('seasons', { limit: 100 })
     seasonList.value = res.rows || []
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
 }
 
 function loadSeason() {
@@ -194,9 +194,14 @@ function loadSeason() {
   form.end_date = s.end_date || ''
   form.note = s.note || ''
   form.legend_pet = s.legend_pet || ''
-  form.pass_pets = JSON.parse(s.pass_pets || '[]')
-  form.season_pets = JSON.parse(s.season_pets || '[]')
-  form.shiny_pets = JSON.parse(s.shiny_pets || '[]')
+  form.pass_pets = safeParseJSON(s.pass_pets)
+  form.season_pets = safeParseJSON(s.season_pets)
+  form.shiny_pets = safeParseJSON(s.shiny_pets)
+}
+
+function safeParseJSON(str) {
+  try { return JSON.parse(str || '[]') }
+  catch { return [] }
 }
 
 async function createSeason() {

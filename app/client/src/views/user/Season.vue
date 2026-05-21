@@ -188,7 +188,7 @@ onMounted(async () => {
     } else if (allSeasons.value.length) {
       await loadSeasonData(allSeasons.value[0])
     }
-  } catch {}
+  } catch (err) { console.error("[Page] 加载失败:", err) }
   loaded.value = true
 })
 </script>
