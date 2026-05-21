@@ -11,6 +11,7 @@ const eggsRouter = require('./routes/eggs');
 const petsRouter = require('./routes/pets');
 const naturesRouter = require('./routes/natures');
 const seasonsRouter = require('./routes/seasons');
+const eventsRouter = require('./routes/events');
 const adminRouter = require('./routes/admin');
 const { apiCache } = require('./middleware/apiCache');
 
@@ -35,6 +36,7 @@ app.use('/api/skills', apiCache(300), skillsRouter);
 app.use('/api/eggs', apiCache(600), eggsRouter);
 app.use('/api/natures', apiCache(600), naturesRouter);
 app.use('/api/seasons', apiCache(600), seasonsRouter);
+app.use('/api/events', apiCache(300), eventsRouter);
 app.use('/api/pets', apiCache(300), petsRouter);
 
 // 管理端 API（不缓存）

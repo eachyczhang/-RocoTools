@@ -58,6 +58,11 @@ const EDITABLE_TABLES = {
     primaryKey: 'id',
     editableFields: ['name', 'stat_up', 'stat_down'],
   },
+  season_events: {
+    label: '赛季活动',
+    primaryKey: 'id',
+    editableFields: ['season_id', 'category', 'name', 'start_date', 'end_date', 'periods', 'image', 'row_order'],
+  },
   pet_details: {
     label: '精灵详情',
     primaryKey: 'pet_uid',

@@ -53,3 +53,7 @@ export const seasonsApi = {
   list: () => request(`${BASE}/seasons`),
   current: () => request(`${BASE}/seasons/current`),
 }
+
+export const eventsApi = {
+  list: (seasonId) => request(`${BASE}/events`, seasonId ? { season_id: seasonId } : {}),
+}

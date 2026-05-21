@@ -144,6 +144,20 @@ CREATE TABLE IF NOT EXISTS seasons (
   note        TEXT                  -- 备注
 );
 
+-- 赛季活动日历
+CREATE TABLE IF NOT EXISTS season_events (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  season_id   TEXT NOT NULL,
+  category    TEXT NOT NULL,        -- 'version' | 'routine'
+  name        TEXT NOT NULL,
+  start_date  TEXT,                 -- 版本活动单段起始
+  end_date    TEXT,                 -- 版本活动单段结束
+  periods     TEXT,                 -- 常驻课题多段 JSON [{start, end}]
+  image       TEXT,                 -- banner图片路径
+  row_order   INTEGER DEFAULT 0,
+  FOREIGN KEY (season_id) REFERENCES seasons(id)
+);
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_pets_pet_id ON pets(pet_id);
 CREATE INDEX IF NOT EXISTS idx_pets_element ON pets(element_id);
