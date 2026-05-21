@@ -29,11 +29,6 @@
         </div>
       </div>
 
-      <!-- 活动日历 -->
-      <div v-if="events.length" class="mb-6 sm:mb-8">
-        <EventCalendar :events="events" :start-date="season.start_date" :end-date="season.end_date" />
-      </div>
-
       <!-- 通行证精灵 -->
       <div v-if="passPetList.length" class="mb-6 sm:mb-8">
         <h2 class="font-roco text-lg sm:text-xl text-primary-500 mb-3 sm:mb-4">通行证精灵</h2>
@@ -128,9 +123,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { petsApi, seasonsApi, eventsApi } from '@/api'
+import { petsApi, seasonsApi } from '@/api'
 import PetCard from '@/components/shared/PetCard.vue'
-import EventCalendar from '@/components/user/EventCalendar.vue'
 
 const allSeasons = ref([])
 const season = ref(null)
@@ -141,7 +135,6 @@ const passPetList = ref([])
 const seasonPetList = ref([])
 const shinyPetList = ref([])
 const shinyMap = ref({})
-const events = ref([])
 
 async function loadPetsByUids(uids) {
   if (!uids || !uids.length) return []
@@ -158,20 +151,17 @@ async function loadSeasonData(s) {
   passPetList.value = []
   seasonPetList.value = []
   shinyPetList.value = []
-  events.value = []
 
-  const [legend, pass, sPets, shPets, eventsRes] = await Promise.all([
+  const [legend, pass, sPets, shPets] = await Promise.all([
     s.legend_pet ? petsApi.get(s.legend_pet).catch(() => null) : null,
     loadPetsByUids(s.pass_pets || []),
     loadPetsByUids(s.season_pets || []),
     loadPetsByUids(s.shiny_pets || []),
-    eventsApi.list(s.id),
   ])
   legendPet.value = legend
   passPetList.value = pass
   seasonPetList.value = sPets
   shinyPetList.value = shPets
-  events.value = eventsRes.events || []
 }
 
 function switchSeason(s) {
