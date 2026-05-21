@@ -13,6 +13,8 @@
 | [skills.md](./skills.md) | 技能系统（4分类、3种学习方式、应对机制、血脉系统） |
 | [pets.md](./pets.md) | 精灵系统（种族值、多形态、进化、特性、性格、蛋组） |
 | [battle.md](./battle.md) | 战斗系统（背包、道具：愿力强化/进化之力） |
+| [seasons.md](./seasons.md) | 赛季系统（通行证/传说/限定/异色精灵） |
+| [events.md](./events.md) | 活动系统（版本活动/大量出没/常驻课题） |
 | [pika-monthly.md](./pika-monthly.md) | 皮卡月刊（角色时装，绑定精灵、出场动画） |
 
 ---
