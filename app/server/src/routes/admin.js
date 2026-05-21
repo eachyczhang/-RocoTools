@@ -193,9 +193,9 @@ router.post('/data/:table', (req, res) => {
       db.close();
       return res.status(409).json({ error: `${config.label}「${req.body[config.primaryKey]}」已存在，无法重复创建` });
     }
-    db.prepare(`INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`).run(...values);
+    const result = db.prepare(`INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`).run(...values);
     db.close();
-    res.json({ success: true });
+    res.json({ success: true, id: result.lastInsertRowid });
   } catch (err) {
     db.close();
     res.status(400).json({ error: err.message });
@@ -229,6 +229,7 @@ const IMAGE_TYPES = {
   pet_thumb: { dir: 'pets/thumbs', suffix: '_default.webp' },
   pet_ability: { dir: 'pets/abilities', suffix: '_ability.png' },
   season_cover: { dir: 'uploads/seasons', suffix: '_cover.png', isUpload: true },
+  event_image: { dir: 'uploads/events', suffix: '.png', isUpload: true },
   skill_icon: { dir: 'skills/icons', suffix: '.png' },
   element_icon: { dir: 'elements/icons', suffix: '.png' },
 };

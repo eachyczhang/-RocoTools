@@ -42,8 +42,15 @@
           <input v-model="form.end_date" type="date" class="input w-full" />
         </div>
         <div>
-          <label class="text-xs text-muted">图片路径（可选）</label>
-          <input v-model="form.image" class="input w-full" placeholder="/uploads/events/xxx.png" />
+          <label class="text-xs text-muted">活动图片（可选）</label>
+          <div class="flex items-center gap-2">
+            <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
+            <button @click="$refs.fileInput.click()" class="btn text-xs">
+              {{ form.image ? '已选择' : '选择图片' }}
+            </button>
+            <span v-if="form.image" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
+          </div>
+          <img v-if="form.imagePreview" :src="form.imagePreview" class="mt-2 h-12 rounded" />
         </div>
       </div>
 
@@ -117,10 +124,28 @@ const form = ref({
   category: 'version',
   start_date: '',
   end_date: '',
-  image: '',
+  image: null,
+  imageName: '',
+  imagePreview: '',
+  imageFile: null,
   row_order: 0,
   periodsArr: [{ start: '', end: '' }],
 })
+
+function handleFileSelect(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  form.value.imageFile = file
+  form.value.imageName = file.name
+  form.value.imagePreview = URL.createObjectURL(file)
+  form.value.image = true
+}
+
+async function uploadEventImage(eventId) {
+  if (!form.value.imageFile) return ''
+  const res = await adminApi.upload(form.value.imageFile, 'event_image', `event_${eventId}`)
+  return res.path || ''
+}
 
 async function loadEvents() {
   if (!currentSeason.value) return
@@ -142,16 +167,29 @@ async function createEvent() {
     periods: form.value.category === 'routine'
       ? JSON.stringify(form.value.periodsArr.filter(p => p.start && p.end))
       : '[]',
-    image: form.value.image || '',
+    image: '',
   }
 
   try {
-    await adminApi.create('season_events', data)
+    const res = await adminApi.create('season_events', data)
+    const newId = res.id || res.lastInsertRowid
+
+    // 上传图片并更新记录
+    if (form.value.imageFile && newId) {
+      const imgPath = await uploadEventImage(newId)
+      if (imgPath) {
+        await adminApi.update('season_events', newId, { image: imgPath })
+      }
+    }
+
     // 重置表单
     form.value.name = ''
     form.value.start_date = ''
     form.value.end_date = ''
-    form.value.image = ''
+    form.value.image = null
+    form.value.imageName = ''
+    form.value.imagePreview = ''
+    form.value.imageFile = null
     form.value.row_order = 0
     form.value.periodsArr = [{ start: '', end: '' }]
     await loadEvents()
