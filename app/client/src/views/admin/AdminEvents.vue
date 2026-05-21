@@ -125,17 +125,6 @@
                 <input v-model="form.end_date" type="date" class="input w-full" />
               </div>
             </div>
-            <div>
-              <label class="text-xs text-muted">活动图片（可选）</label>
-              <div class="flex items-center gap-2">
-                <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
-                <button @click="$refs.fileInput.click()" class="btn text-xs">
-                  {{ form.image ? '已选择' : '选择图片' }}
-                </button>
-                <span v-if="form.image" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
-              </div>
-              <img v-if="form.imagePreview" :src="form.imagePreview" class="mt-2 h-12 rounded" />
-            </div>
           </div>
 
           <!-- 大量出没：日期 + 精灵选择 -->
@@ -193,6 +182,19 @@
             </div>
           </div>
         </div>
+
+          <!-- 活动总览图（所有类型通用） -->
+          <div class="px-4 pb-3">
+            <label class="text-xs text-muted">活动总览图（可选）</label>
+            <div class="flex items-center gap-2 mt-1">
+              <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
+              <button @click="$refs.fileInput.click()" class="btn text-xs">
+                {{ form.image ? '已选择' : '选择图片' }}
+              </button>
+              <span v-if="form.image" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
+            </div>
+            <img v-if="form.imagePreview" :src="form.imagePreview" class="mt-2 h-12 rounded" />
+          </div>
 
         <div class="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
           <span v-if="addMsg" class="text-sm" :class="addMsgOk ? 'text-green-600' : 'text-red-500'">{{ addMsg }}</span>
@@ -297,9 +299,9 @@
             </div>
           </div>
 
-          <!-- 图片（仅版本活动） -->
-          <div v-if="editForm.category === 'version'">
-            <label class="text-xs text-muted">活动图片</label>
+          <!-- 活动图片 -->
+          <div>
+            <label class="text-xs text-muted">活动总览图</label>
             <div v-if="editForm.image && !editForm.imageFile" class="mb-2">
               <img 
                 :src="`/uploads/events/event_${editForm.id}.png`" 
@@ -612,7 +614,7 @@ async function createEvent() {
     const res = await adminApi.create('season_events', data)
     const newId = res.id || res.lastInsertRowid
 
-    if (form.value.imageFile && newId && form.value.category === 'version') {
+    if (form.value.imageFile && newId) {
       const imgPath = await uploadEventImage(newId)
       if (imgPath) {
         await adminApi.update('season_events', newId, { image: imgPath })
@@ -725,7 +727,7 @@ async function updateEvent() {
 
     await adminApi.update('season_events', editForm.id, data)
 
-    if (editForm.imageFile && editForm.category === 'version') {
+    if (editForm.imageFile) {
       const res = await adminApi.upload(editForm.imageFile, 'event_image', `event_${editForm.id}`)
       if (res.path) {
         await adminApi.update('season_events', editForm.id, { image: res.path })
