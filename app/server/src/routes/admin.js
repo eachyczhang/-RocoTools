@@ -61,6 +61,7 @@ const EDITABLE_TABLES = {
   season_events: {
     label: '赛季活动',
     primaryKey: 'id',
+    autoIncrement: true,
     editableFields: ['season_id', 'category', 'name', 'start_date', 'end_date', 'periods', 'image', 'row_order'],
   },
   pet_details: {
@@ -176,22 +177,32 @@ router.post('/data/:table', (req, res) => {
   const config = EDITABLE_TABLES[table];
   if (!config) return res.status(400).json({ error: '无效的表名' });
 
-  const fields = [config.primaryKey, ...config.editableFields].filter(f => req.body[f] !== undefined);
-  const values = fields.map(f => req.body[f]);
+  // 自增主键表不需要手动提供主键
+  const autoIncrement = config.autoIncrement || false;
+  let fields, values;
 
-  if (!req.body[config.primaryKey]) {
-    return res.status(400).json({ error: `缺少主键: ${config.primaryKey}` });
+  if (autoIncrement) {
+    fields = config.editableFields.filter(f => req.body[f] !== undefined);
+    values = fields.map(f => req.body[f]);
+  } else {
+    fields = [config.primaryKey, ...config.editableFields].filter(f => req.body[f] !== undefined);
+    values = fields.map(f => req.body[f]);
+    if (!req.body[config.primaryKey]) {
+      return res.status(400).json({ error: `缺少主键: ${config.primaryKey}` });
+    }
   }
 
   const placeholders = fields.map(() => '?').join(', ');
 
   const db = new Database(DB_PATH);
   try {
-    // 先检查是否已存在
-    const exists = db.prepare(`SELECT 1 FROM ${table} WHERE ${config.primaryKey} = ?`).get(req.body[config.primaryKey]);
-    if (exists) {
-      db.close();
-      return res.status(409).json({ error: `${config.label}「${req.body[config.primaryKey]}」已存在，无法重复创建` });
+    // 自增主键表不检查重复
+    if (!autoIncrement) {
+      const exists = db.prepare(`SELECT 1 FROM ${table} WHERE ${config.primaryKey} = ?`).get(req.body[config.primaryKey]);
+      if (exists) {
+        db.close();
+        return res.status(409).json({ error: `${config.label}「${req.body[config.primaryKey]}」已存在，无法重复创建` });
+      }
     }
     const result = db.prepare(`INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`).run(...values);
     db.close();
