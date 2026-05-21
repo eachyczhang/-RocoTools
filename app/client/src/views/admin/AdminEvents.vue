@@ -81,7 +81,7 @@
             <th class="py-2.5 px-3">类型</th>
             <th class="py-2.5 px-3">时间</th>
             <th class="py-2.5 px-3">排序</th>
-            <th class="py-2.5 px-3 w-20">操作</th>
+            <th class="py-2.5 px-3 w-32">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -98,7 +98,8 @@
               <template v-else>{{ event.periods.length }} 段</template>
             </td>
             <td class="py-2.5 px-3">{{ event.row_order }}</td>
-            <td class="py-2.5 px-3">
+            <td class="py-2.5 px-3 flex gap-2">
+              <button @click="openEdit(event)" class="text-xs text-primary-500 hover:underline">编辑</button>
               <button @click="deleteEvent(event)" class="text-xs text-red-500 hover:underline">删除</button>
             </td>
           </tr>
@@ -108,11 +109,89 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 编辑弹窗 -->
+    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="closeEdit">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+          <h3 class="font-roco text-lg text-primary-500">编辑活动</h3>
+          <button @click="closeEdit" class="text-muted hover:text-foreground text-xl leading-none">&times;</button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-muted">活动名称 <span class="text-red-500">*</span></label>
+              <input v-model="editForm.name" class="input w-full" placeholder="如 呱呱上学记" />
+            </div>
+            <div>
+              <label class="text-xs text-muted">类型 <span class="text-red-500">*</span></label>
+              <select v-model="editForm.category" class="select w-full" @change="onEditCategoryChange">
+                <option value="version">版本活动</option>
+                <option value="routine">常驻课题</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-muted">排序 <span class="text-red-500">*</span></label>
+              <input v-model.number="editForm.row_order" type="number" class="input w-full" placeholder="数字越小越靠上" />
+            </div>
+          </div>
+
+          <!-- 版本活动：单段日期 -->
+          <div v-if="editForm.category === 'version'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-muted">开始日期 <span class="text-red-500">*</span></label>
+              <input v-model="editForm.start_date" type="date" class="input w-full" />
+            </div>
+            <div>
+              <label class="text-xs text-muted">结束日期 <span class="text-red-500">*</span></label>
+              <input v-model="editForm.end_date" type="date" class="input w-full" />
+            </div>
+          </div>
+
+          <!-- 常驻课题：多段日期 -->
+          <div v-if="editForm.category === 'routine'">
+            <label class="text-xs text-muted mb-2 block">时间段列表</label>
+            <div v-for="(p, i) in editForm.periodsArr" :key="i" class="flex items-center gap-2 mb-2">
+              <input v-model="p.start" type="date" class="input flex-1" />
+              <span class="text-muted text-sm">~</span>
+              <input v-model="p.end" type="date" class="input flex-1" />
+              <button @click="editForm.periodsArr.splice(i, 1)" class="text-red-500 text-xs hover:underline">删除</button>
+            </div>
+            <button @click="editForm.periodsArr.push({ start: '', end: '' })" class="text-xs text-primary-500 hover:underline">+ 添加时间段</button>
+          </div>
+
+          <!-- 图片 -->
+          <div>
+            <label class="text-xs text-muted">活动图片</label>
+            <div v-if="editForm.image && !editForm.imageFile" class="mb-2">
+              <img :src="`/uploads/events/event_${editForm.id}.png`" class="h-12 rounded" />
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="file" ref="editFileInput" accept="image/*" class="hidden" @change="handleEditFileSelect" />
+              <button @click="$refs.editFileInput.click()" class="btn text-xs">
+                {{ editForm.imageFile ? '已选择新图片' : '更换图片' }}
+              </button>
+              <span v-if="editForm.imageFile" class="text-xs text-green-600 truncate max-w-[120px]">{{ editForm.imageName }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+          <span v-if="editMsg" class="text-sm" :class="editMsgOk ? 'text-green-600' : 'text-red-500'">{{ editMsg }}</span>
+          <div class="flex gap-2 ml-auto">
+            <button @click="closeEdit" class="btn text-sm">取消</button>
+            <button @click="updateEvent" class="btn-primary text-sm" :disabled="editSaving">
+              {{ editSaving ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { adminApi } from '@/api/admin'
 import { seasonsApi, eventsApi } from '@/api'
 import { useModal } from '@/composables/useModal'
@@ -123,6 +202,24 @@ const events = ref([])
 const saving = ref(false)
 const msg = ref('')
 const msgOk = ref(false)
+
+// 编辑弹窗状态
+const showEditModal = ref(false)
+const editSaving = ref(false)
+const editMsg = ref('')
+const editMsgOk = ref(false)
+const editForm = reactive({
+  id: null,
+  name: '',
+  category: 'version',
+  start_date: '',
+  end_date: '',
+  row_order: 0,
+  image: '',
+  imageName: '',
+  imageFile: null,
+  periodsArr: [],
+})
 
 const form = ref({
   name: '',
@@ -265,6 +362,113 @@ async function deleteEvent(event) {
     msg.value = '删除失败: ' + (err.message || '未知错误')
     msgOk.value = false
   }
+}
+
+// ===== 编辑功能 =====
+function onEditCategoryChange() {
+  if (editForm.category === 'routine' && !editForm.periodsArr.length) {
+    editForm.periodsArr = [{ start: '', end: '' }]
+  }
+}
+
+function handleEditFileSelect(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  editForm.imageFile = file
+  editForm.imageName = file.name
+}
+
+async function openEdit(event) {
+  editMsg.value = ''
+  editMsgOk.value = false
+  editForm.id = event.id
+  editForm.name = event.name
+  editForm.category = event.category
+  editForm.start_date = event.start_date || ''
+  editForm.end_date = event.end_date || ''
+  editForm.row_order = event.row_order ?? 0
+  editForm.image = event.image || ''
+  editForm.imageFile = null
+  editForm.imageName = ''
+  // 解析 periods（已有数据存的是 JSON 字符串）
+  try {
+    const periods = typeof event.periods === 'string' ? JSON.parse(event.periods) : (event.periods || [])
+    editForm.periodsArr = periods.length ? periods : [{ start: '', end: '' }]
+  } catch {
+    editForm.periodsArr = [{ start: '', end: '' }]
+  }
+  showEditModal.value = true
+}
+
+function closeEdit() {
+  showEditModal.value = false
+  editForm.id = null
+}
+
+async function updateEvent() {
+  // 必填项检测（复用创建时的逻辑）
+  if (!editForm.name?.trim()) {
+    editMsg.value = '请填写活动名称'
+    editMsgOk.value = false
+    return
+  }
+  if (editForm.category === 'version') {
+    if (!editForm.start_date || !editForm.end_date) {
+      editMsg.value = '请填写开始日期和结束日期'
+      editMsgOk.value = false
+      return
+    }
+    if (editForm.start_date > editForm.end_date) {
+      editMsg.value = '开始日期不能晚于结束日期'
+      editMsgOk.value = false
+      return
+    }
+  }
+  if (editForm.category === 'routine') {
+    const validPeriods = editForm.periodsArr.filter(p => p.start && p.end)
+    if (validPeriods.length === 0) {
+      editMsg.value = '请至少添加一个有效的时间段'
+      editMsgOk.value = false
+      return
+    }
+  }
+  if (editForm.row_order === null || editForm.row_order === '') {
+    editMsg.value = '请填写排序值'
+    editMsgOk.value = false
+    return
+  }
+
+  editSaving.value = true
+  try {
+    const data = {
+      name: editForm.name,
+      category: editForm.category,
+      row_order: editForm.row_order,
+      start_date: editForm.category === 'version' ? editForm.start_date : '',
+      end_date: editForm.category === 'version' ? editForm.end_date : '',
+      periods: editForm.category === 'routine'
+        ? JSON.stringify(editForm.periodsArr.filter(p => p.start && p.end))
+        : '[]',
+    }
+    await adminApi.update('season_events', editForm.id, data)
+
+    // 上传新图片
+    if (editForm.imageFile) {
+      const res = await adminApi.upload(editForm.imageFile, 'event_image', `event_${editForm.id}`)
+      if (res.path) {
+        await adminApi.update('season_events', editForm.id, { image: res.path })
+      }
+    }
+
+    editMsg.value = '保存成功'
+    editMsgOk.value = true
+    await loadEvents()
+    setTimeout(() => closeEdit(), 600)
+  } catch (err) {
+    editMsg.value = '保存失败: ' + (err.message || '未知错误')
+    editMsgOk.value = false
+  }
+  editSaving.value = false
 }
 
 onMounted(async () => {
