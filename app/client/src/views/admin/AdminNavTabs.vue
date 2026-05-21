@@ -120,8 +120,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { adminApi } from '@/api/admin'
-import { useModalState } from '@/composables/useModal'
+import { useModal, useModalState } from '@/composables/useModal'
 
+const modal = useModal()
 const { state: modalState, onConfirm: modalConfirm, onCancel: modalCancel } = useModalState()
 
 const loading = ref(false)
@@ -206,12 +207,12 @@ function onParentChange() {
 
 async function saveTab() {
   if (!form.value.tab_key || !form.value.label) {
-    alert('请填写必填字段：标识键、显示名称')
+    await modal.warning('提示', '请填写必填字段：标识键、显示名称')
     return
   }
   // 非子标签且非父级时，要求填写路由
   if (!form.value.parent_key && !form.value.is_parent && !form.value.route) {
-    alert('请填写路由路径，或勾选「作为父级（下拉菜单）」')
+    await modal.warning('提示', '请填写路由路径，或勾选「作为父级（下拉菜单）」')
     return
   }
   saving.value = true
@@ -235,7 +236,7 @@ async function saveTab() {
     showModal.value = false
     await loadList()
   } catch (e) {
-    alert('保存失败：' + e.message)
+    await modal.alert('保存失败', e.message)
   } finally {
     saving.value = false
   }
@@ -263,12 +264,13 @@ async function toggleVisible(item) {
 }
 
 async function deleteTab(item) {
-  if (!confirm(`确定要删除标签「${item.label}」吗？删除后用户端将不再显示此标签。`)) return
+  const ok = await modal.confirm('确认删除', `确定要删除标签「${item.label}」吗？删除后用户端将不再显示此标签。`)
+  if (!ok) return
   try {
     await adminApi.deleteNavTab(item.id)
     await loadList()
   } catch (e) {
-    alert('删除失败：' + e.message)
+    await modal.alert('删除失败', e.message)
   }
 }
 
