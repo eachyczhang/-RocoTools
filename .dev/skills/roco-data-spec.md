@@ -136,3 +136,16 @@
 ## 执行顺序（严格依赖关系）
 
 属性 → 技能 → 蛋组 → 性格 → 精灵列表 → 精灵详情
+
+## 数据保护
+
+- `manual_edit` 字段（pets/skills/pet_details 表）
+- 管理端编辑自动标记 `manual_edit = 1`
+- `import.js` 跳过标记记录，冲突存入 `data/pending_conflicts.json`
+- 管理端「数据审查」页面逐条对比处理
+
+## 赛季表（seasons）
+
+- 仅通过管理端配置，不通过爬虫获取
+- init.js 不删库重建，保留 seasons 等手动数据
+- 字段：id(PK), name, is_current, image, legend_pet, pass_pets(JSON), season_pets(JSON), shiny_pets(JSON), start_date, end_date, note

@@ -95,13 +95,18 @@ pip install -r crawler/requirements.txt
 
 ## Nginx 配置
 
-文件位置：项目根目录 `nginx.conf`（已入 git）
+- `nginx.conf` 入 git 但使用占位符：`<YOUR_DOMAIN>`、`<PROJECT_DIR>`
+- 部署脚本 `setup-nginx.sh`（不入 git）自动替换占位符并应用
+- 用法：`sudo bash setup-nginx.sh`
 
-更新配置：
-```bash
-sudo cp /var/www/roco/nginx.conf /etc/nginx/sites-available/roco
-sudo nginx -t && sudo systemctl restart nginx
-```
+---
+
+## 重要注意
+
+- `init.js` 不再删除旧数据库（保留 seasons 等手动录入数据）
+- `sync_db.js` 导入时跳过 `manual_edit=1` 的记录
+- 赛季数据只通过管理端配置，sync 不会覆盖
+- `data/uploads/` 存放手动上传图片，爬虫不碰
 
 ---
 

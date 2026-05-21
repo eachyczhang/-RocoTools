@@ -162,3 +162,24 @@ const modal = useModal()
 新增精灵必填：编号(pet_id)、名称(name)、主属性(element_id)、特性名称、特性描述、种族值（至少一项非零）
 
 新增时 UID 由编号自动生成，已存在则后端返回 409 + 友好提示。
+
+---
+
+## 赛季管理
+
+- 路由：`/admin/seasons`
+- 赛季数据仅在管理端配置，不通过爬虫获取
+- 配置项：封面图 + 传说精灵(1) + 通行证精灵(2) + 赛季限定(8) + 赛季异色(8)
+- PetPicker 选取精灵（搜索模式 + 图片浏览模式）
+- 封面图存入 `data/uploads/seasons/{season_id}_cover.png`（不被爬虫覆盖）
+- `is_current` 设为当前赛季时自动将其他赛季置 0
+
+---
+
+## 数据审查
+
+- 路由：`/admin/conflicts`
+- import.js 遇到 manual_edit=1 的记录 → 跳过并存入 pending_conflicts.json
+- 审查页面逐条对比：当前值(蓝) vs 爬虫新值(绿)，差异黄色标记
+- 操作：逐条覆盖/保留，或全部覆盖/保留
+- 覆盖后 manual_edit 重置为 0
