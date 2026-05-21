@@ -68,6 +68,11 @@ const EDITABLE_TABLES = {
     primaryKey: 'id',
     editableFields: ['name'],
   },
+  seasons: {
+    label: '赛季',
+    primaryKey: 'id',
+    editableFields: ['name', 'is_current', 'image', 'pass_pets', 'season_pets', 'shiny_pets', 'start_date', 'end_date', 'note'],
+  },
 };
 
 // GET /api/admin/tables — 获取可管理的表
@@ -142,6 +147,17 @@ router.put('/data/:table/:id', (req, res) => {
   const values = Object.values(updates);
 
   const db = new Database(DB_PATH);
+
+  // 对支持 manual_edit 的表自动标记
+  const manualEditTables = ['pets', 'skills', 'pet_details'];
+  if (manualEditTables.includes(table)) {
+    const fullSet = setClauses + ', manual_edit = 1';
+    const result = db.prepare(`UPDATE ${table} SET ${fullSet} WHERE ${config.primaryKey} = ?`).run(...values, id);
+    db.close();
+    if (result.changes === 0) return res.status(404).json({ error: '记录不存在' });
+    return res.json({ success: true, changes: result.changes });
+  }
+
   const result = db.prepare(`UPDATE ${table} SET ${setClauses} WHERE ${config.primaryKey} = ?`).run(...values, id);
   db.close();
 
@@ -207,6 +223,7 @@ const IMAGE_TYPES = {
   pet_egg: { dir: 'pets/egg', suffix: '_egg.png' },
   pet_thumb: { dir: 'pets/thumbs', suffix: '_default.webp' },
   pet_ability: { dir: 'pets/abilities', suffix: '_ability.png' },
+  season_cover: { dir: 'uploads/seasons', suffix: '_cover.png', isUpload: true },
   skill_icon: { dir: 'skills/icons', suffix: '.png' },
   element_icon: { dir: 'elements/icons', suffix: '.png' },
 };
@@ -237,12 +254,16 @@ router.post('/upload', upload.single('file'), (req, res) => {
   const imageConfig = IMAGE_TYPES[type];
   if (!imageConfig) return res.status(400).json({ error: `无效的图片类型: ${type}` });
 
-  const dir = path.join(PUBLIC_DIR, imageConfig.dir);
+  // isUpload 类型存到 data/uploads/，否则存到 data/public/
+  const baseDir = imageConfig.isUpload ? DATA_DIR : PUBLIC_DIR;
+  const dir = path.join(baseDir, imageConfig.dir);
   fs.mkdirSync(dir, { recursive: true });
 
   const filename = `${uid}${imageConfig.suffix}`;
   const filepath = path.join(dir, filename);
-  const publicPath = `/public/${imageConfig.dir}/${filename}`;
+  const publicPath = imageConfig.isUpload
+    ? `/uploads/${imageConfig.dir.replace('uploads/', '')}/${filename}`
+    : `/public/${imageConfig.dir}/${filename}`;
 
   fs.writeFileSync(filepath, req.file.buffer);
 
@@ -254,6 +275,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
     pet_egg: { table: 'pet_details', field: 'image_egg', key: 'pet_uid' },
     pet_thumb: { table: 'pets', field: 'thumb_url', key: 'uid' },
     pet_ability: { table: 'pet_details', field: 'ability_icon', key: 'pet_uid' },
+    season_cover: { table: 'seasons', field: 'image', key: 'id' },
     skill_icon: { table: 'skills', field: 'icon_url', key: 'uid' },
     element_icon: { table: 'elements', field: 'icon', key: 'id' },
   };
@@ -266,6 +288,104 @@ router.post('/upload', upload.single('file'), (req, res) => {
   }
 
   res.json({ success: true, path: publicPath });
+});
+
+// ============================================================
+// 数据审查（冲突处理）
+// ============================================================
+
+const CONFLICTS_PATH = path.join(__dirname, '..', '..', 'data', 'pending_conflicts.json');
+
+function loadConflicts() {
+  if (!fs.existsSync(CONFLICTS_PATH)) return [];
+  return JSON.parse(fs.readFileSync(CONFLICTS_PATH, 'utf-8'));
+}
+
+function saveConflicts(conflicts) {
+  if (conflicts.length === 0) {
+    if (fs.existsSync(CONFLICTS_PATH)) fs.unlinkSync(CONFLICTS_PATH);
+  } else {
+    fs.writeFileSync(CONFLICTS_PATH, JSON.stringify(conflicts, null, 2), 'utf-8');
+  }
+}
+
+// GET /api/admin/conflicts — 获取待审查冲突
+router.get('/conflicts', (req, res) => {
+  const conflicts = loadConflicts();
+  // 附加当前数据库中的值用于对比
+  if (conflicts.length === 0) return res.json({ conflicts: [] });
+
+  const db = new Database(DB_PATH, { readonly: true });
+  const result = conflicts.map(c => {
+    const config = EDITABLE_TABLES[c.table];
+    if (!config) return { ...c, currentData: null };
+    const row = db.prepare(`SELECT * FROM ${c.table} WHERE ${config.primaryKey} = ?`).get(c.id);
+    return { ...c, currentData: row || null };
+  });
+  db.close();
+  res.json({ conflicts: result });
+});
+
+// POST /api/admin/conflicts/:index/accept — 接受爬虫数据（覆盖）
+router.post('/conflicts/:index/accept', (req, res) => {
+  const conflicts = loadConflicts();
+  const idx = parseInt(req.params.index);
+  if (idx < 0 || idx >= conflicts.length) return res.status(400).json({ error: '无效索引' });
+
+  const c = conflicts[idx];
+  const config = EDITABLE_TABLES[c.table];
+  if (!config) return res.status(400).json({ error: '无效表' });
+
+  // 用爬虫数据覆盖，同时清除 manual_edit
+  const fields = Object.keys(c.newData);
+  const setClauses = [...fields.map(k => `${k} = ?`), 'manual_edit = 0'].join(', ');
+  const values = fields.map(k => c.newData[k]);
+
+  const db = new Database(DB_PATH);
+  db.prepare(`UPDATE ${c.table} SET ${setClauses} WHERE ${config.primaryKey} = ?`).run(...values, c.id);
+  db.close();
+
+  // 从冲突列表移除
+  conflicts.splice(idx, 1);
+  saveConflicts(conflicts);
+  res.json({ success: true, remaining: conflicts.length });
+});
+
+// POST /api/admin/conflicts/:index/reject — 保留当前数据（忽略爬虫数据）
+router.post('/conflicts/:index/reject', (req, res) => {
+  const conflicts = loadConflicts();
+  const idx = parseInt(req.params.index);
+  if (idx < 0 || idx >= conflicts.length) return res.status(400).json({ error: '无效索引' });
+
+  // 直接从列表移除（保持 manual_edit = 1）
+  conflicts.splice(idx, 1);
+  saveConflicts(conflicts);
+  res.json({ success: true, remaining: conflicts.length });
+});
+
+// POST /api/admin/conflicts/accept-all — 全部接受覆盖
+router.post('/conflicts/accept-all', (req, res) => {
+  const conflicts = loadConflicts();
+  if (conflicts.length === 0) return res.json({ success: true });
+
+  const db = new Database(DB_PATH);
+  for (const c of conflicts) {
+    const config = EDITABLE_TABLES[c.table];
+    if (!config) continue;
+    const fields = Object.keys(c.newData);
+    const setClauses = [...fields.map(k => `${k} = ?`), 'manual_edit = 0'].join(', ');
+    const values = fields.map(k => c.newData[k]);
+    db.prepare(`UPDATE ${c.table} SET ${setClauses} WHERE ${config.primaryKey} = ?`).run(...values, c.id);
+  }
+  db.close();
+  saveConflicts([]);
+  res.json({ success: true, message: `已覆盖 ${conflicts.length} 条` });
+});
+
+// POST /api/admin/conflicts/reject-all — 全部保留
+router.post('/conflicts/reject-all', (req, res) => {
+  saveConflicts([]);
+  res.json({ success: true });
 });
 
 // ============================================================

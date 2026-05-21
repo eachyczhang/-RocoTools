@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS skills (
   description TEXT,
   version     TEXT,
   icon_url    TEXT,
+  manual_edit INTEGER DEFAULT 0,
   FOREIGN KEY (element_id) REFERENCES elements(id)
 );
 
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS pets (
   version       TEXT,
   image_url     TEXT,
   thumb_url     TEXT,
+  manual_edit   INTEGER DEFAULT 0,
   FOREIGN KEY (element_id) REFERENCES elements(id),
   FOREIGN KEY (sub_element_id) REFERENCES elements(id)
 );
@@ -87,6 +89,7 @@ CREATE TABLE IF NOT EXISTS pet_details (
   restrain_weak    TEXT, -- JSON array
   restrain_resist  TEXT, -- JSON array
   restrain_resisted TEXT, -- JSON array
+  manual_edit     INTEGER DEFAULT 0,
   FOREIGN KEY (pet_uid) REFERENCES pets(uid),
   FOREIGN KEY (element_id) REFERENCES elements(id)
 );
@@ -124,6 +127,20 @@ CREATE TABLE IF NOT EXISTS natures (
   stat_up     TEXT NOT NULL,
   stat_down   TEXT NOT NULL,
   sub_natures TEXT  -- JSON array
+);
+
+-- 赛季表
+CREATE TABLE IF NOT EXISTS seasons (
+  id          TEXT PRIMARY KEY,     -- 赛季标识（如 S1、S2）
+  name        TEXT NOT NULL,        -- 赛季名称
+  is_current  INTEGER DEFAULT 0,    -- 是否为当前赛季
+  image       TEXT,                 -- 赛季封面图
+  pass_pets   TEXT,                 -- 通行证精灵 JSON array (2 uid)
+  season_pets TEXT,                 -- 赛季限定精灵 JSON array (8 uid，必有异色)
+  shiny_pets  TEXT,                 -- 常态异色精灵 JSON array (8 uid)
+  start_date  TEXT,                 -- 赛季开始日期
+  end_date    TEXT,                 -- 赛季结束日期
+  note        TEXT                  -- 备注
 );
 
 -- 索引

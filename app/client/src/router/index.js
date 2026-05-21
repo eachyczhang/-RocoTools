@@ -21,6 +21,8 @@ const routes = [
   { path: '/admin/skills/:uid', name: 'AdminSkillEdit', component: () => import('@/views/admin/AdminSkillEdit.vue'), meta: { hidden: true } },
   { path: '/admin/natures', name: 'AdminNatures', component: () => import('@/views/admin/AdminNatures.vue'), meta: { hidden: true } },
   { path: '/admin/eggs', name: 'AdminEggs', component: () => import('@/views/admin/AdminEggs.vue'), meta: { hidden: true } },
+  { path: '/admin/seasons', name: 'AdminSeasons', component: () => import('@/views/admin/AdminSeasons.vue'), meta: { hidden: true } },
+  { path: '/admin/conflicts', name: 'AdminConflicts', component: () => import('@/views/admin/AdminConflicts.vue'), meta: { hidden: true } },
 ]
 
 export default createRouter({

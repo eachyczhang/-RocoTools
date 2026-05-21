@@ -167,6 +167,8 @@ const navCards = [
   { path: '/admin/skills', title: '技能管理', desc: '编辑技能数据、图标' },
   { path: '/admin/natures', title: '性格管理', desc: '编辑性格属性加减' },
   { path: '/admin/eggs', title: '蛋组管理', desc: '编辑蛋组成员' },
+  { path: '/admin/seasons', title: '赛季管理', desc: '配置通行证/限定/异色精灵' },
+  { path: '/admin/conflicts', title: '数据审查', desc: '处理爬虫与手动编辑的数据冲突' },
 ]
 
 // 备份

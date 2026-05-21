@@ -10,6 +10,7 @@ const skillsRouter = require('./routes/skills');
 const eggsRouter = require('./routes/eggs');
 const petsRouter = require('./routes/pets');
 const naturesRouter = require('./routes/natures');
+const seasonsRouter = require('./routes/seasons');
 const adminRouter = require('./routes/admin');
 const { apiCache } = require('./middleware/apiCache');
 
@@ -20,6 +21,10 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', '..', '..', 'data', 'public');
 app.use('/public', express.static(PUBLIC_DIR));
 
+// 手动上传资源：data/uploads/ → /uploads/（入 git）
+const UPLOADS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'uploads');
+app.use('/uploads', express.static(UPLOADS_DIR));
+
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -29,6 +34,7 @@ app.use('/api/elements', apiCache(600), elementsRouter);
 app.use('/api/skills', apiCache(300), skillsRouter);
 app.use('/api/eggs', apiCache(600), eggsRouter);
 app.use('/api/natures', apiCache(600), naturesRouter);
+app.use('/api/seasons', apiCache(600), seasonsRouter);
 app.use('/api/pets', apiCache(300), petsRouter);
 
 // 管理端 API（不缓存）

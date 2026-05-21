@@ -87,4 +87,11 @@ export const adminApi = {
   deleteSeasonBackup: (name, confirm_token) => adminRequest(`/backups/season/${name}`, {
     method: 'DELETE', body: JSON.stringify({ confirm_token }),
   }),
+
+  // 数据审查
+  conflicts: () => adminRequest('/conflicts'),
+  acceptConflict: (index) => adminRequest(`/conflicts/${index}/accept`, { method: 'POST' }),
+  rejectConflict: (index) => adminRequest(`/conflicts/${index}/reject`, { method: 'POST' }),
+  acceptAllConflicts: () => adminRequest('/conflicts/accept-all', { method: 'POST' }),
+  rejectAllConflicts: () => adminRequest('/conflicts/reject-all', { method: 'POST' }),
 }
