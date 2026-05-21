@@ -31,7 +31,7 @@
           <td class="py-3 px-4 text-xs text-muted">{{ item.tab_key }}</td>
           <td class="py-3 px-4 text-xs text-muted">{{ getParentLabel(item.parent_key) }}</td>
           <td class="py-3 px-4">
-            <input v-model.number="item.sort_order" class="input w-16 text-center text-xs" @change="updateTab(item)" />
+            <input v-model.number="item.sort_order" class="input w-16 text-center text-xs" @blur="onSortBlur(item)" />
           </td>
           <td class="py-3 px-4">
             <button
@@ -261,6 +261,12 @@ async function updateTab(item) {
 async function toggleVisible(item) {
   item.is_visible = item.is_visible ? 0 : 1
   await updateTab(item)
+}
+
+async function onSortBlur(item) {
+  await updateTab(item)
+  // 延迟刷新列表，避免焦点丢失时列表立即重排导致视觉跳动
+  setTimeout(() => { list.value = [...list.value] }, 300)
 }
 
 async function deleteTab(item) {
