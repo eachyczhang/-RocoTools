@@ -227,6 +227,44 @@ router.delete('/data/:table/:id', (req, res) => {
   res.json({ success: true, changes: result.changes });
 });
 
+// POST /api/admin/data/:table/batch — 批量更新
+router.post('/data/:table/batch', (req, res) => {
+  const { table } = req.params;
+  const config = EDITABLE_TABLES[table];
+  if (!config) return res.status(400).json({ error: '无效的表名' });
+
+  const updates = req.body.updates || [];
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return res.status(400).json({ error: '缺少 updates 数组' });
+  }
+
+  const db = new Database(DB_PATH);
+  let totalChanges = 0;
+
+  for (const item of updates) {
+    const id = item[config.primaryKey];
+    if (id == null) continue;
+
+    const setClauses = [];
+    const values = [];
+    for (const field of config.editableFields) {
+      if (item[field] !== undefined) {
+        setClauses.push(`${field} = ?`);
+        values.push(item[field]);
+      }
+    }
+
+    if (setClauses.length === 0) continue;
+
+    const result = db.prepare(`UPDATE ${table} SET ${setClauses.join(', ')} WHERE ${config.primaryKey} = ?`)
+      .run(...values, id);
+    totalChanges += result.changes;
+  }
+
+  db.close();
+  res.json({ success: true, changes: totalChanges });
+});
+
 // ============================================================
 // 图片上传
 // ============================================================

@@ -3,154 +3,180 @@
     <router-link to="/admin/dashboard" class="text-sm text-muted hover:text-primary-500 mb-3 inline-block">← 返回管理首页</router-link>
     <h1 class="font-roco text-xl sm:text-2xl text-primary-500 mb-4">活动管理</h1>
 
-    <p class="text-xs sm:text-sm text-muted mb-4">管理当前赛季的活动日历数据（仅展示当前赛季活动）</p>
+    <p class="text-xs sm:text-sm text-muted mb-4">管理当前赛季的活动日历数据</p>
 
     <!-- 当前赛季信息 -->
     <div v-if="currentSeason" class="card mb-4 !p-3">
       <span class="text-sm">当前赛季：<strong class="text-primary-500">{{ currentSeason.name }}</strong> ({{ currentSeason.id }})</span>
     </div>
 
-    <!-- 新增活动 -->
-    <div class="card mb-4">
-      <h2 class="font-roco text-base text-primary-500 mb-3">新增活动</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-        <div>
-          <label class="text-xs text-muted">活动名称 <span class="text-red-500">*</span></label>
-          <input v-model="form.name" class="input w-full" placeholder="如 呱呱上学记" />
-        </div>
-        <div>
-          <label class="text-xs text-muted">类型 <span class="text-red-500">*</span></label>
-          <select v-model="form.category" class="select w-full">
-            <option value="version">版本活动</option>
-            <option value="mass_outbreak">大量出没</option>
-            <option value="routine">常驻课题</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-muted">排序 <span class="text-red-500">*</span></label>
-          <input v-model.number="form.row_order" type="number" class="input w-full" placeholder="数字越小越靠上" />
-        </div>
+    <!-- Tab 切换 -->
+    <div class="card mb-4 !p-0">
+      <div class="flex border-b border-surface-light-border dark:border-surface-dark-border bg-gray-50 dark:bg-white/3">
+        <button v-for="tab in tabs" :key="tab.value"
+          @click="activeTab = tab.value"
+          class="flex-1 py-3 text-sm font-medium transition-colors"
+          :class="activeTab === tab.value
+            ? 'text-primary-500 border-b-2 border-primary-500 -mb-px bg-white dark:bg-gray-800'
+            : 'text-muted hover:text-foreground'">
+          {{ tab.label }}
+          <span class="ml-1 text-xs font-normal">({{ getCategoryCount(tab.value) }})</span>
+        </button>
       </div>
+      <div class="px-4 py-3">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-roco text-base text-primary-500">{{ tabs.find(t => t.value === activeTab)?.label }}</h2>
+          <button @click="openAddModal" class="btn-primary text-sm">+ 新增活动</button>
+        </div>
 
-      <!-- 版本活动：单段日期 + 图片 -->
-      <div v-if="form.category === 'version'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-        <div>
-          <label class="text-xs text-muted">开始日期 <span class="text-red-500">*</span></label>
-          <input v-model="form.start_date" type="date" class="input w-full" />
-        </div>
-        <div>
-          <label class="text-xs text-muted">结束日期 <span class="text-red-500">*</span></label>
-          <input v-model="form.end_date" type="date" class="input w-full" />
-        </div>
-        <div>
-          <label class="text-xs text-muted">活动图片（可选）</label>
-          <div class="flex items-center gap-2">
-            <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
-            <button @click="$refs.fileInput.click()" class="btn text-xs">
-              {{ form.image ? '已选择' : '选择图片' }}
-            </button>
-            <span v-if="form.image" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
-          </div>
-          <img v-if="form.imagePreview" :src="form.imagePreview" class="mt-2 h-12 rounded" />
-        </div>
+        <!-- 活动列表（支持拖拽排序） -->
+        <div class="drag-hint text-xs text-muted mb-2">拖拽活动可调整排序</div>
+        <draggable v-model="filteredEvents" tag="table" class="w-full text-sm" handle=".drag-handle" @end="saveOrder">
+          <thead>
+            <tr class="text-left text-muted text-xs bg-gray-50 dark:bg-white/3">
+              <th class="py-2.5 px-3 w-8"></th>
+              <th class="py-2.5 px-3">名称</th>
+              <th class="py-2.5 px-3">详情</th>
+              <th class="py-2.5 px-3">时间</th>
+              <th class="py-2.5 px-3 w-32">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="event in filteredEvents" :key="event.id"
+              class="border-t border-surface-light-border/50 dark:border-surface-dark-border/50">
+              <td class="py-2.5 px-3">
+                <div class="drag-handle cursor-grab text-muted text-xl">⋮⋮</div>
+              </td>
+              <td class="py-2.5 px-3 font-medium">{{ event.name }}</td>
+              <td class="py-2.5 px-3 text-xs">
+                <template v-if="activeTab === 'mass_outbreak' && event.pet_name">
+                  <div class="flex items-center gap-1">
+                    <img v-if="event.pet_icon" :src="event.pet_icon" class="w-5 h-5 rounded" />
+                    <span>{{ event.pet_name }}</span>
+                  </div>
+                </template>
+                <template v-else-if="activeTab === 'routine' && event.sub_type">
+                  <span class="text-muted text-xs">{{ subTypeLabel(event.sub_type) }}</span>
+                </template>
+                <template v-else>-</template>
+              </td>
+              <td class="py-2.5 px-3 text-xs text-muted">
+                <template v-if="activeTab !== 'routine'">{{ event.start_date }} ~ {{ event.end_date }}</template>
+                <template v-else>{{ event.periods?.length || 0 }} 段</template>
+              </td>
+              <td class="py-2.5 px-3 flex gap-2">
+                <button @click="openEdit(event)" class="text-xs text-primary-500 hover:underline">编辑</button>
+                <button @click="deleteEvent(event)" class="text-xs text-red-500 hover:underline">删除</button>
+              </td>
+            </tr>
+            <tr v-if="filteredEvents.length === 0">
+              <td colspan="5" class="py-8 text-center text-muted text-sm">暂无活动数据</td>
+            </tr>
+          </tbody>
+        </draggable>
       </div>
-
-      <!-- 大量出没：日期 + 精灵选择（PetPicker） -->
-      <div v-if="form.category === 'mass_outbreak'" class="space-y-3 mb-3">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="text-xs text-muted">开始日期 <span class="text-red-500">*</span></label>
-            <input v-model="form.start_date" type="date" class="input w-full" />
-          </div>
-          <div>
-            <label class="text-xs text-muted">结束日期 <span class="text-red-500">*</span></label>
-            <input v-model="form.end_date" type="date" class="input w-full" />
-          </div>
-        </div>
-        <div>
-          <label class="text-xs text-muted">出没精灵 <span class="text-red-500">*</span></label>
-          <PetPicker v-model="form.pet_uid" />
-        </div>
-      </div>
-
-      <!-- 常驻课题：子类型 + 多段日期 -->
-      <div v-if="form.category === 'routine'" class="space-y-3 mb-3">
-        <div>
-          <label class="text-xs text-muted">课题类型 <span class="text-red-500">*</span></label>
-          <select v-model="form.sub_type" class="select w-full">
-            <option value="">请选择</option>
-            <option value="starlight">星光对决</option>
-            <option value="destiny">命定花种</option>
-            <option value="pika">皮卡摄影委托</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-muted mb-2 block">时间段列表</label>
-          <div v-for="(p, i) in form.periodsArr" :key="i" class="flex items-center gap-2 mb-2">
-            <input v-model="p.start" type="date" class="input flex-1" />
-            <span class="text-muted text-sm">~</span>
-            <input v-model="p.end" type="date" class="input flex-1" />
-            <button @click="form.periodsArr.splice(i, 1)" class="text-red-500 text-xs hover:underline">删除</button>
-          </div>
-          <button @click="form.periodsArr.push({ start: '', end: '' })" class="text-xs text-primary-500 hover:underline">+ 添加时间段</button>
-        </div>
-      </div>
-
-      <button @click="createEvent" class="btn-primary text-sm" :disabled="saving">
-        {{ saving ? '保存中...' : '添加活动' }}
-      </button>
-      <span v-if="msg" class="ml-3 text-sm" :class="msgOk ? 'text-green-600' : 'text-red-500'">{{ msg }}</span>
     </div>
 
-    <!-- 活动列表 -->
-    <div class="card !p-0 overflow-hidden">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-muted text-xs bg-gray-50 dark:bg-white/3">
-            <th class="py-2.5 px-3">名称</th>
-            <th class="py-2.5 px-3">类型</th>
-            <th class="py-2.5 px-3">详情</th>
-            <th class="py-2.5 px-3">时间</th>
-            <th class="py-2.5 px-3">排序</th>
-            <th class="py-2.5 px-3 w-32">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="event in events" :key="event.id"
-            class="border-t border-surface-light-border/50 dark:border-surface-dark-border/50">
-            <td class="py-2.5 px-3 font-medium">{{ event.name }}</td>
-            <td class="py-2.5 px-3">
-              <span class="badge" :class="categoryBadgeClass(event.category)">
-                {{ categoryLabel(event.category) }}
-              </span>
-            </td>
-            <td class="py-2.5 px-3 text-xs">
-              <template v-if="event.category === 'mass_outbreak' && event.pet_name">
-                <div class="flex items-center gap-1">
-                  <img v-if="event.pet_icon" :src="event.pet_icon" class="w-5 h-5 rounded" />
-                  <span>{{ event.pet_name }}</span>
-                </div>
-              </template>
-              <template v-else-if="event.category === 'routine' && event.sub_type">
-                <span class="text-muted">{{ subTypeLabel(event.sub_type) }}</span>
-              </template>
-              <template v-else>-</template>
-            </td>
-            <td class="py-2.5 px-3 text-xs text-muted">
-              <template v-if="event.category === 'version' || event.category === 'mass_outbreak'">{{ event.start_date }} ~ {{ event.end_date }}</template>
-              <template v-else>{{ event.periods?.length || 0 }} 段</template>
-            </td>
-            <td class="py-2.5 px-3">{{ event.row_order }}</td>
-            <td class="py-2.5 px-3 flex gap-2">
-              <button @click="openEdit(event)" class="text-xs text-primary-500 hover:underline">编辑</button>
-              <button @click="deleteEvent(event)" class="text-xs text-red-500 hover:underline">删除</button>
-            </td>
-          </tr>
-          <tr v-if="!events.length">
-            <td colspan="6" class="py-8 text-center text-muted text-sm">暂无活动数据</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 新增弹窗 -->
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="closeAdd">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+          <h3 class="font-roco text-lg text-primary-500">新增活动</h3>
+          <button @click="closeAdd" class="text-muted hover:text-foreground text-xl leading-none">&times;</button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-muted">活动名称 <span class="text-red-500">*</span></label>
+              <input v-model="form.name" class="input w-full" placeholder="如 呱呱上学记" />
+            </div>
+            <div>
+              <label class="text-xs text-muted">类型 <span class="text-red-500">*</span></label>
+              <select v-model="form.category" class="select w-full">
+                <option value="version">版本活动</option>
+                <option value="mass_outbreak">大量出没</option>
+                <option value="routine">常驻课题</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 版本活动：单段日期 + 图片 -->
+          <div v-if="form.category === 'version'" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-muted">开始日期 <span class="text-red-500">*</span></label>
+                <input v-model="form.start_date" type="date" class="input w-full" />
+              </div>
+              <div>
+                <label class="text-xs text-muted">结束日期 <span class="text-red-500">*</span></label>
+                <input v-model="form.end_date" type="date" class="input w-full" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-muted">活动图片（可选）</label>
+              <div class="flex items-center gap-2">
+                <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
+                <button @click="$refs.fileInput.click()" class="btn text-xs">
+                  {{ form.image ? '已选择' : '选择图片' }}
+                </button>
+                <span v-if="form.image" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
+              </div>
+              <img v-if="form.imagePreview" :src="form.imagePreview" class="mt-2 h-12 rounded" />
+            </div>
+          </div>
+
+          <!-- 大量出没：日期 + 精灵选择 -->
+          <div v-if="form.category === 'mass_outbreak'" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-muted">开始日期 <span class="text-red-500">*</span></label>
+                <input v-model="form.start_date" type="date" class="input w-full" />
+              </div>
+              <div>
+                <label class="text-xs text-muted">结束日期 <span class="text-red-500">*</span></label>
+                <input v-model="form.end_date" type="date" class="input w-full" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-muted">出没精灵 <span class="text-red-500">*</span></label>
+              <PetPicker v-model="form.pet_uid" />
+            </div>
+          </div>
+
+          <!-- 常驻课题：子类型 + 多段日期 -->
+          <div v-if="form.category === 'routine'" class="space-y-3">
+            <div>
+              <label class="text-xs text-muted">课题类型 <span class="text-red-500">*</span></label>
+              <select v-model="form.sub_type" class="select w-full">
+                <option value="">请选择</option>
+                <option value="starlight">星光对决</option>
+                <option value="destiny">命定花种</option>
+                <option value="pika">皮卡摄影委托</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-muted mb-2 block">时间段列表</label>
+              <div v-for="(p, i) in form.periodsArr" :key="i" class="flex items-center gap-2 mb-2">
+                <input v-model="p.start" type="date" class="input flex-1" />
+                <span class="text-muted text-sm">~</span>
+                <input v-model="p.end" type="date" class="input flex-1" />
+                <button @click="form.periodsArr.splice(i, 1)" class="text-red-500 text-xs hover:underline">删除</button>
+              </div>
+              <button @click="form.periodsArr.push({ start: '', end: '' })" class="text-xs text-primary-500 hover:underline">+ 添加时间段</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-surface-light-border dark:border-surface-dark-border px-4 py-3 flex items-center justify-between">
+          <span v-if="addMsg" class="text-sm" :class="addMsgOk ? 'text-green-600' : 'text-red-500'">{{ addMsg }}</span>
+          <div class="flex gap-2 ml-auto">
+            <button @click="closeAdd" class="btn text-sm">取消</button>
+            <button @click="createEvent" class="btn-primary text-sm" :disabled="saving">
+              {{ saving ? '保存中...' : '添加' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -174,10 +200,6 @@
                 <option value="routine">常驻课题</option>
               </select>
             </div>
-            <div>
-              <label class="text-xs text-muted">排序 <span class="text-red-500">*</span></label>
-              <input v-model.number="editForm.row_order" type="number" class="input w-full" placeholder="数字越小越靠上" />
-            </div>
           </div>
 
           <!-- 版本活动：单段日期 -->
@@ -192,7 +214,7 @@
             </div>
           </div>
 
-          <!-- 大量出没：日期 + 精灵选择（PetPicker） -->
+          <!-- 大量出没：日期 + 精灵选择 -->
           <div v-if="editForm.category === 'mass_outbreak'" class="space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -264,18 +286,26 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { adminApi } from '@/api/admin'
 import { seasonsApi, eventsApi, petsApi } from '@/api'
 import { useModal } from '@/composables/useModal'
 import PetPicker from '@/components/shared/PetPicker.vue'
+import draggable from 'vuedraggable'
 
 const modal = useModal()
 const currentSeason = ref(null)
-const events = ref([])
+const activeTab = ref('all')
 const saving = ref(false)
 const msg = ref('')
 const msgOk = ref(false)
+
+const tabs = [
+  { value: 'all', label: '全部活动' },
+  { value: 'version', label: '版本活动' },
+  { value: 'mass_outbreak', label: '大量出没' },
+  { value: 'routine', label: '常驻课题' },
+]
 
 // 编辑弹窗状态
 const showEditModal = ref(false)
@@ -289,7 +319,6 @@ const editForm = reactive({
   sub_type: '',
   start_date: '',
   end_date: '',
-  row_order: 0,
   pet_uid: '',
   image: '',
   imageName: '',
@@ -297,6 +326,10 @@ const editForm = reactive({
   periodsArr: [],
 })
 
+// 新增弹窗状态
+const showAddModal = ref(false)
+const addMsg = ref('')
+const addMsgOk = ref(false)
 const form = ref({
   name: '',
   category: 'version',
@@ -307,16 +340,9 @@ const form = ref({
   imageName: '',
   imagePreview: '',
   imageFile: null,
-  row_order: 0,
   pet_uid: '',
   periodsArr: [{ start: '', end: '' }],
 })
-
-const CATEGORY_LABELS = {
-  version: '版本',
-  mass_outbreak: '大量出没',
-  routine: '常驻',
-}
 
 const SUB_TYPE_LABELS = {
   starlight: '星光对决',
@@ -324,16 +350,32 @@ const SUB_TYPE_LABELS = {
   pika: '皮卡摄影委托',
 }
 
-function categoryLabel(cat) { return CATEGORY_LABELS[cat] || cat }
-function subTypeLabel(st) { return SUB_TYPE_LABELS[st] || st }
-function categoryBadgeClass(cat) {
-  const map = {
-    version: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
-    mass_outbreak: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-    routine: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
-  }
-  return map[cat] || ''
+// 按 Tab 过滤后的活动列表（双向绑定用）
+const events = ref([])
+const filteredEvents = computed({
+  get: () => {
+    if (activeTab.value === 'all') return events.value
+    return events.value.filter(e => e.category === activeTab.value)
+  },
+  set: (val) => {
+    // 拖拽时会触发 set，但我们需要更新原始 events
+    if (activeTab.value === 'all') {
+      events.value = val
+    } else {
+      // 找到原始数组中对应分类的元素，按新顺序重排
+      const otherCategories = events.value.filter(e => e.category !== activeTab.value)
+      const reordered = val
+      events.value = [...otherCategories, ...reordered]
+    }
+  },
+})
+
+function getCategoryCount(cat) {
+  if (cat === 'all') return events.value.length
+  return events.value.filter(e => e.category === cat).length
 }
+
+function subTypeLabel(st) { return SUB_TYPE_LABELS[st] || st }
 
 function handleFileSelect(e) {
   const file = e.target.files[0]
@@ -372,7 +414,6 @@ function validateForm(f) {
     const validPeriods = (f.periodsArr || []).filter(p => p.start && p.end)
     if (validPeriods.length === 0) return '请至少添加一个有效的时间段'
   }
-  if (f.row_order === null || f.row_order === '') return '请填写排序值'
   return null
 }
 
@@ -390,16 +431,50 @@ async function resolvePetInfo(uid) {
   }
 }
 
+// 拖拽排序保存
+async function saveOrder() {
+  const newOrder = events.value.map((e, i) => ({ id: e.id, row_order: i }))
+  try {
+    await adminApi.batchUpdate('season_events', newOrder)
+  } catch (err) {
+    console.error('保存排序失败:', err)
+  }
+}
+
+async function openAddModal() {
+  addMsg.value = ''
+  addMsgOk.value = false
+  form.value = {
+    name: '',
+    category: activeTab.value === 'all' ? 'version' : activeTab.value,
+    sub_type: '',
+    start_date: '',
+    end_date: '',
+    image: null,
+    imageName: '',
+    imagePreview: '',
+    imageFile: null,
+    pet_uid: '',
+    periodsArr: [{ start: '', end: '' }],
+  }
+  showAddModal.value = true
+}
+
+function closeAdd() {
+  showAddModal.value = false
+  if ($refs.fileInput) $refs.fileInput.value = ''
+}
+
 async function createEvent() {
   const err = validateForm(form.value)
   if (err) {
-    msg.value = err
-    msgOk.value = false
+    addMsg.value = err
+    addMsgOk.value = false
     return
   }
   if (!currentSeason.value) {
-    msg.value = '当前赛季信息缺失'
-    msgOk.value = false
+    addMsg.value = '当前赛季信息缺失'
+    addMsgOk.value = false
     return
   }
 
@@ -410,7 +485,7 @@ async function createEvent() {
     name: form.value.name,
     sub_type: form.value.category === 'routine' ? form.value.sub_type : '',
     pet_uid: form.value.category === 'mass_outbreak' ? form.value.pet_uid : '',
-    row_order: form.value.row_order || 0,
+    row_order: events.value.length, // 新增放最后
     start_date: (form.value.category === 'version' || form.value.category === 'mass_outbreak') ? form.value.start_date : '',
     end_date: (form.value.category === 'version' || form.value.category === 'mass_outbreak') ? form.value.end_date : '',
     periods: form.value.category === 'routine'
@@ -437,25 +512,14 @@ async function createEvent() {
       }
     }
 
-    // 重置表单
-    form.value.name = ''
-    form.value.category = 'version'
-    form.value.sub_type = ''
-    form.value.start_date = ''
-    form.value.end_date = ''
-    form.value.image = null
-    form.value.imageName = ''
-    form.value.imagePreview = ''
-    form.value.imageFile = null
-    form.value.row_order = 0
-    form.value.pet_uid = ''
-    form.value.periodsArr = [{ start: '', end: '' }]
+    closeAdd()
     await loadEvents()
-    msg.value = '活动添加成功'
-    msgOk.value = true
+    addMsg.value = '活动添加成功'
+    addMsgOk.value = true
+    setTimeout(() => { addMsg.value = '' }, 3000)
   } catch (err) {
-    msg.value = '创建失败: ' + (err.message || '未知错误')
-    msgOk.value = false
+    addMsg.value = '创建失败: ' + (err.message || '未知错误')
+    addMsgOk.value = false
   }
   saving.value = false
 }
@@ -468,6 +532,7 @@ async function deleteEvent(event) {
     await loadEvents()
     msg.value = `「${event.name}」已删除`
     msgOk.value = true
+    setTimeout(() => { msg.value = '' }, 3000)
   } catch (err) {
     msg.value = '删除失败: ' + (err.message || '未知错误')
     msgOk.value = false
@@ -499,7 +564,6 @@ async function openEdit(event) {
   editForm.sub_type = event.sub_type || ''
   editForm.start_date = event.start_date || ''
   editForm.end_date = event.end_date || ''
-  editForm.row_order = event.row_order ?? 0
   editForm.pet_uid = event.pet_uid || ''
   editForm.image = event.image || ''
   editForm.imageFile = null
@@ -533,7 +597,6 @@ async function updateEvent() {
       category: editForm.category,
       sub_type: editForm.category === 'routine' ? editForm.sub_type : '',
       pet_uid: editForm.category === 'mass_outbreak' ? editForm.pet_uid : '',
-      row_order: editForm.row_order,
       start_date: (editForm.category === 'version' || editForm.category === 'mass_outbreak') ? editForm.start_date : '',
       end_date: (editForm.category === 'version' || editForm.category === 'mass_outbreak') ? editForm.end_date : '',
       periods: editForm.category === 'routine'
