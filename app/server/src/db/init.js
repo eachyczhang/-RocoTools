@@ -51,19 +51,21 @@ function migrateColumns(db, schemaSql) {
 
     // 解析期望的列（排除 FOREIGN KEY、PRIMARY KEY 约束行）
     const lines = body.split('\n')
-      .map(l => l.trim())
+      .map(l => l.replace(/--.*$/, '').trim())  // 去掉行内注释
       .filter(l => l && !l.startsWith('--'))
       .filter(l => !l.toUpperCase().startsWith('FOREIGN KEY'))
       .filter(l => !l.toUpperCase().startsWith('PRIMARY KEY'));
 
     for (const line of lines) {
+      // 去掉尾部逗号
+      const cleaned = line.replace(/,\s*$/, '').trim();
       // 匹配列定义：列名 类型 [...约束]
-      const colMatch = line.match(/^(\w+)\s+(TEXT|INTEGER|REAL|BLOB|NUMERIC)(.*)$/i);
+      const colMatch = cleaned.match(/^(\w+)\s+(TEXT|INTEGER|REAL|BLOB|NUMERIC)(.*)$/i);
       if (!colMatch) continue;
 
       const colName = colMatch[1];
       const colType = colMatch[2].toUpperCase();
-      let constraints = colMatch[3].replace(/,\s*$/, '').trim();
+      let constraints = colMatch[3].trim();
 
       // 跳过已存在的列
       if (existingColumns.has(colName)) continue;
