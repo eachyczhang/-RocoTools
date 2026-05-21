@@ -5,11 +5,11 @@
       <div class="h-36 sm:h-48 md:h-56 bg-gradient-to-br from-primary-500/20 via-primary-400/10 to-transparent">
         <img v-if="season.image" :src="season.image" class="w-full h-full object-cover" />
       </div>
-      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-4 md:p-6">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-5 sm:p-6 md:p-8">
         <div>
-          <div class="text-xs text-white/60 mb-1">{{ season.id }}</div>
-          <h1 class="font-roco text-2xl md:text-3xl text-white">{{ season.name }}</h1>
-          <div v-if="season.start_date || season.end_date" class="text-xs text-white/50 mt-1">
+          <div class="text-sm sm:text-base font-medium text-white/80 mb-1">{{ season.id }}</div>
+          <h1 class="font-roco text-3xl sm:text-4xl md:text-5xl text-white drop-shadow-lg">{{ season.name }}</h1>
+          <div v-if="season.start_date || season.end_date" class="text-sm sm:text-base text-white/70 mt-2">
             {{ season.start_date || '?' }} ~ {{ season.end_date || '?' }}
           </div>
         </div>
