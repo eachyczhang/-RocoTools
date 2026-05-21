@@ -47,7 +47,7 @@ app.use('/api/admin', adminRouter);
 app.get('/api/stats', (req, res) => {
   const db = getDb();
   try {
-    const pets = db.prepare('SELECT COUNT(*) as c FROM pets').get().c;
+    const pets = db.prepare('SELECT COUNT(DISTINCT pet_id) as c FROM pets').get().c;
     const skills = db.prepare('SELECT COUNT(*) as c FROM skills').get().c;
     const elements = db.prepare('SELECT COUNT(*) as c FROM elements').get().c;
     const eggs = db.prepare('SELECT COUNT(*) as c FROM egg_groups').get().c;
