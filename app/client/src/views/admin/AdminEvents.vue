@@ -162,9 +162,7 @@
               <label class="text-xs text-muted">课题类型 <span class="text-red-500">*</span></label>
               <select v-model="form.sub_type" class="select w-full">
                 <option value="">请选择</option>
-                <option value="starlight">星光对决</option>
-                <option value="destiny">命定花种</option>
-                <option value="pika">皮卡摄影委托</option>
+                <option v-for="st in ROUTINE_SUB_TYPES" :key="st.value" :value="st.value">{{ st.label }}</option>
               </select>
             </div>
             <div>
@@ -176,6 +174,17 @@
                 <button @click="form.periodsArr.splice(i, 1)" class="text-red-500 text-xs hover:underline">删除</button>
               </div>
               <button @click="form.periodsArr.push({ start: '', end: '' })" class="text-xs text-primary-500 hover:underline">+ 添加时间段</button>
+            </div>
+          </div>
+
+          <!-- 版本活动：子类型选择 -->
+          <div v-if="form.category === 'version'" class="space-y-3">
+            <div>
+              <label class="text-xs text-muted">活动类型</label>
+              <select v-model="form.sub_type" class="select w-full">
+                <option value="">不分类</option>
+                <option v-for="st in VERSION_SUB_TYPES" :key="st.value" :value="st.value">{{ st.label }}</option>
+              </select>
             </div>
           </div>
         </div>
@@ -252,9 +261,7 @@
               <label class="text-xs text-muted">课题类型 <span class="text-red-500">*</span></label>
               <select v-model="editForm.sub_type" class="select w-full">
                 <option value="">请选择</option>
-                <option value="starlight">星光对决</option>
-                <option value="destiny">命定花种</option>
-                <option value="pika">皮卡摄影委托</option>
+                <option v-for="st in ROUTINE_SUB_TYPES" :key="st.value" :value="st.value">{{ st.label }}</option>
               </select>
             </div>
             <div>
@@ -266,6 +273,17 @@
                 <button @click="editForm.periodsArr.splice(i, 1)" class="text-red-500 text-xs hover:underline">删除</button>
               </div>
               <button @click="editForm.periodsArr.push({ start: '', end: '' })" class="text-xs text-primary-500 hover:underline">+ 添加时间段</button>
+            </div>
+          </div>
+
+          <!-- 版本活动子类型 -->
+          <div v-if="editForm.category === 'version'" class="space-y-3">
+            <div>
+              <label class="text-xs text-muted">活动类型</label>
+              <select v-model="editForm.sub_type" class="select w-full">
+                <option value="">不分类</option>
+                <option v-for="st in VERSION_SUB_TYPES" :key="st.value" :value="st.value">{{ st.label }}</option>
+              </select>
             </div>
           </div>
 
@@ -365,10 +383,33 @@ const form = ref({
 })
 
 const SUB_TYPE_LABELS = {
+  // 版本活动子类型
+  main: '主推活动',
+  territory: '领地试炼',
+  hug: '精灵抱抱团',
+  diary: '大世界观察日记',
+  // 常驻课题子类型
+  fate_flower: '命定花种',
+  star_battle: '星光对决',
+  pika_photo: '皮卡摄影委托',
+  // 兼容旧数据
   starlight: '星光对决',
   destiny: '命定花种',
   pika: '皮卡摄影委托',
 }
+
+const VERSION_SUB_TYPES = [
+  { value: 'main', label: '主推活动' },
+  { value: 'territory', label: '领地试炼' },
+  { value: 'hug', label: '精灵抱抱团' },
+  { value: 'diary', label: '大世界观察日记' },
+]
+
+const ROUTINE_SUB_TYPES = [
+  { value: 'fate_flower', label: '命定花种' },
+  { value: 'star_battle', label: '星光对决' },
+  { value: 'pika_photo', label: '皮卡摄影委托' },
+]
 
 const { openPreview } = useImagePreview()
 
@@ -539,7 +580,7 @@ async function createEvent() {
     season_id: currentSeason.value.id,
     category: form.value.category,
     name: form.value.name,
-    sub_type: form.value.category === 'routine' ? form.value.sub_type : '',
+    sub_type: form.value.sub_type || '',
     pet_uid: form.value.category === 'mass_outbreak' ? form.value.pet_uid : '',
     row_order: events.value.length, // 新增放最后
     start_date: (form.value.category === 'version' || form.value.category === 'mass_outbreak') ? form.value.start_date : '',
@@ -653,7 +694,7 @@ async function updateEvent() {
     const data = {
       name: editForm.name,
       category: editForm.category,
-      sub_type: editForm.category === 'routine' ? editForm.sub_type : '',
+      sub_type: editForm.sub_type || '',
       pet_uid: editForm.category === 'mass_outbreak' ? editForm.pet_uid : '',
       start_date: (editForm.category === 'version' || editForm.category === 'mass_outbreak') ? editForm.start_date : '',
       end_date: (editForm.category === 'version' || editForm.category === 'mass_outbreak') ? editForm.end_date : '',
