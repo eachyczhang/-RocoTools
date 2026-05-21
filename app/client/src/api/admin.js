@@ -13,7 +13,20 @@ export function clearToken() {
 }
 
 export function isLoggedIn() {
-  return !!getToken()
+  const token = getToken()
+  if (!token) return false
+  // 检查 JWT 是否过期
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      clearToken()
+      return false
+    }
+    return true
+  } catch {
+    clearToken()
+    return false
+  }
 }
 
 async function adminRequest(path, options = {}) {
