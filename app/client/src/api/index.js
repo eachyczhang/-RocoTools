@@ -48,3 +48,8 @@ export const petsApi = {
 export const naturesApi = {
   list: () => request(`${BASE}/natures`),
 }
+
+export const seasonsApi = {
+  list: () => request(`${BASE}/seasons`),
+  current: () => request(`${BASE}/seasons/current`),
+}

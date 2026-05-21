@@ -97,37 +97,43 @@
       <!-- 通行证精灵（2只） -->
       <div class="card">
         <h2 class="font-roco text-base text-primary-500 font-bold mb-3">通行证精灵 <span class="text-xs text-muted font-normal">（2只）</span></h2>
-        <div class="space-y-2">
+        <div class="space-y-3">
           <div v-for="(uid, i) in form.pass_pets" :key="'pass_'+i" class="flex items-center gap-2">
-            <span class="text-xs text-muted w-6">{{ i + 1 }}.</span>
-            <input v-model="form.pass_pets[i]" class="input flex-1" placeholder="精灵 UID（如 pet_001）" />
-            <button @click="form.pass_pets.splice(i, 1)" class="text-xs text-red-500 hover:underline">移除</button>
+            <span class="text-xs text-muted w-6 flex-shrink-0">{{ i + 1 }}.</span>
+            <PetPicker v-model="form.pass_pets[i]" class="flex-1" />
           </div>
           <button v-if="form.pass_pets.length < 2" @click="form.pass_pets.push('')" class="text-xs text-primary-500 hover:underline">+ 添加</button>
         </div>
       </div>
 
+      <!-- 传说精灵（1只） -->
+      <div class="card">
+        <h2 class="font-roco text-base text-primary-500 font-bold mb-1">传说精灵</h2>
+        <p class="text-xs text-muted mb-3">当赛季主推的传说精灵，不排除后续返厂</p>
+        <PetPicker v-model="form.legend_pet" />
+      </div>
+
       <!-- 赛季限定精灵（8只） -->
       <div class="card">
-        <h2 class="font-roco text-base text-primary-500 font-bold mb-3">赛季限定精灵 <span class="text-xs text-muted font-normal">（8只，必有异色）</span></h2>
-        <div class="space-y-2">
+        <h2 class="font-roco text-base text-primary-500 font-bold mb-1">赛季限定精灵 <span class="text-xs text-muted font-normal">（8只）</span></h2>
+        <p class="text-xs text-muted mb-3">仅当赛季可捕捉，拥有异色版本，赛季结束后异色仅可通过孵蛋获取</p>
+        <div class="space-y-3">
           <div v-for="(uid, i) in form.season_pets" :key="'season_'+i" class="flex items-center gap-2">
-            <span class="text-xs text-muted w-6">{{ i + 1 }}.</span>
-            <input v-model="form.season_pets[i]" class="input flex-1" placeholder="精灵 UID" />
-            <button @click="form.season_pets.splice(i, 1)" class="text-xs text-red-500 hover:underline">移除</button>
+            <span class="text-xs text-muted w-6 flex-shrink-0">{{ i + 1 }}.</span>
+            <PetPicker v-model="form.season_pets[i]" class="flex-1" />
           </div>
           <button v-if="form.season_pets.length < 8" @click="form.season_pets.push('')" class="text-xs text-primary-500 hover:underline">+ 添加</button>
         </div>
       </div>
 
-      <!-- 常态异色精灵（8只） -->
+      <!-- 赛季异色精灵（8只） -->
       <div class="card">
-        <h2 class="font-roco text-base text-primary-500 font-bold mb-3">常态异色精灵 <span class="text-xs text-muted font-normal">（8只，本赛季限定异色）</span></h2>
-        <div class="space-y-2">
+        <h2 class="font-roco text-base text-primary-500 font-bold mb-1">赛季异色精灵 <span class="text-xs text-muted font-normal">（8只）</span></h2>
+        <p class="text-xs text-muted mb-3">日常可捕捉的精灵，当赛季可在野外获取其异色版本，赛季结束后异色仅可通过孵蛋获取</p>
+        <div class="space-y-3">
           <div v-for="(uid, i) in form.shiny_pets" :key="'shiny_'+i" class="flex items-center gap-2">
-            <span class="text-xs text-muted w-6">{{ i + 1 }}.</span>
-            <input v-model="form.shiny_pets[i]" class="input flex-1" placeholder="精灵 UID" />
-            <button @click="form.shiny_pets.splice(i, 1)" class="text-xs text-red-500 hover:underline">移除</button>
+            <span class="text-xs text-muted w-6 flex-shrink-0">{{ i + 1 }}.</span>
+            <PetPicker v-model="form.shiny_pets[i]" class="flex-1" />
           </div>
           <button v-if="form.shiny_pets.length < 8" @click="form.shiny_pets.push('')" class="text-xs text-primary-500 hover:underline">+ 添加</button>
         </div>
@@ -146,6 +152,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { adminApi } from '@/api/admin'
 import { useModal } from '@/composables/useModal'
+import PetPicker from '@/components/shared/PetPicker.vue'
 
 const modal = useModal()
 
@@ -159,6 +166,7 @@ const newSeason = reactive({ id: '', name: '', is_current: 0 })
 
 const form = reactive({
   name: '', is_current: 0, image: '', start_date: '', end_date: '', note: '',
+  legend_pet: '',
   pass_pets: [],
   season_pets: [],
   shiny_pets: [],
@@ -181,6 +189,7 @@ function loadSeason() {
   form.start_date = s.start_date || ''
   form.end_date = s.end_date || ''
   form.note = s.note || ''
+  form.legend_pet = s.legend_pet || ''
   form.pass_pets = JSON.parse(s.pass_pets || '[]')
   form.season_pets = JSON.parse(s.season_pets || '[]')
   form.shiny_pets = JSON.parse(s.shiny_pets || '[]')
@@ -241,6 +250,7 @@ async function save() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       note: form.note || null,
+      legend_pet: form.legend_pet || null,
       pass_pets: JSON.stringify(form.pass_pets.filter(Boolean)),
       season_pets: JSON.stringify(form.season_pets.filter(Boolean)),
       shiny_pets: JSON.stringify(form.shiny_pets.filter(Boolean)),

@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS seasons (
   is_current  INTEGER DEFAULT 0,    -- 是否为当前赛季
   image       TEXT,                 -- 赛季封面图
   pass_pets   TEXT,                 -- 通行证精灵 JSON array (2 uid)
+  legend_pet  TEXT,                 -- 传说精灵 (1 uid，赛季限定)
   season_pets TEXT,                 -- 赛季限定精灵 JSON array (8 uid，必有异色)
   shiny_pets  TEXT,                 -- 常态异色精灵 JSON array (8 uid)
   start_date  TEXT,                 -- 赛季开始日期

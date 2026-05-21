@@ -13,6 +13,7 @@
         <!-- 用户端桌面导航 -->
         <div v-if="!isAdminRoute" class="hidden md:flex flex-1 items-center gap-1 lg:gap-2">
           <router-link to="/" class="nav-link" exact>首页</router-link>
+          <router-link to="/season" class="nav-link">赛季</router-link>
           <router-link to="/pets" class="nav-link">精灵</router-link>
           <div class="relative" @mouseenter="skillMenuOpen = true" @mouseleave="skillMenuOpen = false">
             <button class="nav-link" :class="{ 'router-link-active': $route.path.startsWith('/skills') || $route.path === '/coverage' }">
@@ -74,6 +75,7 @@
         :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
         <template v-if="!isAdminRoute">
           <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">首页</router-link>
+          <router-link to="/season" class="mobile-nav-link" @click="mobileMenuOpen = false">赛季</router-link>
           <router-link to="/pets" class="mobile-nav-link" @click="mobileMenuOpen = false">精灵</router-link>
           <router-link to="/skills" class="mobile-nav-link" @click="mobileMenuOpen = false">技能列表</router-link>
           <router-link to="/coverage" class="mobile-nav-link" @click="mobileMenuOpen = false">打击面分析</router-link>

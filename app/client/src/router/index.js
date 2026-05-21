@@ -4,6 +4,7 @@ import { isLoggedIn, clearToken } from '@/api/admin'
 const routes = [
   // 用户端
   { path: '/', name: 'Home', component: () => import('@/views/user/Home.vue') },
+  { path: '/season', name: 'Season', component: () => import('@/views/user/Season.vue') },
   { path: '/pets', name: 'Pets', component: () => import('@/views/user/Pets.vue') },
   { path: '/pets/:uid', name: 'PetDetail', component: () => import('@/views/user/PetDetail.vue') },
   { path: '/skills', name: 'Skills', component: () => import('@/views/user/Skills.vue') },
