@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', '..', '..', 'data', 'roco.db');
+const DB_PATH = path.join(__dirname, '..', '..', 'data', 'roco.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 // 确保目录存在

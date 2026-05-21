@@ -17,8 +17,8 @@ const adminRouter = require('./routes/admin');
 const { apiCache } = require('./middleware/apiCache');
 
 const Database = require('better-sqlite3');
-// __dirname = app/server/src，3个.. 到项目根目录，-RocoTools/
-const DB_PATH = path.join(__dirname, '..', '..', '..', 'data', 'roco.db');
+// __dirname = app/server/src，2个.. 到 app/server/
+const DB_PATH = path.join(__dirname, '..', '..', 'data', 'roco.db');
 // 确保 data 目录存在
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
