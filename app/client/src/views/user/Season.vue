@@ -8,7 +8,7 @@
       <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-5 sm:p-6 md:p-8">
         <div>
           <div class="text-sm sm:text-base font-medium text-white/80 mb-1">{{ season.id }}</div>
-          <h1 class="font-roco text-3xl sm:text-4xl md:text-5xl text-white drop-shadow-lg">{{ season.name }}</h1>
+          <h1 class="font-roco text-3xl sm:text-4xl md:text-5xl text-primary-300 drop-shadow-lg">{{ season.name }}</h1>
           <div v-if="season.start_date || season.end_date" class="text-sm sm:text-base text-white/70 mt-2">
             {{ season.start_date || '?' }} ~ {{ season.end_date || '?' }}
           </div>
