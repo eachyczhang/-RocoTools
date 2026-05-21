@@ -50,7 +50,7 @@ const ok = ref(false)
 
 async function loadData() {
   const res = await eggsApi.list()
-  groups.value = res.groups || res
+  groups.value = res.egg_groups || res.groups || []
 }
 
 async function saveGroup(id) {
