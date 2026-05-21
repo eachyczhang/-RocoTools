@@ -10,6 +10,7 @@ const routes = [
   { path: '/eggs', name: 'Eggs', component: () => import('@/views/Eggs.vue') },
   { path: '/natures', name: 'Natures', component: () => import('@/views/Natures.vue') },
   { path: '/elements', name: 'Elements', component: () => import('@/views/Elements.vue') },
+  { path: '/admin', name: 'Admin', component: () => import('@/views/Admin.vue'), meta: { hidden: true } },
 ]
 
 export default createRouter({

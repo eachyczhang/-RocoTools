@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -8,6 +10,7 @@ const skillsRouter = require('./routes/skills');
 const eggsRouter = require('./routes/eggs');
 const petsRouter = require('./routes/pets');
 const naturesRouter = require('./routes/natures');
+const adminRouter = require('./routes/admin');
 const { apiCache } = require('./middleware/apiCache');
 
 const app = express();
@@ -27,6 +30,9 @@ app.use('/api/skills', apiCache(300), skillsRouter);
 app.use('/api/eggs', apiCache(600), eggsRouter);
 app.use('/api/natures', apiCache(600), naturesRouter);
 app.use('/api/pets', apiCache(300), petsRouter);
+
+// 管理端 API（不缓存）
+app.use('/api/admin', adminRouter);
 
 // 健康检查
 app.get('/api', (req, res) => {
