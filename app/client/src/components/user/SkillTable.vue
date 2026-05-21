@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import SkillDescription from '@/components/SkillDescription.vue'
+import SkillDescription from '@/components/user/SkillDescription.vue'
 
 defineProps({
   title: {

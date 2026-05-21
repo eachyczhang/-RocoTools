@@ -180,10 +180,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
-import SkillTable from '@/components/SkillTable.vue'
-import ElementMatchup from '@/components/ElementMatchup.vue'
-import CoverageAnalysis from '@/components/CoverageAnalysis.vue'
-import StatsRadar from '@/components/StatsRadar.vue'
+import SkillTable from '@/components/user/SkillTable.vue'
+import ElementMatchup from '@/components/shared/ElementMatchup.vue'
+import CoverageAnalysis from '@/components/user/CoverageAnalysis.vue'
+import StatsRadar from '@/components/shared/StatsRadar.vue'
 import { getEggGroupColor } from '@/constants/eggGroupColors'
 
 const route = useRoute()

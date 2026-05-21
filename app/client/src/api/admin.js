@@ -76,6 +76,15 @@ export const adminApi = {
   // 备份
   backups: () => adminRequest('/backups'),
   backup: () => adminRequest('/backup', { method: 'POST' }),
-  restore: (name) => adminRequest('/restore', { method: 'POST', body: JSON.stringify({ name }) }),
+  backupSeason: (label, note) => adminRequest('/backup/season', {
+    method: 'POST', body: JSON.stringify({ label, note }),
+  }),
+  restore: (name, type, save_current, save_label) => adminRequest('/restore', {
+    method: 'POST', body: JSON.stringify({ name, type, save_current, save_label }),
+  }),
   deleteBackup: (name) => adminRequest(`/backups/${name}`, { method: 'DELETE' }),
+  deleteSnapshot: (name) => adminRequest(`/backups/snapshots/${name}`, { method: 'DELETE' }),
+  deleteSeasonBackup: (name, confirm_token) => adminRequest(`/backups/season/${name}`, {
+    method: 'DELETE', body: JSON.stringify({ confirm_token }),
+  }),
 }

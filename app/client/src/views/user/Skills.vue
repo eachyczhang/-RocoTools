@@ -118,7 +118,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { skillsApi, elementsApi } from '@/api'
-import SkillDescription from '@/components/SkillDescription.vue'
+import SkillDescription from '@/components/user/SkillDescription.vue'
 
 const skills = ref([])
 const elements = ref([])

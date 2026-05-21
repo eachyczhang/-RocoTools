@@ -109,7 +109,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { skillsApi } from '@/api'
-import SkillDescription from '@/components/SkillDescription.vue'
+import SkillDescription from '@/components/user/SkillDescription.vue'
 
 const route = useRoute()
 const skill = ref(null)

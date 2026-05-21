@@ -48,7 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { petsApi, elementsApi } from '@/api'
-import PetCard from '@/components/PetCard.vue'
+import PetCard from '@/components/shared/PetCard.vue'
 
 const pets = ref([])
 const elements = ref([])
