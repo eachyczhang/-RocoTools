@@ -43,7 +43,9 @@ function getByUid(uid) {
 
   // 查找能学此技能的精灵（按 pet_id 去重，只取第一形态）
   const learners = db.prepare(`
-    SELECT p.uid, p.name, p.pet_id, p.image_url, ps.skill_type,
+    SELECT p.uid, p.name, p.pet_id,
+      COALESCE(p.thumb_url, p.image_url) as image_url,
+      ps.skill_type,
       e.name as element_name, e.color as element_color, e.icon as element_icon
     FROM pet_skills ps
     JOIN pets p ON ps.pet_uid = p.uid

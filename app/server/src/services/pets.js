@@ -191,7 +191,7 @@ function findByCoverage(elementNames) {
   // 查询精灵信息
   function getPetInfo(uid) {
     return db.prepare(`
-      SELECT p.uid, p.pet_id, p.name, p.image_url,
+      SELECT p.uid, p.pet_id, p.name, COALESCE(p.thumb_url, p.image_url) as image_url,
         e.name as element_name, e.color as element_color, e.icon as element_icon
       FROM pets p
       LEFT JOIN elements e ON p.element_id = e.id
