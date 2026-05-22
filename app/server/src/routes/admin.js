@@ -1743,5 +1743,23 @@ router.get('/skills-search', authAdmin, (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/skills-next-uid
+ * Get the next available skill UID (auto-increment, no duplicates)
+ */
+router.get('/skills-next-uid', authAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const row = db.prepare(`
+      SELECT MAX(CAST(SUBSTR(uid, 7) AS INTEGER)) as max_num FROM skills WHERE uid LIKE 'skill_%'
+    `).get();
+    const nextNum = (row?.max_num || 0) + 1;
+    res.json({ uid: `skill_${nextNum}` });
+  } catch (err) {
+    console.error('[SkillsNextUid]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 

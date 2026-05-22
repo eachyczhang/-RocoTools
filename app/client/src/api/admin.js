@@ -210,4 +210,5 @@ export const adminApi = {
     body: JSON.stringify(data),
   }),
   searchSkills: (q) => adminRequest(`/skills-search?q=${encodeURIComponent(q)}`),
+  getNextSkillUid: () => adminRequest('/skills-next-uid'),
 }

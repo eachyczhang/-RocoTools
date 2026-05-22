@@ -10,14 +10,14 @@
       </div>
     </div>
 
-    <!-- UID (only for new) -->
+    <!-- UID (only for new, auto-generated, readonly) -->
     <div v-if="isNew" class="card mb-4">
-      <h2 class="font-roco text-base text-primary-500 mb-3">技能标识 <span class="text-xs text-red-500">*</span></h2>
+      <h2 class="font-roco text-base text-primary-500 mb-3">技能标识</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-muted">技能 UID <span class="text-red-500">*</span></label>
-          <input v-model="newUid" class="input w-full" placeholder="如 skill_470" />
-          <p class="text-[10px] text-muted mt-1">格式：skill_编号，如 skill_470</p>
+          <label class="text-xs text-muted">技能 UID（自动生成）</label>
+          <input :value="newUid" class="input w-full bg-gray-100 dark:bg-white/5 cursor-not-allowed" readonly />
+          <p class="text-[10px] text-muted mt-1">自动分配，格式：skill_编号</p>
         </div>
       </div>
     </div>
@@ -123,7 +123,11 @@ async function loadData() {
   const elemRes = await elementsApi.list()
   elements.value = elemRes.elements
 
-  if (!isNew) {
+  if (isNew) {
+    // Auto-fetch next available UID
+    const { uid: nextUid } = await adminApi.getNextSkillUid()
+    newUid.value = nextUid
+  } else {
     const data = await skillsApi.get(uid)
     skill.value = data
     form.value = {
@@ -145,12 +149,7 @@ async function save() {
   saving.value = true; msg.value = ''
   try {
     if (isNew) {
-      const uidVal = newUid.value.trim()
-      if (!uidVal) {
-        await modal.warning('缺少必填项', '请填写技能 UID')
-        saving.value = false
-        return
-      }
+      const uidVal = newUid.value
       await adminApi.create('skills', { uid: uidVal, ...form.value })
       await modal.success('创建成功', `技能「${form.value.name}」（${uidVal}）已创建`)
       router.replace(`/admin/skills/${uidVal}`)
