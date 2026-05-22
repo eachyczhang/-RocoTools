@@ -189,14 +189,11 @@
           <div class="px-4 pb-3">
             <label class="text-xs text-muted">活动总览图（可选）</label>
             <div class="flex items-center gap-2 mt-1">
-              <input type="file" ref="fileInput" accept="image/*" class="hidden" @change="handleFileSelect" />
-              <button @click="$refs.fileInput.click()" class="btn text-xs">
-                {{ form.imageFile ? '已选择本地图片' : '本地上传' }}
-              </button>
               <ImageUploader
-                upload-label="📂 素材库"
+                upload-label="📷 本地上传"
                 btn-class="btn text-xs"
                 @uploaded="(path) => { form.image = path; form.imageFile = null; form.imageName = ''; form.imagePreview = path }"
+                @file-selected="handleFileSelect"
               />
               <span v-if="form.imageFile" class="text-xs text-green-600 truncate max-w-[120px]">{{ form.imageName }}</span>
               <span v-else-if="form.image && !form.imageFile" class="text-xs text-green-600 truncate max-w-[120px]">已选择素材库图片</span>
@@ -318,14 +315,11 @@
                 />
               </div>
               <div class="flex items-center gap-2">
-                <input type="file" ref="editFileInput" accept="image/*" class="hidden" @change="handleEditFileSelect" />
-                <button @click="$refs.editFileInput.click()" class="btn text-xs">
-                  {{ editForm.imageFile ? '已选择新图片' : '本地上传' }}
-                </button>
                 <ImageUploader
-                  upload-label="📂 素材库"
+                  upload-label="📷 本地上传"
                   btn-class="btn text-xs"
                   @uploaded="(path) => { editForm.image = path; editForm.imageFile = null; editForm.imageName = '' }"
+                  @file-selected="handleEditFileSelect"
                 />
                 <span v-if="editForm.imageFile" class="text-xs text-green-600 truncate max-w-[120px]">{{ editForm.imageName }}</span>
                 <span v-else-if="editForm.image" class="text-xs text-green-600 truncate max-w-[120px]">已有图片</span>
@@ -364,7 +358,6 @@ const activeTab = ref('all')
 const saving = ref(false)
 const msg = ref('')
 const msgOk = ref(false)
-const fileInput = ref(null)
 
 const tabs = [
   { value: 'all', label: '全部活动' },
@@ -504,12 +497,11 @@ function parsePetIcons(petIcon) {
   try { return JSON.parse(petIcon) } catch { return [] }
 }
 
-function handleFileSelect(e) {
-  const file = e.target.files[0]
+function handleFileSelect(file) {
   if (!file) return
   form.value.imageFile = file
   form.value.imageName = file.name
-  // 释放旧的 ObjectURL 防止内存泄漏
+  // Release old ObjectURL to prevent memory leak
   if (form.value.imagePreview && form.value.imagePreview.startsWith('blob:')) {
     URL.revokeObjectURL(form.value.imagePreview)
   }
@@ -593,7 +585,6 @@ async function openAddModal() {
 
 function closeAdd() {
   showAddModal.value = false
-  if (fileInput.value) fileInput.value.value = ''
 }
 
 async function createEvent() {
@@ -682,8 +673,7 @@ function onEditCategoryChange() {
   if (editForm.category !== 'routine') editForm.sub_type = ''
 }
 
-function handleEditFileSelect(e) {
-  const file = e.target.files[0]
+function handleEditFileSelect(file) {
   if (!file) return
   editForm.imageFile = file
   editForm.imageName = file.name

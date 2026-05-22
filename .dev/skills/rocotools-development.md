@@ -81,6 +81,17 @@
 
 ---
 
+## 视觉设计规范
+
+项目统一的视觉设计系统详见 `app/client/DESIGN.md`，核心要点：
+
+- **主色**：金色系 `#D69F23`，禁止使用 indigo/紫色
+- **暗色模式**：所有组件必须同时提供亮色和暗色样式
+- **组件规范**：卡片 rounded-xl、按钮 active:scale-95、Tab 金色激活态
+- **CSS 变量 Fallback**：必须使用项目实际的 primary 色值（如 `#D69F23`），禁止使用 `#6366f1`
+
+---
+
 ## 开发流程
 
 ### 1. 环境搭建
@@ -316,6 +327,7 @@ pm2 save && pm2 startup
 | `data/FIELDS.md` | 数据字段对照表 |
 | `data/STRUCTURE_RULES.md` | 数据结构化规则 |
 | `app/client/RESPONSIVE.md` | 响应式适配规范 |
+| `app/client/DESIGN.md` | 视觉设计规范（色彩/组件/暗色模式/交互） |
 | `docs/game-notes/*.md` | 游戏设定笔记 |
 
 ---
@@ -326,7 +338,10 @@ pm2 save && pm2 startup
 - [ ] CDN 加速图片
 - [ ] 精灵对比功能
 - [ ] 队伍构建器
+- [x] 皮卡月刊管理端 + 用户端展示页面 2026-05-22
+- [x] 视觉设计规范文档 (DESIGN.md) 2026-05-22
+- [x] 统一素材管理模块 (AdminMedia + 后端接口 + ImageUploader增强) 2026-05-23
 
 ---
 
-**最后更新：2026-05-22**
+**最后更新：2026-05-23**

@@ -120,4 +120,5 @@ async function save() {
   finally { saving.value = false }
 }
 
-async function save() {</script>
+onMounted(loadData)
+</script>

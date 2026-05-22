@@ -32,6 +32,13 @@
 | 精灵蛋 | `/public/pets/egg/{uid}_egg.png` | `_egg.png` |
 | 缩略图 | `/public/pets/thumbs/{uid}_default.webp` | `_default.webp` |
 | 特性图标 | `/public/pets/abilities/{uid}_ability.png` | `_ability.png` |
+| 赛季封面 | `/uploads/seasons/{season_id}_cover.png` | `_cover.png` |
+| 活动图片 | `/uploads/events/event_{id}.png` | `.png` |
+| 皮卡概念图(男) | `/uploads/pika/{period}_concept_male.png` | `_concept_male.png` |
+| 皮卡概念图(女) | `/uploads/pika/{period}_concept_female.png` | `_concept_female.png` |
+| 皮卡时装(男) | `/uploads/pika/{period}_{pet_uid}_locke_male.png` | `_locke_male.png` |
+| 皮卡时装(女) | `/uploads/pika/{period}_{pet_uid}_locke_female.png` | `_locke_female.png` |
+| 素材库图片 | `/uploads/library/{timestamp}_{filename}.{ext}` | 原始后缀 |
 
 ---
 
@@ -149,3 +156,18 @@
 - 仅通过管理端配置，不通过爬虫获取
 - init.js 不删库重建，保留 seasons 等手动数据
 - 字段：id(PK), name, is_current, image, legend_pet, pass_pets(JSON), season_pets(JSON), shiny_pets(JSON), start_date, end_date, note
+
+## 活动表（season_events）
+
+- 仅通过管理端配置
+- 字段：id(PK), season_id, name, type, sub_type, image, start_date, end_date, date_ranges(JSON), pets(JSON), sort_order
+- type: version_event / mass_appear / permanent_quest
+- sub_type: pika_flower / pika_photo / 其他
+
+## 皮卡月刊表（pika_monthlies + pika_monthly_pets）
+
+### pika_monthlies
+`id(PK)`, `period`, `name`, `start_date`, `end_date`, `concept_male`, `concept_female`, `row_order`
+
+### pika_monthly_pets
+`id(PK)`, `monthly_id(FK→pika_monthlies.id)`, `pet_uid`, `pet_name`, `pet_icon`, `locke_male`, `locke_female`, `sort_order`

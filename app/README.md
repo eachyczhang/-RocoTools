@@ -30,6 +30,7 @@ app/
     ├── vite.config.js          # 构建配置（base: /rocotools/）
     ├── tailwind.config.js      # 主题色 + 系统字体
     ├── RESPONSIVE.md           # 响应式适配规范
+    ├── DESIGN.md               # 视觉设计规范
     └── src/
         ├── main.js             # Vue 入口 + v-lazy-src 指令注册
         ├── App.vue             # 布局（导航 + 内容区 + 底部）
@@ -91,6 +92,7 @@ pm2 start app/server/src/index.js --name roco -i 2
 | `GET /api/pets?page&limit&search&element_id&sort_by&order` | 精灵列表 | 5 分钟 |
 | `GET /api/pets/:uid` | 精灵详情 | 5 分钟 |
 | `GET /api/pets/shiny` | 异色列表 | 5 分钟 |
+| `GET /api/pika-monthlies` | 皮卡月刊列表（含关联精灵） | 5 分钟 |
 
 ## 性能优化
 

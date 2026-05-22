@@ -332,4 +332,5 @@ async function save() {
   }
 }
 
-async function save() {</script>
+onMounted(loadData)
+</script>

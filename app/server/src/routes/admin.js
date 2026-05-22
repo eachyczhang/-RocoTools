@@ -1072,5 +1072,150 @@ router.delete('/library/:filename', authAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ============================================================
+// 统一素材管理接口
+// ============================================================
+
+/**
+ * GET /api/admin/media
+ * List all images across all directories (library + uploads + public)
+ */
+router.get('/media', authAdmin, (req, res) => {
+  const IMAGE_EXT = /\.(png|jpe?g|webp|gif)$/i;
+  const files = [];
+
+  // Scan directories recursively
+  function scanDir(baseDir, urlPrefix) {
+    if (!fs.existsSync(baseDir)) return;
+    const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(baseDir, entry.name);
+      if (entry.isDirectory()) {
+        scanDir(fullPath, urlPrefix + '/' + entry.name);
+      } else if (IMAGE_EXT.test(entry.name)) {
+        try {
+          const stat = fs.statSync(fullPath);
+          files.push({
+            filename: entry.name,
+            fullPath: urlPrefix + '/' + entry.name,
+            url: urlPrefix + '/' + entry.name,
+            size: stat.size,
+            mtime: stat.mtimeMs,
+          });
+        } catch (e) { /* skip unreadable files */ }
+      }
+    }
+  }
+
+  // Scan uploads directory (library, pika, seasons, events)
+  const uploadsDir = path.join(DATA_DIR, 'uploads');
+  scanDir(uploadsDir, '/uploads');
+
+  // Scan public directory (pets, skills, elements)
+  scanDir(PUBLIC_DIR, '/public');
+
+  // Sort by modification time (newest first)
+  files.sort((a, b) => b.mtime - a.mtime);
+
+  res.json({ files, total: files.length });
+});
+
+/**
+ * DELETE /api/admin/media
+ * Delete an image by its full path (e.g. /uploads/library/xxx.png or /public/pets/default/xxx.png)
+ * body: { path: '/uploads/library/xxx.png' }
+ */
+router.delete('/media', authAdmin, (req, res) => {
+  const { path: filePath } = req.body;
+  if (!filePath) return res.status(400).json({ error: '缺少 path 参数' });
+
+  let absolutePath;
+  if (filePath.startsWith('/uploads/')) {
+    absolutePath = path.join(DATA_DIR, filePath);
+  } else if (filePath.startsWith('/public/')) {
+    absolutePath = path.join(DATA_DIR, filePath);
+  } else {
+    return res.status(400).json({ error: '不支持的路径前缀' });
+  }
+
+  // Security: ensure path is within DATA_DIR
+  const resolved = path.resolve(absolutePath);
+  const dataResolved = path.resolve(DATA_DIR);
+  if (!resolved.startsWith(dataResolved)) {
+    return res.status(400).json({ error: '路径非法' });
+  }
+
+  if (!fs.existsSync(resolved)) {
+    return res.status(404).json({ error: '文件不存在' });
+  }
+
+  fs.unlinkSync(resolved);
+  res.json({ success: true });
+});
+
+/**
+ * POST /api/admin/media/copy-to-business
+ * Copy a library image to a business directory with proper naming
+ * body: { source: '/uploads/library/xxx.png', type: 'pika_concept_male', uid: '202605' }
+ */
+router.post('/media/copy-to-business', authAdmin, (req, res) => {
+  const { source, type, uid } = req.body;
+  if (!source || !type || !uid) return res.status(400).json({ error: '缺少 source/type/uid 参数' });
+  if (!isSafeFilename(uid)) return res.status(400).json({ error: 'uid 包含非法字符' });
+
+  const imageConfig = IMAGE_TYPES[type];
+  if (!imageConfig) return res.status(400).json({ error: '无效的图片类型: ' + type });
+
+  // Resolve source path
+  let sourcePath;
+  if (source.startsWith('/uploads/')) {
+    sourcePath = path.join(DATA_DIR, source);
+  } else if (source.startsWith('/public/')) {
+    sourcePath = path.join(DATA_DIR, source);
+  } else {
+    return res.status(400).json({ error: '不支持的源路径' });
+  }
+
+  if (!fs.existsSync(sourcePath)) {
+    return res.status(404).json({ error: '源文件不存在' });
+  }
+
+  // Determine destination
+  const baseDir = imageConfig.isUpload ? DATA_DIR : PUBLIC_DIR;
+  const dir = path.join(baseDir, imageConfig.dir);
+  fs.mkdirSync(dir, { recursive: true });
+
+  const filename = uid + imageConfig.suffix;
+  const destPath = path.join(dir, filename);
+  const publicPath = imageConfig.isUpload
+    ? '/uploads/' + imageConfig.dir.replace('uploads/', '') + '/' + filename
+    : '/public/' + imageConfig.dir + '/' + filename;
+
+  // Copy file
+  fs.copyFileSync(sourcePath, destPath);
+
+  // Update database if applicable
+  const fieldMap = {
+    pet_default: { table: 'pet_details', field: 'image_default', key: 'pet_uid' },
+    pet_shiny: { table: 'pet_details', field: 'image_shiny', key: 'pet_uid' },
+    pet_fruit: { table: 'pet_details', field: 'image_fruit', key: 'pet_uid' },
+    pet_egg: { table: 'pet_details', field: 'image_egg', key: 'pet_uid' },
+    pet_thumb: { table: 'pets', field: 'thumb_url', key: 'uid' },
+    pet_ability: { table: 'pet_details', field: 'ability_icon', key: 'pet_uid' },
+    season_cover: { table: 'seasons', field: 'image', key: 'id' },
+    skill_icon: { table: 'skills', field: 'icon_url', key: 'uid' },
+    element_icon: { table: 'elements', field: 'icon', key: 'id' },
+  };
+
+  const mapping = fieldMap[type];
+  if (mapping) {
+    const db = getWriteDb();
+    db.prepare('UPDATE ' + mapping.table + ' SET ' + mapping.field + ' = ? WHERE ' + mapping.key + ' = ?').run(publicPath, uid);
+    db.close();
+  }
+
+  res.json({ success: true, path: publicPath });
+});
+
 module.exports = router;
 

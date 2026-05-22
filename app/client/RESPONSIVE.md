@@ -201,3 +201,9 @@ body {
 - 隐藏/显示：`hidden lg:block`（桌面可见）、`lg:hidden`（仅手机/平板可见）
 - 优先使用全局组件类（`.card`、`.btn`、`.input`、`.page-title`）
 - 只在组件类无法满足时才写内联断点样式
+
+---
+
+## 相关文档
+
+- 视觉设计规范（色彩/组件/暗色模式）：[DESIGN.md](./DESIGN.md)

@@ -152,4 +152,15 @@ export const adminApi = {
     return adminRequest('/library/upload', { method: 'POST', body: form })
   },
   libraryDelete: (filename) => adminRequest(`/library/${filename}`, { method: 'DELETE' }),
+
+  // 统一素材管理
+  mediaList: () => adminRequest('/media'),
+  mediaDelete: (filePath) => adminRequest('/media', {
+    method: 'DELETE',
+    body: JSON.stringify({ path: filePath }),
+  }),
+  mediaCopyToBusiness: (source, type, uid) => adminRequest('/media/copy-to-business', {
+    method: 'POST',
+    body: JSON.stringify({ source, type, uid }),
+  }),
 }

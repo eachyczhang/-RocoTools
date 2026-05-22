@@ -7,7 +7,7 @@
         <div class="text-sm font-medium truncate">{{ selectedPet.name }}</div>
         <div class="text-xs text-muted">{{ selectedPet.uid }}</div>
       </div>
-      <button @click="clear" class="text-xs text-red-500 hover:underline flex-shrink-0">移除</button>
+      <button @click="clear" class="text-xs text-primary-500 hover:underline flex-shrink-0">更换</button>
     </div>
 
     <!-- 未选中：搜索 + 浏览 -->

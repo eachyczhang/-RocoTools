@@ -1,7 +1,7 @@
 <template>
-  <!-- 触发区域：由父组件通过 slot 或默认按钮触发 -->
+  <!-- Trigger area: local upload + library pick -->
   <div class="inline-flex items-center gap-1.5">
-    <!-- 本地上传 -->
+    <!-- Local upload -->
     <label class="cursor-pointer" :class="btnClass">
       <slot name="upload-btn">
         <span>{{ uploadLabel }}</span>
@@ -9,30 +9,29 @@
       <input type="file" accept="image/*" class="hidden" :disabled="loading" @change="handleLocalUpload" />
     </label>
 
-    <!-- 从素材库选取 -->
+    <!-- Pick from library -->
     <button type="button" :class="btnClass" :disabled="loading" @click="openLibrary">
       <slot name="library-btn">
         <span>📂 素材库</span>
       </slot>
     </button>
 
-    <!-- 加载中 -->
+    <!-- Loading indicator -->
     <span v-if="loading" class="text-xs text-muted">上传中...</span>
   </div>
 
-  <!-- 素材库弹窗 -->
+  <!-- Library modal -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="showLibrary" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click.self="showLibrary = false">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
           :class="isDark ? 'bg-gray-800' : 'bg-white'">
-          <!-- 顶部 -->
+          <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b"
             :class="isDark ? 'border-gray-700' : 'border-gray-200'">
             <h2 class="font-roco text-base text-primary-500 font-bold">素材库</h2>
             <div class="flex items-center gap-2">
-              <!-- 上传到素材库 -->
               <label class="btn text-xs cursor-pointer">
                 + 上传到素材库
                 <input type="file" accept="image/*" multiple class="hidden" @change="handleLibraryUpload" />
@@ -41,7 +40,7 @@
             </div>
           </div>
 
-          <!-- 图片网格 -->
+          <!-- Image grid -->
           <div class="flex-1 overflow-y-auto p-4">
             <div v-if="libraryLoading" class="flex items-center justify-center h-40 text-muted text-sm">加载中...</div>
             <div v-else-if="libraryFiles.length === 0" class="flex flex-col items-center justify-center h-40 text-muted text-sm gap-2">
@@ -58,16 +57,16 @@
                 <div class="aspect-square bg-gray-100 dark:bg-gray-700">
                   <img :src="file.path" class="w-full h-full object-cover" loading="lazy" />
                 </div>
-                <!-- 选中标记 -->
+                <!-- Selected mark -->
                 <div v-if="selectedFile === file.filename"
                   class="absolute inset-0 bg-primary-500/20 flex items-center justify-center">
                   <span class="text-2xl">✓</span>
                 </div>
-                <!-- 删除按钮 -->
+                <!-- Delete button -->
                 <button
                   class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs items-center justify-center hidden group-hover:flex"
                   @click.stop="deleteLibraryFile(file.filename)">×</button>
-                <!-- 文件名 -->
+                <!-- Filename -->
                 <div class="px-1 py-0.5 text-[10px] text-muted truncate"
                   :class="isDark ? 'bg-gray-800' : 'bg-white'">
                   {{ file.filename.replace(/^\d+_/, '') }}
@@ -76,13 +75,22 @@
             </div>
           </div>
 
-          <!-- 底部操作 -->
+          <!-- Footer -->
           <div class="flex items-center justify-between px-5 py-3 border-t"
             :class="isDark ? 'border-gray-700' : 'border-gray-200'">
-            <span class="text-xs text-muted">{{ libraryFiles.length }} 张图片{{ selectedFile ? ' · 已选择 1 张' : '' }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-muted">{{ libraryFiles.length }} 张图片{{ selectedFile ? ' · 已选择 1 张' : '' }}</span>
+              <!-- Copy-to-business option: only show when uploadType and uploadUid are provided -->
+              <label v-if="uploadType && uploadUid && selectedFile" class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" v-model="copyToBusiness" class="rounded w-3.5 h-3.5" />
+                <span class="text-xs text-muted">复制到业务目录</span>
+              </label>
+            </div>
             <div class="flex gap-2">
               <button @click="showLibrary = false" class="btn-ghost text-sm">取消</button>
-              <button @click="confirmSelect" :disabled="!selectedFile" class="btn text-sm">确认选取</button>
+              <button @click="confirmSelect" :disabled="!selectedFile || confirming" class="btn text-sm">
+                {{ confirming ? '处理中...' : '确认选取' }}
+              </button>
             </div>
           </div>
         </div>
@@ -98,17 +106,17 @@ import { useModal } from '@/composables/useModal'
 import { useTheme } from '@/composables/useTheme'
 
 const props = defineProps({
-  // 上传类型（对应后端 IMAGE_TYPES），不传则只支持素材库选取
+  // Upload type (maps to backend IMAGE_TYPES). If empty, only library pick is supported.
   uploadType: { type: String, default: '' },
-  // 上传 uid
+  // Upload uid
   uploadUid: { type: String, default: '' },
-  // 上传按钮样式类
+  // Button style class
   btnClass: { type: String, default: 'btn text-xs' },
-  // 上传按钮文字
+  // Upload button text
   uploadLabel: { type: String, default: '📷 上传图片' },
 })
 
-const emit = defineEmits(['uploaded'])
+const emit = defineEmits(['uploaded', 'file-selected'])
 
 const modal = useModal()
 const { isDark } = useTheme()
@@ -118,15 +126,22 @@ const showLibrary = ref(false)
 const libraryLoading = ref(false)
 const libraryFiles = ref([])
 const selectedFile = ref('')
+const copyToBusiness = ref(true)
+const confirming = ref(false)
 
-// 本地上传
+// Local upload: if type/uid provided, upload immediately; otherwise emit file for deferred upload
 async function handleLocalUpload(e) {
   const file = e.target.files?.[0]
   if (!file) return
+
+  // Deferred mode: no type/uid, just emit the file object for parent to handle
   if (!props.uploadType || !props.uploadUid) {
-    await modal.alert('配置错误', '未指定 uploadType 或 uploadUid')
+    emit('file-selected', file)
+    e.target.value = ''
     return
   }
+
+  // Immediate mode: upload directly to business directory
   loading.value = true
   try {
     const res = await adminApi.upload(file, props.uploadType, props.uploadUid)
@@ -139,10 +154,11 @@ async function handleLocalUpload(e) {
   }
 }
 
-// 打开素材库
+// Open library modal
 async function openLibrary() {
   showLibrary.value = true
   selectedFile.value = ''
+  copyToBusiness.value = !!(props.uploadType && props.uploadUid)
   await loadLibrary()
 }
 
@@ -158,7 +174,7 @@ async function loadLibrary() {
   }
 }
 
-// 上传图片到素材库
+// Upload to library
 async function handleLibraryUpload(e) {
   const files = Array.from(e.target.files || [])
   if (!files.length) return
@@ -174,9 +190,9 @@ async function handleLibraryUpload(e) {
   }
 }
 
-// 删除素材库图片
+// Delete library file
 async function deleteLibraryFile(filename) {
-  const ok = await modal.danger('删除图片', `确定删除「${filename.replace(/^\d+_/, '')}」？`)
+  const ok = await modal.danger('删除图片', '确定删除「' + filename.replace(/^\d+_/, '') + '」？')
   if (!ok) return
   try {
     await adminApi.libraryDelete(filename)
@@ -187,12 +203,28 @@ async function deleteLibraryFile(filename) {
   }
 }
 
-// 确认选取
-function confirmSelect() {
+// Confirm selection: either copy to business dir or just use library path
+async function confirmSelect() {
   const file = libraryFiles.value.find(f => f.filename === selectedFile.value)
   if (!file) return
-  emit('uploaded', file.path)
-  showLibrary.value = false
+
+  // If copy-to-business is checked and we have type/uid, copy the file
+  if (copyToBusiness.value && props.uploadType && props.uploadUid) {
+    confirming.value = true
+    try {
+      const res = await adminApi.mediaCopyToBusiness(file.path, props.uploadType, props.uploadUid)
+      emit('uploaded', res.path)
+      showLibrary.value = false
+    } catch (err) {
+      await modal.alert('复制失败', err.message)
+    } finally {
+      confirming.value = false
+    }
+  } else {
+    // Just emit the library path directly
+    emit('uploaded', file.path)
+    showLibrary.value = false
+  }
 }
 </script>
 

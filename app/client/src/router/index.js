@@ -14,6 +14,7 @@ const routes = [
   { path: '/eggs', name: 'Eggs', component: () => import('@/views/user/Eggs.vue') },
   { path: '/natures', name: 'Natures', component: () => import('@/views/user/Natures.vue') },
   { path: '/elements', name: 'Elements', component: () => import('@/views/user/Elements.vue') },
+  { path: '/pika', name: 'PikaMonthlies', component: () => import('@/views/user/PikaMonthlies.vue') },
 
   // 管理端
   { path: '/admin', name: 'Admin', component: () => import('@/views/admin/Admin.vue'), meta: { hidden: true } },
@@ -29,6 +30,7 @@ const routes = [
   { path: '/admin/pika', name: 'AdminPikaMonthlies', component: () => import('@/views/admin/AdminPikaMonthlies.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/conflicts', name: 'AdminConflicts', component: () => import('@/views/admin/AdminConflicts.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/nav-tabs', name: 'AdminNavTabs', component: () => import('@/views/admin/AdminNavTabs.vue'), meta: { hidden: true, requiresAdmin: true } },
+  { path: '/admin/media', name: 'AdminMedia', component: () => import('@/views/admin/AdminMedia.vue'), meta: { hidden: true, requiresAdmin: true } },
 ]
 
 const router = createRouter({

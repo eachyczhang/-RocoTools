@@ -53,6 +53,7 @@
           <router-link to="/admin/seasons" class="nav-link">赛季</router-link>
           <router-link to="/admin/events" class="nav-link">活动</router-link>
           <router-link to="/admin/pika" class="nav-link">皮卡</router-link>
+          <router-link to="/admin/media" class="nav-link">素材</router-link>
           <router-link to="/admin/nav-tabs" class="nav-link">标签</router-link>
           <router-link to="/admin/conflicts" class="nav-link">审查</router-link>
         </div>
@@ -117,6 +118,7 @@
           <router-link to="/admin/seasons" class="mobile-nav-link" @click="mobileMenuOpen = false">赛季</router-link>
           <router-link to="/admin/events" class="mobile-nav-link" @click="mobileMenuOpen = false">活动</router-link>
           <router-link to="/admin/pika" class="mobile-nav-link" @click="mobileMenuOpen = false">皮卡月刊</router-link>
+          <router-link to="/admin/media" class="mobile-nav-link" @click="mobileMenuOpen = false">素材管理</router-link>
           <router-link to="/admin/nav-tabs" class="mobile-nav-link" @click="mobileMenuOpen = false">导航标签</router-link>
           <router-link to="/admin/conflicts" class="mobile-nav-link" @click="mobileMenuOpen = false">审查</router-link>
           <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">回到用户端</router-link>
@@ -153,8 +155,8 @@
       @cancel="modalCancel"
     />
 
-    <!-- 管理端全局图片预览 -->
-    <ImagePreview v-if="isAdminRoute" v-model="showPreview" :src="previewSrc" @close="closePreview" />
+    <!-- 全局图片预览 -->
+    <ImagePreview v-model="showPreview" :src="previewSrc" @close="closePreview" />
   </div>
 </template>
 

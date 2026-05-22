@@ -71,3 +71,7 @@ export const eventsApi = {
 export const statsApi = {
   get: () => request(`${BASE}/stats`),
 }
+
+export const pikaApi = {
+  list: () => request(`${BASE}/pika-monthlies`),
+}

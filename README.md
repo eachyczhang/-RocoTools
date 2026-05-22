@@ -22,6 +22,7 @@
 | 蛋组 | `/rocotools/eggs` | 15 种蛋组及其精灵成员 |
 | 性格 | `/rocotools/natures` | 30 种性格属性增减查询 |
 | 属性克制 | `/rocotools/elements` | 克制表(18×18)、双属性表、详细查询 |
+| 皮卡月刊 | `/rocotools/pika` | 角色时装期刊展示（全屏翻页、精灵切换） |
 
 ---
 
@@ -58,7 +59,8 @@
 │   │   ├── gen_webp.js     # WebP 批量转换
 │   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入）
 │   └── client/             # Vue3 前端（Vite + TailwindCSS）
-│       └── RESPONSIVE.md   # 响应式适配规范
+│       ├── RESPONSIVE.md   # 响应式适配规范
+│       └── DESIGN.md       # 视觉设计规范
 ├── nginx.conf              # Nginx 站点配置
 └── deploy.sh               # 一键部署脚本
 ```
@@ -149,6 +151,14 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 
 ---
 
+## 视觉设计规范
+
+统一的色彩体系（金色主色）、组件样式、暗色模式、交互规范。
+
+详见 [app/client/DESIGN.md](./app/client/DESIGN.md)
+
+---
+
 ## API 接口
 
 | 路由 | 说明 |
@@ -167,6 +177,7 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 | `GET /api/seasons` | 所有赛季 |
 | `GET /api/seasons/current` | 当前赛季 |
 | `GET /api/events?season_id&all` | 活动日历（默认仅活跃） |
+| `GET /api/pika-monthlies` | 皮卡月刊列表（含关联精灵） |
 
 ---
 

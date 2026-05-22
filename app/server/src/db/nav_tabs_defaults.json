@@ -1,12 +1,110 @@
 [
-  { "tab_key": "home",        "label": "首页",      "route": "/",         "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 100 },
-  { "tab_key": "season",      "label": "赛季",      "route": "/season",   "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 90  },
-  { "tab_key": "events",      "label": "活动",      "route": "/events",   "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 80  },
-  { "tab_key": "pets",        "label": "精灵",      "route": "/pets",     "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 70  },
-  { "tab_key": "skills",      "label": "技能",      "route": null,        "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 60  },
-  { "tab_key": "skills_list", "label": "技能列表",  "route": "/skills",   "icon": "", "parent_key": "skills", "is_visible": 1, "sort_order": 62 },
-  { "tab_key": "coverage",    "label": "打击面分析","route": "/coverage", "icon": "", "parent_key": "skills", "is_visible": 1, "sort_order": 61 },
-  { "tab_key": "eggs",        "label": "蛋组",      "route": "/eggs",     "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 40  },
-  { "tab_key": "natures",     "label": "性格",      "route": "/natures",  "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 30  },
-  { "tab_key": "elements",    "label": "属性",      "route": "/elements", "icon": "", "parent_key": null, "is_visible": 1, "sort_order": 20  }
+  {
+    "tab_key": "home",
+    "label": "首页",
+    "route": "/",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 100
+  },
+  {
+    "tab_key": "season",
+    "label": "赛季详情",
+    "route": "/season",
+    "icon": "",
+    "parent_key": "seasontab",
+    "is_visible": 1,
+    "sort_order": 90
+  },
+  {
+    "tab_key": "events",
+    "label": "赛季活动",
+    "route": "/events",
+    "icon": "",
+    "parent_key": "seasontab",
+    "is_visible": 1,
+    "sort_order": 80
+  },
+  {
+    "tab_key": "pets",
+    "label": "精灵",
+    "route": "/pets",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 77
+  },
+  {
+    "tab_key": "seasontab",
+    "label": "赛季",
+    "route": "",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 70
+  },
+  {
+    "tab_key": "skills",
+    "label": "技能",
+    "route": "",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 60
+  },
+  {
+    "tab_key": "skilllist",
+    "label": "技能列表",
+    "route": "/skills",
+    "icon": "",
+    "parent_key": "skills",
+    "is_visible": 1,
+    "sort_order": 60
+  },
+  {
+    "tab_key": "coverage",
+    "label": "打击面",
+    "route": "/coverage",
+    "icon": "",
+    "parent_key": "skills",
+    "is_visible": 1,
+    "sort_order": 50
+  },
+  {
+    "tab_key": "eggs",
+    "label": "蛋组",
+    "route": "/eggs",
+    "icon": "",
+    "parent_key": null,
+    "is_visible": 1,
+    "sort_order": 40
+  },
+  {
+    "tab_key": "natures",
+    "label": "性格",
+    "route": "/natures",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 30
+  },
+  {
+    "tab_key": "elements",
+    "label": "属性",
+    "route": "/elements",
+    "icon": "",
+    "parent_key": "",
+    "is_visible": 1,
+    "sort_order": 20
+  },
+  {
+    "tab_key": "pika",
+    "label": "皮卡月刊",
+    "route": "/pika",
+    "icon": "",
+    "parent_key": "seasontab",
+    "is_visible": 1,
+    "sort_order": 0
+  }
 ]
