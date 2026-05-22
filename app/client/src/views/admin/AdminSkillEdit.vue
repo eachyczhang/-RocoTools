@@ -1,21 +1,33 @@
 <template>
-  <div v-if="skill">
+  <div v-if="loaded">
     <router-link to="/admin/skills" class="text-sm text-muted hover:text-primary-500 mb-3 inline-block">← 返回技能列表</router-link>
 
     <div class="flex items-center gap-3 mb-4">
-      <img v-if="skill.icon_url" :src="skill.icon_url" class="w-12 h-12 object-contain" />
+      <img v-if="!isNew && skill?.icon_url" :src="skill.icon_url" class="w-12 h-12 object-contain" />
       <div>
-        <h1 class="font-roco text-xl text-primary-500">{{ skill.name }}</h1>
-        <span class="text-xs text-muted">{{ skill.uid }}</span>
+        <h1 class="font-roco text-xl text-primary-500">{{ isNew ? '新增技能' : skill?.name }}</h1>
+        <span v-if="!isNew" class="text-xs text-muted">{{ skill?.uid }}</span>
+      </div>
+    </div>
+
+    <!-- UID (only for new) -->
+    <div v-if="isNew" class="card mb-4">
+      <h2 class="font-roco text-base text-primary-500 mb-3">技能标识 <span class="text-xs text-red-500">*</span></h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-muted">技能 UID <span class="text-red-500">*</span></label>
+          <input v-model="newUid" class="input w-full" placeholder="如 skill_470" />
+          <p class="text-[10px] text-muted mt-1">格式：skill_编号，如 skill_470</p>
+        </div>
       </div>
     </div>
 
     <!-- 图标上传 -->
-    <div class="card mb-4">
+    <div v-if="!isNew" class="card mb-4">
       <h2 class="font-roco text-base text-primary-500 mb-3">技能图标</h2>
         <div class="flex items-center gap-4">
           <div class="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center">
-            <img v-if="skill.icon_url" :src="skill.icon_url" class="w-full h-full object-contain rounded-lg" />
+            <img v-if="skill?.icon_url" :src="skill.icon_url" class="w-full h-full object-contain rounded-lg" />
             <span v-else class="text-xs text-muted">无</span>
           </div>
           <ImageUploader
@@ -33,14 +45,14 @@
       <h2 class="font-roco text-base text-primary-500 mb-3">基础信息</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-muted">名称</label>
+          <label class="text-xs text-muted">名称 <span class="text-red-500">*</span></label>
           <input v-model="form.name" class="input w-full" />
         </div>
         <div>
           <label class="text-xs text-muted">属性</label>
           <SearchSelect
             v-model="elementIdStr"
-            :options="[{ value: '', label: '无' }, ...elements.map(e => ({ value: String(e.id), label: e.name }))]"
+            :options="[{ value: '', label: '无' }, ...elements.map(e => ({ value: String(e.id), label: e.name, icon: e.icon }))]"
             placeholder="无"
           />
         </div>
@@ -67,8 +79,10 @@
       </div>
     </div>
 
-    <div class="flex gap-3">
-      <button @click="save" class="btn" :disabled="saving">{{ saving ? '保存中...' : '保存修改' }}</button>
+    <div class="flex gap-3 mb-8">
+      <button @click="save" class="btn-primary shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" :disabled="saving">
+        {{ saving ? '保存中...' : (isNew ? '✨ 创建技能' : '💾 保存修改') }}
+      </button>
       <span v-if="msg" class="text-sm self-center" :class="ok ? 'text-green-600' : 'text-red-500'">{{ msg }}</span>
     </div>
   </div>
@@ -77,7 +91,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { skillsApi, elementsApi } from '@/api'
 import { adminApi } from '@/api/admin'
 import { useModal } from '@/composables/useModal'
@@ -85,11 +99,16 @@ import SearchSelect from '@/components/shared/SearchSelect.vue'
 import ImageUploader from '@/components/shared/ImageUploader.vue'
 
 const route = useRoute()
+const router = useRouter()
 const modal = useModal()
 const uid = route.params.uid
+const isNew = uid === 'new'
+
 const skill = ref(null)
 const elements = ref([])
-const form = ref({})
+const loaded = ref(false)
+const form = ref({ name: '', element_id: null, category: '', cost: 0, power: 0, description: '', version: '' })
+const newUid = ref('')
 const saving = ref(false)
 const msg = ref('')
 const ok = ref(false)
@@ -101,23 +120,49 @@ const elementIdStr = computed({
 })
 
 async function loadData() {
-  const [data, elemRes] = await Promise.all([skillsApi.get(uid), elementsApi.list()])
-  skill.value = data
+  const elemRes = await elementsApi.list()
   elements.value = elemRes.elements
-  form.value = {
-    name: data.name, element_id: data.element_id,
-    category: data.category, cost: data.cost, power: data.power,
-    description: data.description, version: data.version,
+
+  if (!isNew) {
+    const data = await skillsApi.get(uid)
+    skill.value = data
+    form.value = {
+      name: data.name, element_id: data.element_id,
+      category: data.category, cost: data.cost, power: data.power,
+      description: data.description, version: data.version,
+    }
   }
+
+  loaded.value = true
 }
 
 async function save() {
+  if (!form.value.name?.trim()) {
+    await modal.warning('缺少必填项', '请填写技能名称')
+    return
+  }
+
   saving.value = true; msg.value = ''
   try {
-    await adminApi.update('skills', uid, form.value)
-    ok.value = true; msg.value = '保存成功'; loadData()
-  } catch (err) { await modal.alert('保存失败', err.message) }
-  finally { saving.value = false }
+    if (isNew) {
+      const uidVal = newUid.value.trim()
+      if (!uidVal) {
+        await modal.warning('缺少必填项', '请填写技能 UID')
+        saving.value = false
+        return
+      }
+      await adminApi.create('skills', { uid: uidVal, ...form.value })
+      await modal.success('创建成功', `技能「${form.value.name}」（${uidVal}）已创建`)
+      router.replace(`/admin/skills/${uidVal}`)
+    } else {
+      await adminApi.update('skills', uid, form.value)
+      ok.value = true; msg.value = '保存成功'; loadData()
+    }
+  } catch (err) {
+    await modal.alert('操作失败', err.message)
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(loadData)

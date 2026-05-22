@@ -5,6 +5,7 @@
 
     <div class="flex flex-wrap gap-2 items-center mb-4">
       <input v-model="search" placeholder="搜索技能名称/UID..." class="input w-full sm:w-52" @input="debouncedFetch" />
+      <router-link to="/admin/skills/new" class="btn text-xs">+ 新增技能</router-link>
       <span class="text-muted text-xs ml-auto">共 {{ total }} 条</span>
     </div>
 
