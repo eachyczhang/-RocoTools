@@ -1,6 +1,6 @@
 
 <template>
-  <div class="relative" ref="wrapperRef">
+  <div class="relative" :class="{ 'z-[100]': isOpen }" ref="wrapperRef">
     <!-- 输入框 -->
     <div
       class="input w-full flex items-center gap-2 cursor-text"

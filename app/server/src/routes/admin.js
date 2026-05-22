@@ -1582,5 +1582,32 @@ router.get('/export-excel', (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/abilities
+ * Aggregate abilities from pets table for autocomplete
+ * Returns: [{ name, description, icon, pet_count }]
+ */
+router.get('/abilities', authAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare(`
+      SELECT
+        p.ability_name AS name,
+        p.ability_desc AS description,
+        pd.ability_icon AS icon,
+        COUNT(*) AS pet_count
+      FROM pets p
+      LEFT JOIN pet_details pd ON pd.pet_uid = p.uid
+      WHERE p.ability_name IS NOT NULL AND p.ability_name != ''
+      GROUP BY p.ability_name
+      ORDER BY pet_count DESC, p.ability_name ASC
+    `).all();
+    res.json(rows);
+  } catch (err) {
+    console.error('[Abilities]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 

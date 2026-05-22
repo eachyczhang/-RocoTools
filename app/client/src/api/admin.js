@@ -199,4 +199,7 @@ export const adminApi = {
       return res.blob()
     })
   },
+
+  // 特性聚合（智能提示）
+  abilities: () => adminRequest('/abilities'),
 }

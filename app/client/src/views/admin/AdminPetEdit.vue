@@ -73,7 +73,7 @@
     </div>
 
     <!-- 基础信息 -->
-    <div class="card mb-4">
+    <div class="card mb-4 relative z-20">
       <h2 class="font-roco text-base text-primary-500 mb-3">基础信息</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
@@ -104,12 +104,17 @@
     </div>
 
     <!-- 特性 -->
-    <div class="card mb-4">
+    <div class="card mb-4 relative z-10">
       <h2 class="font-roco text-base text-primary-500 mb-3">特性 <span class="text-xs text-red-500">*</span></h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="text-xs text-muted">特性名称 <span class="text-red-500">*</span></label>
-          <input v-model="form.ability_name" class="input w-full" />
+          <SearchSelect
+            v-model="form.ability_name"
+            :options="abilityOptions"
+            placeholder="选择已有特性或输入新特性"
+            :allow-custom="true"
+          />
         </div>
         <div>
           <label class="text-xs text-muted">特性描述 <span class="text-red-500">*</span></label>
@@ -169,7 +174,7 @@
 
     <!-- 保存按钮 -->
     <div class="flex gap-3 mb-8">
-      <button @click="save" class="btn" :disabled="saving">{{ saving ? '保存中...' : (isNew ? '创建精灵' : '保存修改') }}</button>
+      <button @click="save" class="btn-primary shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" :disabled="saving">{{ saving ? '保存中...' : (isNew ? '✨ 创建精灵' : '💾 保存修改') }}</button>
       <span v-if="msg" class="text-sm self-center" :class="ok ? 'text-green-600' : 'text-red-500'">{{ msg }}</span>
     </div>
   </div>
@@ -195,6 +200,7 @@ const isNew = uid === 'new'
 const pet = ref(null)
 const detail = ref(null)
 const elements = ref([])
+const abilities = ref([])
 const loaded = ref(false)
 const saving = ref(false)
 const msg = ref('')
@@ -223,8 +229,8 @@ const form = ref({
 const detailForm = ref({ height: '', weight: '', location: '' })
 
 const statFields = [
-  { key: 'hp', label: 'HP' }, { key: 'atk', label: '物攻' }, { key: 'def', label: '物防' },
-  { key: 'matk', label: '魔攻' }, { key: 'mdef', label: '魔防' }, { key: 'speed', label: '速度' },
+  { key: 'hp', label: '生命' }, { key: 'atk', label: '物攻' }, { key: 'matk', label: '魔攻' },
+  { key: 'def', label: '物防' }, { key: 'mdef', label: '魔防' }, { key: 'speed', label: '速度' },
   { key: 'total', label: '总和' },
 ]
 
@@ -270,9 +276,36 @@ const currentPreviewUrl = computed(() => {
 
 const abilityIconUrl = computed(() => pendingPreviews.value.pet_ability || detail.value?.ability_icon || null)
 
+// Ability options for SearchSelect (with pet_count badge)
+const abilityOptions = computed(() =>
+  abilities.value.map(a => ({
+    value: a.name,
+    label: a.name + (a.pet_count > 1 ? ` (${a.pet_count})` : ''),
+    icon: a.icon || '',
+  }))
+)
+
+// Watch ability_name changes to auto-fill description
+watch(() => form.value.ability_name, (newName) => {
+  if (!newName) return
+  const found = abilities.value.find(a => a.name === newName)
+  if (found) {
+    // Only auto-fill if description is empty or matches a known ability description
+    const currentDesc = form.value.ability_desc
+    const isKnownDesc = !currentDesc || abilities.value.some(a => a.description === currentDesc)
+    if (isKnownDesc) {
+      form.value.ability_desc = found.description || ''
+    }
+  }
+})
+
 async function loadData() {
-  const elemRes = await elementsApi.list()
+  const [elemRes, abilitiesRes] = await Promise.all([
+    elementsApi.list(),
+    adminApi.abilities().catch(() => []),
+  ])
   elements.value = elemRes.elements
+  abilities.value = abilitiesRes
 
   if (!isNew) {
     const data = await petsApi.get(uid)
