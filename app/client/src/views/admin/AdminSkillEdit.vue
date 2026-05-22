@@ -60,7 +60,13 @@
         </div>
         <div>
           <label class="text-xs text-muted">分类</label>
-          <input v-model="form.category" class="input w-full" placeholder="物攻/魔攻/防御/状态" />
+          <select v-model="form.category" class="input w-full">
+            <option value="">请选择分类</option>
+            <option value="物攻">物攻</option>
+            <option value="魔攻">魔攻</option>
+            <option value="防御">防御</option>
+            <option value="状态">状态</option>
+          </select>
         </div>
         <div>
           <label class="text-xs text-muted">能量消耗</label>
