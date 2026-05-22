@@ -13,11 +13,11 @@
     </div>
 
     <!-- Category tabs -->
-    <div class="flex items-center gap-1 overflow-x-auto pb-2 mb-4">
+    <div class="flex items-center gap-1 overflow-x-auto pb-2 mb-2">
       <button
         v-for="cat in categories"
         :key="cat.key"
-        @click="currentCategory = cat.key"
+        @click="selectCategory(cat.key)"
         class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
         :class="currentCategory === cat.key
           ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20'
@@ -28,12 +28,35 @@
       </button>
     </div>
 
+    <!-- Sub-category tabs for pets -->
+    <div v-if="currentCategory === 'pets'" class="flex items-center gap-1 overflow-x-auto pb-2 mb-4">
+      <button
+        v-for="sub in petSubCategories"
+        :key="sub.key"
+        @click="currentPetSub = sub.key"
+        class="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors"
+        :class="currentPetSub === sub.key
+          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+          : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5 border border-transparent'"
+      >
+        {{ sub.label }}
+        <span class="ml-1 text-[10px] opacity-60">({{ getPetSubCount(sub.key) }})</span>
+      </button>
+    </div>
+    <div v-else class="mb-4"></div>
+
     <!-- Stats bar -->
     <div class="flex items-center justify-between text-xs text-muted mb-3">
       <span>共 {{ filteredFiles.length }} 张图片{{ selectedFiles.size > 0 ? ' · 已选 ' + selectedFiles.size + ' 张' : '' }}</span>
       <div class="flex items-center gap-2">
         <button v-if="selectedFiles.size > 0" @click="batchDelete" class="text-red-500 hover:underline">批量删除</button>
         <button v-if="selectedFiles.size > 0" @click="selectedFiles.clear()" class="text-muted hover:underline">取消选择</button>
+        <select v-model="pageSize" class="input text-xs w-20" @change="currentPage = 1">
+          <option :value="36">36/页</option>
+          <option :value="72">72/页</option>
+          <option :value="120">120/页</option>
+          <option :value="0">全部</option>
+        </select>
         <button @click="toggleViewMode" class="text-muted hover:text-foreground">
           {{ viewMode === 'grid' ? '📋 列表' : '🖼️ 网格' }}
         </button>
@@ -54,7 +77,7 @@
     <!-- Grid view -->
     <div v-else-if="viewMode === 'grid'" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       <div
-        v-for="file in filteredFiles"
+        v-for="file in pagedFiles"
         :key="file.fullPath"
         class="group relative rounded-xl overflow-hidden border transition-all cursor-pointer"
         :class="[
@@ -104,7 +127,7 @@
     <!-- List view -->
     <div v-else class="space-y-1">
       <div
-        v-for="file in filteredFiles"
+        v-for="file in pagedFiles"
         :key="file.fullPath"
         class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
       >
@@ -130,11 +153,50 @@
         </div>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <button
+        @click="currentPage = 1"
+        :disabled="currentPage === 1"
+        class="px-2 py-1 rounded text-xs transition-colors"
+        :class="currentPage === 1 ? 'text-muted cursor-not-allowed' : 'text-foreground hover:bg-gray-100 dark:hover:bg-white/10'"
+      >«</button>
+      <button
+        @click="currentPage--"
+        :disabled="currentPage === 1"
+        class="px-2 py-1 rounded text-xs transition-colors"
+        :class="currentPage === 1 ? 'text-muted cursor-not-allowed' : 'text-foreground hover:bg-gray-100 dark:hover:bg-white/10'"
+      >‹</button>
+      <template v-for="p in visiblePages" :key="p">
+        <span v-if="p === '...'" class="text-xs text-muted px-1">…</span>
+        <button
+          v-else
+          @click="currentPage = p"
+          class="w-7 h-7 rounded text-xs font-medium transition-colors"
+          :class="currentPage === p
+            ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20'
+            : 'text-muted hover:bg-gray-100 dark:hover:bg-white/10'"
+        >{{ p }}</button>
+      </template>
+      <button
+        @click="currentPage++"
+        :disabled="currentPage === totalPages"
+        class="px-2 py-1 rounded text-xs transition-colors"
+        :class="currentPage === totalPages ? 'text-muted cursor-not-allowed' : 'text-foreground hover:bg-gray-100 dark:hover:bg-white/10'"
+      >›</button>
+      <button
+        @click="currentPage = totalPages"
+        :disabled="currentPage === totalPages"
+        class="px-2 py-1 rounded text-xs transition-colors"
+        :class="currentPage === totalPages ? 'text-muted cursor-not-allowed' : 'text-foreground hover:bg-gray-100 dark:hover:bg-white/10'"
+      >»</button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { adminApi } from '@/api/admin'
 import { useModal } from '@/composables/useModal'
 import { useImagePreview } from '@/composables/useImagePreview'
@@ -148,6 +210,8 @@ const currentCategory = ref('all')
 const searchQuery = ref('')
 const viewMode = ref('grid')
 const selectedFiles = reactive(new Set())
+const currentPage = ref(1)
+const pageSize = ref(36)
 
 const categories = [
   { key: 'all', label: '全部' },
@@ -160,6 +224,19 @@ const categories = [
   { key: 'elements', label: '属性' },
 ]
 
+const petSubCategories = [
+  { key: 'all', label: '全部' },
+  { key: 'default', label: '高清立绘' },
+  { key: 'thumb', label: '缩略图' },
+  { key: 'shiny', label: '异色' },
+  { key: 'fruit', label: '果实' },
+  { key: 'egg', label: '精灵蛋' },
+  { key: 'ability', label: '特性图标' },
+  { key: 'other', label: '其他' },
+]
+
+const currentPetSub = ref('all')
+
 // Map directory prefix to category
 function getFileCategory(filePath) {
   if (filePath.includes('/library/')) return 'library'
@@ -170,6 +247,28 @@ function getFileCategory(filePath) {
   if (filePath.includes('/skills/')) return 'skills'
   if (filePath.includes('/elements/')) return 'elements'
   return 'library'
+}
+
+// Map pet image path to sub-category
+function getPetSubCategory(filePath) {
+  if (filePath.includes('/pets/thumbs/')) return 'thumb'
+  if (filePath.includes('/pets/default/')) return 'default'
+  if (filePath.includes('/pets/shiny/')) return 'shiny'
+  if (filePath.includes('/pets/fruit/')) return 'fruit'
+  if (filePath.includes('/pets/egg/')) return 'egg'
+  if (filePath.includes('/pets/abilities/')) return 'ability'
+  return 'other'
+}
+
+function getPetSubCount(key) {
+  const petFiles = allFiles.value.filter(f => f.category === 'pets')
+  if (key === 'all') return petFiles.length
+  return petFiles.filter(f => f.petSub === key).length
+}
+
+function selectCategory(key) {
+  currentCategory.value = key
+  currentPetSub.value = 'all'
 }
 
 function getCategoryLabel(cat) {
@@ -187,11 +286,46 @@ const filteredFiles = computed(() => {
   if (currentCategory.value !== 'all') {
     files = files.filter(f => f.category === currentCategory.value)
   }
+  // Apply pet sub-category filter
+  if (currentCategory.value === 'pets' && currentPetSub.value !== 'all') {
+    files = files.filter(f => f.petSub === currentPetSub.value)
+  }
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
     files = files.filter(f => f.displayName.toLowerCase().includes(q) || f.fullPath.toLowerCase().includes(q))
   }
   return files
+})
+
+const totalPages = computed(() => {
+  if (pageSize.value === 0) return 1
+  return Math.max(1, Math.ceil(filteredFiles.value.length / pageSize.value))
+})
+
+const pagedFiles = computed(() => {
+  if (pageSize.value === 0) return filteredFiles.value
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredFiles.value.slice(start, start + pageSize.value)
+})
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages = []
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+
+// Reset page when filter changes
+watch([currentCategory, searchQuery, currentPetSub], () => {
+  currentPage.value = 1
 })
 
 function toggleViewMode() {
@@ -210,12 +344,16 @@ async function loadAllMedia() {
   loading.value = true
   try {
     const res = await adminApi.mediaList()
-    allFiles.value = (res.files || []).map(f => ({
-      ...f,
-      category: getFileCategory(f.fullPath),
-      categoryLabel: getCategoryLabel(getFileCategory(f.fullPath)),
-      displayName: f.filename.replace(/^\d+_/, ''),
-    }))
+    allFiles.value = (res.files || []).map(f => {
+      const category = getFileCategory(f.fullPath)
+      return {
+        ...f,
+        category,
+        categoryLabel: getCategoryLabel(category),
+        petSub: category === 'pets' ? getPetSubCategory(f.fullPath) : null,
+        displayName: f.filename.replace(/^\d+_/, ''),
+      }
+    })
   } catch (err) {
     await modal.alert('加载失败', err.message)
   } finally {

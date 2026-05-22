@@ -96,6 +96,43 @@
       </div>
     </div>
 
+    <!-- 进化链 -->
+    <div class="card mb-4 sm:mb-6" v-if="pet.detail?.evolution_chain?.length > 1">
+      <h3 class="font-roco text-sm sm:text-base mb-2 sm:mb-3">进化链</h3>
+      <div class="flex items-center justify-center flex-wrap gap-0">
+        <template v-for="(stage, idx) in pet.detail.evolution_chain" :key="idx">
+          <!-- Evolution level arrow -->
+          <div v-if="idx > 0" class="flex flex-col items-center mx-1 sm:mx-2">
+            <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">{{ stage.evolve_level ? 'Lv.' + stage.evolve_level : '特殊' }}</span>
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </div>
+          <!-- Pet stage card -->
+          <router-link v-if="stage.uid && stage.uid !== pet.uid"
+            :to="'/pets/' + stage.uid"
+            class="flex flex-col items-center px-3 py-2 rounded-xl transition-all hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:scale-105 cursor-pointer group">
+            <img v-if="stage.thumb_url" :src="stage.thumb_url"
+              class="w-16 h-16 sm:w-20 sm:h-20 object-contain" loading="lazy" />
+            <div v-else class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+              <span class="text-base text-gray-400">?</span>
+            </div>
+            <span class="text-xs sm:text-sm text-gray-700 dark:text-gray-200 group-hover:text-primary-500 transition-colors mt-1">{{ stage.name }}</span>
+          </router-link>
+          <div v-else
+            class="flex flex-col items-center px-3 py-2 rounded-xl"
+            :class="stage.uid === pet.uid ? 'bg-primary-50 dark:bg-primary-500/10 ring-2 ring-primary-400/60' : ''">
+            <img v-if="stage.thumb_url" :src="stage.thumb_url"
+              class="w-16 h-16 sm:w-20 sm:h-20 object-contain" loading="lazy" />
+            <div v-else class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+              <span class="text-base text-gray-400">?</span>
+            </div>
+            <span class="text-xs sm:text-sm mt-1 font-medium" :class="stage.uid === pet.uid ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-200'">{{ stage.name }}</span>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- 种族值 -->
     <div class="card mb-4 sm:mb-6">
       <h3 class="font-roco text-sm sm:text-base mb-3 sm:mb-4">种族值 <span class="text-primary-500 font-bold ml-2">{{ pet.total }}</span></h3>
