@@ -10,6 +10,7 @@ let sharp;
 try { sharp = require('sharp'); } catch (e) { /* sharp not available */ }
 
 const { authAdmin, signAdminToken } = require('../middleware/authAdmin');
+const { clearCache } = require('../middleware/apiCache');
 const { DB_PATH, DATA_DIR, getDb, getWriteDb } = require('../db/connection');
 
 const PUBLIC_DIR = path.join(DATA_DIR, 'public');
@@ -28,6 +29,19 @@ const _password = ADMIN_PASSWORD || 'roco2026';
 function isSafeFilename(name) {
   return /^[a-zA-Z0-9_\-.]+$/.test(name) && !name.includes('..');
 }
+
+// Auto-clear API cache after successful write operations (non-GET)
+router.use((req, res, next) => {
+  if (req.method === 'GET') return next();
+  const originalJson = res.json.bind(res);
+  res.json = (data) => {
+    if (res.statusCode < 400 && data && data.success !== false) {
+      clearCache();
+    }
+    return originalJson(data);
+  };
+  next();
+});
 
 /** 校验路径是否在预期目录内（防止路径遍历） */
 function isPathWithin(filepath, allowedDir) {
@@ -1002,10 +1016,6 @@ router.post('/restore', (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: `恢复失败: ${err.message}` });
   }
-
-  // 恢复后清除 API 缓存（数据已变化）
-  const { clearCache } = require('../middleware/apiCache');
-  clearCache();
 
   const msg = savedAs
     ? `已恢复到 ${name}，当前数据已保存为「${savedAs}」`
