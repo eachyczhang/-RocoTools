@@ -4,6 +4,7 @@ const path = require('path');
 
 const { DB_PATH } = require('./connection');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+const NAV_TABS_DEFAULTS_PATH = path.join(__dirname, 'nav_tabs_defaults.json');
 
 // 不删除旧数据库，schema.sql 使用 CREATE TABLE IF NOT EXISTS
 // 保留非爬虫数据（seasons 等手动录入的表）
@@ -25,8 +26,6 @@ initNavTabs(db);
 
 console.log(`[DONE] 数据库已初始化: ${DB_PATH}`);
 db.close();
-
-const NAV_TABS_DEFAULTS_PATH = path.join(__dirname, 'nav_tabs_defaults.json');
 
 /**
  * 初始化用户端导航标签默认数据
