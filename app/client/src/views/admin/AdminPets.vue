@@ -6,6 +6,13 @@
     <!-- 筛选栏 -->
     <div class="flex flex-wrap gap-2 items-center mb-4">
       <input v-model="search" placeholder="搜索精灵名称/UID..." class="input w-full sm:w-52" @input="debouncedFetch" />
+      <div class="w-40">
+        <SearchSelect
+          v-model="elementFilter"
+          :options="[{ value: '', label: '全部属性' }, ...elements.map(e => ({ value: String(e.id), label: e.name, icon: e.icon }))]"
+          placeholder="筛选属性"
+        />
+      </div>
       <router-link to="/admin/pets/new" class="btn text-xs">+ 新增精灵</router-link>
       <span class="text-muted text-xs ml-auto">共 {{ total }} 只</span>
     </div>
@@ -39,14 +46,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { petsApi } from '@/api'
+import { ref, onMounted, watch } from 'vue'
+import { petsApi, elementsApi } from '@/api'
+import SearchSelect from '@/components/shared/SearchSelect.vue'
 
 const pets = ref([])
 const total = ref(0)
 const page = ref(1)
 const limit = ref(30)
 const search = ref('')
+const elementFilter = ref('')
+const elements = ref([])
 
 let timer = null
 function debouncedFetch() {
@@ -54,11 +64,19 @@ function debouncedFetch() {
   timer = setTimeout(() => { page.value = 1; fetchData() }, 300)
 }
 
+watch(elementFilter, () => { page.value = 1; fetchData() })
+
 async function fetchData() {
-  const res = await petsApi.list({ page: page.value, limit: limit.value, search: search.value })
+  const params = { page: page.value, limit: limit.value, search: search.value }
+  if (elementFilter.value) params.element_id = elementFilter.value
+  const res = await petsApi.list(params)
   pets.value = res.pets
   total.value = res.total
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  const elemRes = await elementsApi.list()
+  elements.value = elemRes.elements
+  fetchData()
+})
 </script>

@@ -84,7 +84,7 @@
           <label class="text-xs text-muted">主属性 <span class="text-red-500">*</span></label>
           <SearchSelect
             v-model="elementIdStr"
-            :options="elements.map(e => ({ value: String(e.id), label: e.name }))"
+            :options="elements.map(e => ({ value: String(e.id), label: e.name, icon: e.icon }))"
             placeholder="请选择属性"
           />
         </div>
@@ -92,7 +92,7 @@
           <label class="text-xs text-muted">副属性</label>
           <SearchSelect
             v-model="subElementIdStr"
-            :options="[{ value: '', label: '无' }, ...elements.map(e => ({ value: String(e.id), label: e.name }))]"
+            :options="[{ value: '', label: '无' }, ...elements.map(e => ({ value: String(e.id), label: e.name, icon: e.icon }))]"
             placeholder="无"
           />
         </div>

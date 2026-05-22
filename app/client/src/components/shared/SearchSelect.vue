@@ -24,8 +24,8 @@
       <!-- 已选中时显示标签 -->
       <span
         v-if="selectedLabel && !query"
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-sm pointer-events-none text-foreground dark:text-white truncate max-w-[calc(100%-3rem)]"
-      >{{ selectedLabel }}</span>
+        class="absolute left-4 top-1/2 -translate-y-1/2 text-sm pointer-events-none text-foreground dark:text-white truncate max-w-[calc(100%-3rem)] flex items-center gap-1.5"
+      ><img v-if="selectedIcon" :src="selectedIcon" class="w-4 h-4 inline-block" />{{ selectedLabel }}</span>
       <!-- 清除按钮 -->
       <button
         v-if="modelValue && !disabled"
@@ -74,8 +74,8 @@
             @mousedown.prevent="selectOption(opt)"
             @mousemove="activeIndex = idx"
           >
-            <span class="truncate">{{ opt.label }}</span>
-            <span v-if="opt.value !== opt.label" class="ml-2 shrink-0 text-xs text-muted font-mono">{{ opt.value }}</span>
+            <span class="truncate flex items-center gap-1.5"><img v-if="opt.icon" :src="opt.icon" class="w-4 h-4 inline-block shrink-0" />{{ opt.label }}</span>
+            <span v-if="opt.value !== opt.label && !opt.icon" class="ml-2 shrink-0 text-xs text-muted font-mono">{{ opt.value }}</span>
             <svg v-if="opt.value === modelValue" class="ml-2 shrink-0 w-3.5 h-3.5 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
             </svg>
@@ -113,8 +113,8 @@ const activeIndex = ref(-1)
 const normalizedOptions = computed(() =>
   props.options.map(o =>
     typeof o === 'string'
-      ? { value: o, label: o }
-      : { value: o.value ?? o.path ?? '', label: o.label ?? o.value ?? o.path ?? '' }
+      ? { value: o, label: o, icon: '' }
+      : { value: o.value ?? o.path ?? '', label: o.label ?? o.value ?? o.path ?? '', icon: o.icon || '' }
   )
 )
 
@@ -123,6 +123,13 @@ const selectedLabel = computed(() => {
   if (!props.modelValue) return ''
   const found = normalizedOptions.value.find(o => o.value === props.modelValue)
   return found ? found.label : props.modelValue
+})
+
+// 当前选中项的图标
+const selectedIcon = computed(() => {
+  if (!props.modelValue) return ''
+  const found = normalizedOptions.value.find(o => o.value === props.modelValue)
+  return found ? found.icon : ''
 })
 
 // 过滤后的选项
