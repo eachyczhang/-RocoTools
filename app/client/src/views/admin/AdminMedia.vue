@@ -53,6 +53,7 @@
     <div class="flex items-center justify-between text-xs text-muted mb-3">
       <span>共 {{ filteredFiles.length }} 张图片{{ selectedFiles.size > 0 ? ' · 已选 ' + selectedFiles.size + ' 张' : '' }}</span>
       <div class="flex items-center gap-2">
+        <button v-if="isLibraryCategory" @click="selectAllPage" class="text-primary-500 hover:underline">{{ isAllPageSelected ? '取消全选' : '全选本页' }}</button>
         <button v-if="selectedFiles.size > 0" @click="batchDelete" class="text-red-500 hover:underline">批量删除</button>
         <button v-if="selectedFiles.size > 0" @click="selectedFiles.clear()" class="text-muted hover:underline">取消选择</button>
         <select v-model="pageSize" class="input text-xs w-20" @change="currentPage = 1">
@@ -92,6 +93,7 @@
         @click.exact="openPreview(file.url)"
         @click.ctrl="toggleSelect(file)"
         @click.meta="toggleSelect(file)"
+        :title="!isLibraryCategory ? '该分类下的图片受保护，不可批量操作' : ''"
       >
         <div class="aspect-square bg-gray-100 dark:bg-gray-800">
           <img :src="file.url" class="w-full h-full object-cover" loading="lazy" />
@@ -103,8 +105,8 @@
             <p class="text-white/60 text-[9px]">{{ formatSize(file.size) }}</p>
           </div>
         </div>
-        <!-- Select checkbox -->
-        <div class="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        <!-- Select checkbox (only for library category) -->
+        <div v-if="isLibraryCategory" class="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
           :class="{ '!opacity-100': selectedFiles.has(file.fullPath) }">
           <button
             @click.stop="toggleSelect(file)"
@@ -135,7 +137,7 @@
         :key="file.fullPath"
         class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
       >
-        <button @click="toggleSelect(file)" class="flex-shrink-0">
+        <button v-if="isLibraryCategory" @click="toggleSelect(file)" class="flex-shrink-0">
           <span class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
             :class="selectedFiles.has(file.fullPath)
               ? 'bg-primary-500 border-primary-500 text-white'
@@ -143,6 +145,7 @@
             {{ selectedFiles.has(file.fullPath) ? '✓' : '' }}
           </span>
         </button>
+        <span v-else class="w-5 flex-shrink-0"></span>
         <div class="w-10 h-10 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0 cursor-pointer"
           @click="openPreview(file.url)">
           <img :src="file.url" class="w-full h-full object-cover" loading="lazy" />
@@ -365,16 +368,37 @@ const visiblePages = computed(() => {
   return pages
 })
 
-// Reset page when filter changes
+// Reset page and selection when filter changes
 watch([currentCategory, searchQuery, currentPetSub], () => {
   currentPage.value = 1
+  selectedFiles.clear()
 })
 
 function toggleViewMode() {
   viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid'
 }
 
+// Only library category files can be selected
+const isLibraryCategory = computed(() => currentCategory.value === 'library')
+
+const isAllPageSelected = computed(() => {
+  if (!pagedFiles.value.length) return false
+  return pagedFiles.value.every(f => selectedFiles.has(f.fullPath))
+})
+
+function selectAllPage() {
+  if (isAllPageSelected.value) {
+    // Deselect all on current page
+    pagedFiles.value.forEach(f => selectedFiles.delete(f.fullPath))
+  } else {
+    // Select all on current page
+    pagedFiles.value.forEach(f => selectedFiles.add(f.fullPath))
+  }
+}
+
 function toggleSelect(file) {
+  // Only allow selecting library files
+  if (file.category !== 'library') return
   if (selectedFiles.has(file.fullPath)) {
     selectedFiles.delete(file.fullPath)
   } else {
