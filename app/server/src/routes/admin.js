@@ -1034,9 +1034,9 @@ router.post('/library/upload', authAdmin, upload.single('file'), (req, res) => {
   // Support optional sub-folder (sanitize to prevent path traversal)
   let folder = (req.body.folder || '').trim();
   if (folder) {
-    // Only allow alphanumeric, underscore, hyphen, forward slash
-    folder = folder.replace(/\\/g, '/').replace(/[^a-zA-Z0-9_\-\/]/g, '_');
-    // Remove leading/trailing slashes and prevent ..
+    // Normalize slashes, allow unicode letters/digits/underscore/hyphen/slash (supports Chinese)
+    folder = folder.replace(/\\/g, '/').replace(/[^\p{L}\p{N}_\-\/]/gu, '_');
+    // Remove leading/trailing slashes and prevent path traversal
     folder = folder.replace(/^\/+|\/+$/g, '').replace(/\.\./g, '');
   }
 
@@ -1050,7 +1050,7 @@ router.post('/library/upload', authAdmin, upload.single('file'), (req, res) => {
 
   // 用时间戳+原始文件名避免冲突
   const ext = path.extname(req.file.originalname) || '.png';
-  const base = path.basename(req.file.originalname, ext).replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const base = path.basename(req.file.originalname, ext).replace(/[^\p{L}\p{N}_\-]/gu, '_');
   const filename = `${Date.now()}_${base}${ext}`;
   const filepath = path.join(targetDir, filename);
   fs.writeFileSync(filepath, req.file.buffer);
