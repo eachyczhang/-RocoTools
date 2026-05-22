@@ -23,21 +23,23 @@
     </div>
 
     <!-- 图标上传 -->
-    <div v-if="!isNew" class="card mb-4">
+    <div class="card mb-4">
       <h2 class="font-roco text-base text-primary-500 mb-3">技能图标</h2>
         <div class="flex items-center gap-4">
           <div class="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-lg flex items-center justify-center">
-            <img v-if="skill?.icon_url" :src="skill.icon_url" class="w-full h-full object-contain rounded-lg" />
+            <img v-if="iconPreview" :src="iconPreview" class="w-full h-full object-contain rounded-lg" />
             <span v-else class="text-xs text-muted">无</span>
           </div>
           <ImageUploader
-            upload-type="skill_icon"
-            :upload-uid="uid"
+            :upload-type="isNew ? '' : 'skill_icon'"
+            :upload-uid="isNew ? '' : uid"
             upload-label="上传图标"
             btn-class="text-xs text-primary-500 hover:underline cursor-pointer"
-            @uploaded="() => { ok = true; msg = '图标上传成功'; loadData() }"
+            @uploaded="handleIconUploaded"
+            @file-selected="handleIconFileSelected"
           />
         </div>
+        <p v-if="isNew && pendingIconFile" class="text-xs text-green-600 mt-2">✓ 图标已暂存，创建技能时将一并上传</p>
     </div>
 
     <!-- 基础信息 -->
@@ -113,6 +115,30 @@ const saving = ref(false)
 const msg = ref('')
 const ok = ref(false)
 
+// Icon upload state
+const pendingIconFile = ref(null)
+const pendingIconPreview = ref('')
+const iconPreview = computed(() => pendingIconPreview.value || skill.value?.icon_url || '')
+
+function handleIconUploaded(path) {
+  if (isNew) {
+    // From library selection in deferred mode
+    pendingIconFile.value = { source: 'library', path }
+    pendingIconPreview.value = path
+  } else {
+    ok.value = true; msg.value = '图标上传成功'; loadData()
+  }
+}
+
+function handleIconFileSelected(file) {
+  pendingIconFile.value = { source: 'file', file }
+  if (pendingIconPreview.value && pendingIconPreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(pendingIconPreview.value)
+  }
+  pendingIconPreview.value = URL.createObjectURL(file)
+  msg.value = '图标已暂存'; ok.value = true
+}
+
 // SearchSelect 需要字符串，element_id 在 DB 中是数字，做桥接
 const elementIdStr = computed({
   get: () => form.value.element_id != null ? String(form.value.element_id) : '',
@@ -159,6 +185,26 @@ async function save() {
       }
       const uidVal = newUid.value
       await adminApi.create('skills', { uid: uidVal, ...form.value })
+
+      // Upload pending icon if any
+      if (pendingIconFile.value) {
+        let iconPath = ''
+        if (pendingIconFile.value.source === 'file') {
+          const res = await adminApi.upload(pendingIconFile.value.file, 'skill_icon', uidVal)
+          iconPath = res.path
+        } else if (pendingIconFile.value.source === 'library') {
+          const res = await adminApi.mediaCopyToBusiness(pendingIconFile.value.path, 'skill_icon', uidVal)
+          iconPath = res.path
+        }
+        if (iconPath) {
+          await adminApi.update('skills', uidVal, { icon_url: iconPath })
+        }
+        // Cleanup blob URL
+        if (pendingIconPreview.value && pendingIconPreview.value.startsWith('blob:')) {
+          URL.revokeObjectURL(pendingIconPreview.value)
+        }
+      }
+
       await modal.success('创建成功', `技能「${form.value.name}」（${uidVal}）已创建`)
       router.replace(`/admin/skills/${uidVal}`)
     } else {
