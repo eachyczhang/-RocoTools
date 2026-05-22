@@ -350,3 +350,33 @@ app/server/data/backups/
 | 临时备份 | 管理端 Dashboard 按钮 | 手动删除 | 管理端恢复 |
 | 赛季备份 | 管理端命名备份 | 需确认才能删除 | 管理端恢复 |
 | 恢复前快照 | 恢复操作自动触发 | 手动删除 | 管理端恢复 |
+
+### 图片安全与隔离
+
+爬虫同步（`run.py --full` / `--update`）对图片文件的影响：
+
+| 目录 | 用途 | 爬虫是否涉及 | 覆盖行为 |
+|------|------|-------------|----------|
+| `/uploads/` | 管理端上传的业务图片 | ❌ 完全不涉及 | — |
+| `/uploads/library/` | 素材库图片 | ❌ 完全不涉及 | — |
+| `data/public/pets/` | 爬虫下载的精灵图片 | ✅ | `skip_existing=True`，不覆盖 |
+| `data/public/skills/icons/` | 爬虫下载的技能图标 | ✅ | `skip_existing=True`，不覆盖 |
+| `data/public/elements/icons/` | 爬虫下载的属性图标 | ✅ | `skip_existing=True`，不覆盖 |
+| `data/public/pets/thumbs/` | 缩略图（WebP） | ✅ gen_thumbnails.js | 仅源 PNG 更新时重新生成 |
+
+**规则**：
+
+1. `batch_download()` 默认 `skip_existing=True`：文件已存在时直接跳过，不重新下载
+2. `gen_thumbnails.js` / `gen_webp.js`：比较源文件与输出文件的 mtime，源文件未变则跳过
+3. `import.js`：仅操作数据库（写入路径字符串），不触碰文件系统
+4. 爬虫代码中无任何对 `/uploads/` 目录的引用，管理端上传的图片与爬虫完全隔离
+5. 如需强制重新下载某图片：手动删除对应文件后重新执行爬虫即可
+
+**同名文件场景**：
+
+| 场景 | 结果 |
+|------|------|
+| 爬虫下载时目标文件已存在 | 跳过，不覆盖 |
+| 手动替换了爬虫图片后重新爬取 | 跳过，保留手动替换的版本 |
+| 删除文件后重新爬取 | 重新从 BWIKI 下载 |
+| BWIKI 图片更新但文件名不变 | 不会自动更新（需手动删除后重爬） |
