@@ -4,8 +4,10 @@
     <div class="space-y-2 md:space-y-2.5">
       <div v-for="skill in skills" :key="skill.id"
         class="flex items-start gap-2 md:gap-4 p-2.5 md:p-4 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">
-        <!-- 图标 -->
+        <!-- 图标：优先技能图标，fallback 属性图标 -->
         <img v-if="skill.skill_icon" :src="skill.skill_icon"
+          class="w-8 h-8 md:w-10 md:h-10 object-contain rounded flex-shrink-0 mt-0.5" loading="lazy" />
+        <img v-else-if="elemMap[skill.element]?.icon" :src="elemMap[skill.element].icon"
           class="w-8 h-8 md:w-10 md:h-10 object-contain rounded flex-shrink-0 mt-0.5" loading="lazy" />
         <div v-else class="w-8 h-8 md:w-10 md:h-10 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
 

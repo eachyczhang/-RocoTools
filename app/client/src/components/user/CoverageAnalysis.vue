@@ -85,7 +85,8 @@
             <div v-for="skill in bestCombo.recommendedSkills" :key="skill.name"
               class="flex items-center gap-1.5 md:gap-2 px-2 py-1.5 md:px-3 md:py-2 rounded-lg bg-gray-50 dark:bg-white/5 text-xs md:text-sm">
               <img v-if="skill.skillIcon" :src="skill.skillIcon" class="w-5 h-5 md:w-7 md:h-7 object-contain rounded" />
-              <span v-if="skill.elemIcon" class="inline-flex items-center px-1 py-0.5 rounded"
+              <img v-else-if="skill.elemIcon" :src="skill.elemIcon" class="w-5 h-5 md:w-7 md:h-7 object-contain rounded" />
+              <span v-if="skill.skillIcon && skill.elemIcon" class="inline-flex items-center px-1 py-0.5 rounded"
                 :style="{ background: skill.elemColor + '18' }">
                 <img :src="skill.elemIcon" class="w-4 h-4 md:w-5 md:h-5" />
               </span>
@@ -187,7 +188,8 @@
             <div v-for="skill in customResult.recommendedSkills" :key="skill.name"
               class="flex items-center gap-1.5 md:gap-2 px-2 py-1.5 md:px-3 md:py-2 rounded-lg bg-gray-50 dark:bg-white/5">
               <img v-if="skill.skillIcon" :src="skill.skillIcon" class="w-5 h-5 md:w-7 md:h-7 object-contain rounded" />
-              <span v-if="skill.elemIcon" class="inline-flex items-center px-1 py-0.5 rounded"
+              <img v-else-if="skill.elemIcon" :src="skill.elemIcon" class="w-5 h-5 md:w-7 md:h-7 object-contain rounded" />
+              <span v-if="skill.skillIcon && skill.elemIcon" class="inline-flex items-center px-1 py-0.5 rounded"
                 :style="{ background: skill.elemColor + '18' }">
                 <img :src="skill.elemIcon" class="w-4 h-4 md:w-5 md:h-5" />
               </span>

@@ -393,8 +393,9 @@
             <span class="text-xs text-muted mr-1">LV</span>
             <input v-model="skill.level" type="number" class="input w-12 text-xs text-center !px-1" placeholder="--" />
           </div>
-          <!-- Skill icon -->
+          <!-- Skill icon: fallback to element icon -->
           <img v-if="skill.skill_icon" :src="skill.skill_icon" class="w-6 h-6 object-contain flex-shrink-0 rounded" loading="lazy" />
+          <img v-else-if="getElementIcon(skill.element)" :src="getElementIcon(skill.element)" class="w-6 h-6 object-contain flex-shrink-0 rounded" loading="lazy" />
           <div v-else class="w-6 h-6 bg-gray-200 dark:bg-white/10 rounded flex-shrink-0"></div>
           <!-- Skill name -->
           <span class="text-xs font-medium truncate flex-1 min-w-0">{{ skill.name || '(未选择)' }}</span>
@@ -495,6 +496,7 @@
                     :class="isDark ? 'border-gray-700' : 'border-gray-100'">
                     <td class="py-2 px-2">
                       <img v-if="skill.icon_url" :src="skill.icon_url" class="w-8 h-8 object-contain" loading="lazy" />
+                      <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-8 h-8 object-contain" loading="lazy" />
                     </td>
                     <td class="py-2 px-2 font-medium">{{ skill.name }}</td>
                     <td class="py-2 px-2">
@@ -1147,6 +1149,11 @@ const keywordOptions = [
 function getElementColor(elementName) {
   const elem = elements.value.find(e => e.name === elementName)
   return elem?.color || '#6B7280'
+}
+
+function getElementIcon(elementName) {
+  const elem = elements.value.find(e => e.name === elementName)
+  return elem?.icon || ''
 }
 
 function getCategoryColor(type) {

@@ -7,6 +7,8 @@
     <div class="card flex flex-col sm:flex-row gap-4 sm:gap-5 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
       <img v-if="skill.icon_url" :src="skill.icon_url"
         class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 object-contain mx-auto sm:mx-0 flex-shrink-0" loading="lazy" />
+      <img v-else-if="skill.element_icon" :src="skill.element_icon"
+        class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 object-contain mx-auto sm:mx-0 flex-shrink-0" loading="lazy" />
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 justify-center sm:justify-start flex-wrap">
           <h1 class="font-roco text-2xl sm:text-3xl text-primary-500">{{ skill.name }}</h1>

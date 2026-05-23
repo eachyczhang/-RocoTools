@@ -59,6 +59,7 @@
             class="border-t border-surface-light-border/50 dark:border-surface-dark-border/50 hover:bg-gray-50 dark:hover:bg-white/3">
             <td class="py-3.5 px-4">
               <img v-if="skill.icon_url" :src="skill.icon_url" class="w-10 h-10 object-contain" :alt="skill.name" loading="lazy" />
+              <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-10 h-10 object-contain" :alt="skill.element_name" loading="lazy" />
             </td>
             <td class="py-3.5 px-4 font-medium">
               <router-link :to="`/skills/${skill.uid}`" class="hover:text-primary-500 transition-colors">{{ skill.name }}</router-link>
@@ -88,6 +89,7 @@
         class="block card !p-3">
         <div class="flex items-center gap-3">
           <img v-if="skill.icon_url" :src="skill.icon_url" class="w-9 h-9 object-contain flex-shrink-0" loading="lazy" />
+          <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-9 h-9 object-contain flex-shrink-0" loading="lazy" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <span class="font-medium text-sm truncate">{{ skill.name }}</span>
