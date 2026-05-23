@@ -1,6 +1,6 @@
 # RocoTools 工程架构设计图
 
-> 最后更新：2026-05-23
+> 最后更新：2026-05-24
 > 本文档使用 Mermaid 语法，可在 GitHub / VS Code / 任何支持 Mermaid 的 Markdown 渲染器中查看。
 
 ---
@@ -340,6 +340,7 @@ graph TD
         AdminSeasons["/admin/seasons  赛季管理"]
         AdminEvents["/admin/events  活动管理"]
         AdminPika["/admin/pika  皮卡月刊"]
+        AdminAbilities["/admin/abilities  特性管理"]
         AdminMedia["/admin/media  素材管理"]
         AdminNavTabs["/admin/nav-tabs  导航配置"]
         AdminConflicts["/admin/conflicts  数据冲突"]
@@ -382,6 +383,7 @@ graph LR
         ASE["/api/admin/seasons"]
         AEV["/api/admin/events"]
         APK["/api/admin/pika"]
+        AAB["/api/admin/abilities<br/>特性管理"]
         AM["/api/admin/media<br/>素材浏览"]
         ALB["/api/admin/library<br/>素材库CRUD"]
         ANT["/api/admin/nav-tabs"]
@@ -600,6 +602,7 @@ graph TD
         useModal["useModal"]
         useLazyImage["useLazyImage"]
         useImagePreview["useImagePreview"]
+        usePageVisibility["usePageVisibility"]
         useAdmin["useAdmin"]
         useTheme["useTheme"]
     end
@@ -621,6 +624,8 @@ graph TD
     PetPicker --> ModalDialog
     ImagePreview --> useImagePreview
     AdminMedia2 --> useLazyImage
+
+    App_vue["App.vue"] --> usePageVisibility
 ```
 
 ---

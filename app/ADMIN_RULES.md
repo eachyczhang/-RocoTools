@@ -161,6 +161,59 @@ router.use((req, res, next) => {
 | `/api/admin/pet-egg-groups/:uid` | GET | 获取精灵当前关联的蛋组 |
 | `/api/admin/pet-egg-groups/:uid` | PUT | 保存精灵的蛋组关联 |
 
+### 多形态管理（variants_map 自动同步）
+
+精灵支持多形态（如普通形态、异色形态等），通过 `variants_map` 表维护映射关系。
+
+#### 自动同步机制
+
+管理端创建/更新/删除精灵时，后端自动调用 `syncVariantsMap(db, petId)` 函数同步映射：
+
+| 操作 | 触发时机 | 说明 |
+|------|----------|------|
+| 创建精灵 | `POST /api/admin/data/pets` 成功后 | 同步该 pet_id 的所有形态 |
+| 更新精灵 | `PUT /api/admin/data/pets/:id` 成功后 | 同步新旧 pet_id（处理 pet_id 变更） |
+| 删除精灵 | `DELETE /api/admin/data/pets/:id` 成功后 | 同步剩余形态 |
+
+#### syncVariantsMap 逻辑
+
+1. 查找同 `pet_id` 下所有 uid（按 uid 自然排序）
+2. 删除该 `pet_id` 在 `variants_map` 中的旧记录
+3. 重新插入所有 uid 的映射（`sort_order` 从 0 开始递增）
+
+#### 管理端形态切换
+
+精灵编辑页面（`AdminPetEdit.vue`）支持形态切换：
+- 标题下方显示形态切换按钮（当 `variants.length > 1` 时）
+- 使用 `<router-link>` 跳转到 `/admin/pets/:uid`
+- 通过 `watch(() => route.params.uid)` 监听路由变化，自动重新加载数据
+- 当前形态高亮使用 `route.params.uid` 响应式判断
+
+### 特性管理
+
+特性（Ability）数据分散在 `pets.ability_name`、`pets.ability_desc`、`pet_details.ability_icon` 中，通过管理端 `/admin/abilities` 页面统一管理。
+
+#### API 接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/admin/abilities` | GET | 获取所有特性聚合列表（名称、描述、图标、精灵数量） |
+| `/api/admin/abilities/:name` | GET | 获取特性详情（含关联精灵列表） |
+| `/api/admin/abilities/:name` | PUT | 更新特性（更名/修改描述/修改图标） |
+| `/api/admin/abilities/upload-icon` | POST | 上传特性图标 |
+
+#### 更名规则
+
+- 更名时批量更新所有拥有该特性的精灵的 `ability_name` 字段
+- 检查目标名称是否已存在（409 冲突）
+- 自动标记 `manual_edit = 1`
+
+#### 图标更新规则
+
+- 修改图标时批量更新所有关联精灵的 `pet_details.ability_icon`
+- 图标存储路径：`/public/pets/abilities/`
+- 支持本地上传和从素材库选取（使用 `ImageUploader` 组件）
+
 ### 图片上传与字段同步
 
 上传精灵立绘（`pet_default` 类型）时，自动同步写入以下字段：
@@ -389,6 +442,10 @@ router.use((req, res, next) => {
 | `/api/admin/data/:table/:id` | DELETE | 通用删除记录 |
 | `/api/admin/pet-skills/:uid` | GET/PUT | 精灵技能管理 |
 | `/api/admin/pet-egg-groups/:uid` | GET/PUT | 精灵蛋组管理 |
+| `/api/admin/abilities` | GET | 特性聚合列表 |
+| `/api/admin/abilities/:name` | GET | 特性详情（含关联精灵） |
+| `/api/admin/abilities/:name` | PUT | 更新特性（更名/描述/图标） |
+| `/api/admin/abilities/upload-icon` | POST | 上传特性图标 |
 | `/api/admin/skills-next-uid` | GET | 获取下一个技能 UID |
 | `/api/admin/skills-search?q=` | GET | 技能名称搜索（自动补全） |
 | `/api/admin/library/upload` | POST | 素材库上传 |
@@ -439,7 +496,58 @@ router.use((req, res, next) => {
 
 ---
 
-## 九、manual_edit 保护机制
+## 九、前端稳定性机制
+
+### 页面可见性恢复（usePageVisibility）
+
+解决 SPA 页面切到后台一段时间后变成"无响应"的问题。
+
+**组件**：`composables/usePageVisibility.js`
+
+**机制**：
+- 监听 `document.visibilitychange` 事件
+- 记录页面隐藏时间戳
+- 页面重新可见时，如果隐藏时长 ≥ 5 分钟（`STALE_THRESHOLD`）：
+  - 管理端：检查 JWT token 是否过期，过期则 `window.location.reload()` 触发重新登录
+  - 自动 `router.replace(route.fullPath)` 刷新当前页面数据
+- 提供全局事件总线 `onPageResume(callback)` 供组件订阅恢复事件
+
+**集成位置**：`App.vue` 中调用 `usePageVisibility()`
+
+### 请求超时机制
+
+防止 fetch 请求在页面后台时永远挂起（Promise 不 resolve 也不 reject）。
+
+| API 层 | 超时时长 | 文件 |
+|--------|----------|------|
+| 管理端 `adminRequest` | 30 秒 | `api/admin.js` |
+| 用户端 `request` | 20 秒 | `api/index.js` |
+
+**实现**：使用 `AbortController` + `setTimeout`，超时后 `abort()` 请求，抛出"请求超时"错误。
+
+---
+
+## 十、Express 中间件顺序规范
+
+**核心原则**：API 路由必须注册在静态文件中间件之前，确保 API 请求不被图片 I/O 阻塞。
+
+```
+1. cors() + morgan() + express.json()   ← 核心中间件
+2. /api/* 路由                            ← API 优先处理
+3. express.static('/public')             ← 静态文件（仅开发环境/fallback）
+4. express.static('/uploads')            ← 上传文件（仅开发环境/fallback）
+```
+
+**原因**：3M 带宽服务器上，并发图片下载会占满 Node.js 事件循环，导致 API 请求排队。生产环境由 Nginx 直接提供静态文件（`location ^~ /public/` 和 `location ^~ /uploads/`），Express 的 static 中间件仅作为开发环境 fallback。
+
+### Nginx location 优先级
+
+- `/public/` 和 `/uploads/` 使用 `^~` 修饰符，确保优先于正则 location
+- 正则 `~* \.(webp|jpg|...)$` 仅匹配未被 `^~` 捕获的图片请求（如 `/rocotools/assets/` 中的构建产物图片）
+
+---
+
+## 十一、manual_edit 保护机制
 
 | 表 | 字段 | 说明 |
 |----|------|------|
