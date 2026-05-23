@@ -218,4 +218,25 @@ export const adminApi = {
     method: 'PUT',
     body: JSON.stringify({ egg_group_ids: eggGroupIds }),
   }),
+
+  // 素材库目录管理
+  libraryDirectories: () => adminRequest('/library/directories'),
+  createLibraryDirectory: (dirPath) => adminRequest('/library/directories', {
+    method: 'POST',
+    body: JSON.stringify({ path: dirPath }),
+  }),
+  renameLibraryDirectory: (oldPath, newName) => adminRequest('/library/directories', {
+    method: 'PUT',
+    body: JSON.stringify({ oldPath, newName }),
+  }),
+  deleteLibraryDirectory: (dirPath) => adminRequest('/library/directories', {
+    method: 'DELETE',
+    body: JSON.stringify({ path: dirPath }),
+  }),
+
+  // 素材库批量重命名
+  batchRenameFiles: (operations) => adminRequest('/library/batch-rename', {
+    method: 'POST',
+    body: JSON.stringify({ operations }),
+  }),
 }

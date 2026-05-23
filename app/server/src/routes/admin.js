@@ -1230,6 +1230,199 @@ router.delete('/library/:filename', authAdmin, (req, res) => {
 });
 
 // ============================================================
+// 素材库目录管理接口
+// ============================================================
+
+/**
+ * GET /api/admin/library/directories
+ * 获取素材库目录结构
+ */
+router.get('/library/directories', authAdmin, (req, res) => {
+  
+  function scanDirectories(dir, prefix = '') {
+    const directories = [];
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name !== '.thumbs') {
+        const fullPath = prefix ? prefix + '/' + entry.name : entry.name;
+        const subDir = path.join(dir, entry.name);
+        const children = scanDirectories(subDir, fullPath);
+        directories.push({
+          name: entry.name,
+          path: fullPath,
+          children: children
+        });
+      }
+    }
+    return directories;
+  }
+  
+  const result = scanDirectories(LIBRARY_DIR);
+  res.json({ directories: result });
+});
+
+/**
+ * POST /api/admin/library/directories
+ * 创建新目录
+ */
+router.post('/library/directories', authAdmin, (req, res) => {
+  const { path: dirPath } = req.body;
+  if (!dirPath) return res.status(400).json({ error: '缺少路径参数' });
+  
+  // Sanitize path
+  const safePath = dirPath.replace(/\\/g, '/').replace(/[^\p{L}\p{N}_\-\/]/gu, '_').replace(/^\.\.\//g, '');
+  const targetDir = path.join(LIBRARY_DIR, safePath);
+  
+  if (!isPathWithin(targetDir, LIBRARY_DIR)) {
+    return res.status(400).json({ error: '路径非法' });
+  }
+  
+  if (fs.existsSync(targetDir)) {
+    return res.status(409).json({ error: '目录已存在' });
+  }
+  
+  fs.mkdirSync(targetDir, { recursive: true });
+  res.json({ success: true, path: safePath });
+});
+
+/**
+ * PUT /api/admin/library/directories
+ * 重命名目录
+ */
+router.put('/library/directories', authAdmin, (req, res) => {
+  const { oldPath, newName } = req.body;
+  if (!oldPath || !newName) return res.status(400).json({ error: '缺少参数' });
+  
+  // Sanitize inputs
+  const safeOldPath = oldPath.replace(/\\/g, '/').replace(/[^\p{L}\p{N}_\-\/]/gu, '_');
+  const safeNewName = newName.replace(/[^\p{L}\p{N}_\-]/gu, '_');
+  
+  const oldDir = path.join(LIBRARY_DIR, safeOldPath);
+  const parentDir = path.dirname(oldDir);
+  const newDir = path.join(parentDir, safeNewName);
+  
+  if (!isPathWithin(oldDir, LIBRARY_DIR) || !isPathWithin(newDir, LIBRARY_DIR)) {
+    return res.status(400).json({ error: '路径非法' });
+  }
+  
+  if (!fs.existsSync(oldDir)) {
+    return res.status(404).json({ error: '原目录不存在' });
+  }
+  
+  if (fs.existsSync(newDir)) {
+    return res.status(409).json({ error: '新目录名已存在' });
+  }
+  
+  fs.renameSync(oldDir, newDir);
+  
+  // Also rename corresponding thumbnail directory
+  const oldThumbDir = path.join(LIBRARY_DIR, '.thumbs', safeOldPath);
+  const newThumbDir = path.join(LIBRARY_DIR, '.thumbs', path.dirname(safeOldPath), safeNewName);
+  if (fs.existsSync(oldThumbDir)) {
+    fs.renameSync(oldThumbDir, newThumbDir);
+  }
+  
+  res.json({ success: true, newPath: path.join(path.dirname(safeOldPath), safeNewName) });
+});
+
+/**
+ * DELETE /api/admin/library/directories
+ * 删除目录
+ */
+router.delete('/library/directories', authAdmin, (req, res) => {
+  const { path: dirPath } = req.body;
+  if (!dirPath) return res.status(400).json({ error: '缺少路径参数' });
+  
+  const safePath = dirPath.replace(/\\/g, '/').replace(/[^\p{L}\p{N}_\-\/]/gu, '_');
+  const targetDir = path.join(LIBRARY_DIR, safePath);
+  
+  if (!isPathWithin(targetDir, LIBRARY_DIR)) {
+    return res.status(400).json({ error: '路径非法' });
+  }
+  
+  if (!fs.existsSync(targetDir)) {
+    return res.status(404).json({ error: '目录不存在' });
+  }
+  
+  // Recursively delete directory and all its contents
+  try {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+    
+    // Also delete corresponding thumbnail directory recursively
+    const thumbDir = path.join(LIBRARY_DIR, '.thumbs', safePath);
+    if (fs.existsSync(thumbDir)) {
+      fs.rmSync(thumbDir, { recursive: true, force: true });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除目录失败:', error);
+    res.status(500).json({ error: '删除目录失败：' + error.message });
+  }
+});
+
+/**
+ * POST /api/admin/library/batch-rename
+ * 批量重命名文件
+ */
+router.post('/library/batch-rename', authAdmin, (req, res) => {
+  const { operations } = req.body;
+  if (!Array.isArray(operations) || operations.length === 0) {
+    return res.status(400).json({ error: '缺少重命名操作列表' });
+  }
+  
+  const results = [];
+  
+  for (const op of operations) {
+    const { oldPath, newName } = op;
+    if (!oldPath || !newName) {
+      results.push({ oldPath, success: false, error: '缺少参数' });
+      continue;
+    }
+    
+    // Sanitize inputs
+    const safeOldPath = oldPath.replace(/\\/g, '/').replace(/[^\p{L}\p{N}_\-\/\.]/gu, '_');
+    const safeNewName = newName.replace(/[^\p{L}\p{N}_\-\.]/gu, '_');
+    
+    const oldFilePath = path.join(LIBRARY_DIR, safeOldPath);
+    const parentDir = path.dirname(oldFilePath);
+    const newFilePath = path.join(parentDir, safeNewName);
+    
+    if (!isPathWithin(oldFilePath, LIBRARY_DIR) || !isPathWithin(newFilePath, LIBRARY_DIR)) {
+      results.push({ oldPath, success: false, error: '路径非法' });
+      continue;
+    }
+    
+    if (!fs.existsSync(oldFilePath)) {
+      results.push({ oldPath, success: false, error: '文件不存在' });
+      continue;
+    }
+    
+    if (fs.existsSync(newFilePath)) {
+      results.push({ oldPath, success: false, error: '新文件名已存在' });
+      continue;
+    }
+    
+    try {
+      fs.renameSync(oldFilePath, newFilePath);
+      
+      // Also rename thumbnail
+      const oldThumbPath = oldFilePath.replace(LIBRARY_DIR, path.join(LIBRARY_DIR, '.thumbs')).replace(/\.[^.]+$/, '.webp');
+      const newThumbPath = newFilePath.replace(LIBRARY_DIR, path.join(LIBRARY_DIR, '.thumbs')).replace(/\.[^.]+$/, '.webp');
+      if (fs.existsSync(oldThumbPath)) {
+        fs.renameSync(oldThumbPath, newThumbPath);
+      }
+      
+      results.push({ oldPath, success: true, newPath: path.join(path.dirname(safeOldPath), safeNewName) });
+    } catch (error) {
+      results.push({ oldPath, success: false, error: error.message });
+    }
+  }
+  
+  res.json({ results });
+});
+
+// ============================================================
 // 统一素材管理接口
 // ============================================================
 
