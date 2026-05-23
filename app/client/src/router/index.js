@@ -37,6 +37,16 @@ const routes = [
 const router = createRouter({
   history: createWebHistory('/rocotools/'),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // Back/forward navigation: restore saved scroll position after content renders
+    if (savedPosition) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(savedPosition), 300)
+      })
+    }
+    // Normal navigation: scroll to top
+    return { top: 0 }
+  },
 })
 
 // 路由守卫：管理端页面需验证 token
