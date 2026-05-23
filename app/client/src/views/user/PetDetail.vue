@@ -1,7 +1,7 @@
 <template>
   <div v-if="pet">
     <!-- 返回 -->
-    <button @click="goBack" class="text-sm sm:text-base text-muted hover:text-primary-500 mb-3 sm:mb-4 inline-block cursor-pointer">← 返回列表</button>
+    <button @click="goBack" class="text-sm sm:text-base text-muted hover:text-primary-500 mb-3 sm:mb-4 inline-block cursor-pointer">← 返回</button>
 
     <!-- 形态切换 -->
     <div class="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 flex-wrap" v-if="pet.variants && pet.variants.length > 1">

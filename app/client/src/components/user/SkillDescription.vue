@@ -26,6 +26,16 @@ const INDEPENDENT = {
   '驱散': '#1565C0',   // Indigo blue - unique
 }
 
+// Stats colors (六维属性)
+const STATS_COLORS = {
+  '生命': '#22A65B',   // Green - vitality
+  '物攻': '#E8703A',   // Orange - physical attack
+  '魔攻': '#A855F7',   // Purple - magic attack
+  '物防': '#5B8FA8',   // Steel blue - physical defense
+  '魔防': '#6D9DC5',   // Soft blue - magic defense
+  '速度': '#D4A017',   // Gold - speed
+}
+
 // Keyword highlight rules (sorted by length desc at runtime)
 const highlightRules = [
   // Red-orange - Counter mechanic (应对系)
@@ -81,6 +91,14 @@ const highlightRules = [
   { pattern: '回复', color: ELEMENT_COLORS['草'] },
   { pattern: '奉献', color: ELEMENT_COLORS['虫'] },
   { pattern: '传动', color: ELEMENT_COLORS['机械'] },
+
+  // Stats (六维属性)
+  { pattern: '生命', color: STATS_COLORS['生命'] },
+  { pattern: '物攻', color: STATS_COLORS['物攻'] },
+  { pattern: '魔攻', color: STATS_COLORS['魔攻'] },
+  { pattern: '物防', color: STATS_COLORS['物防'] },
+  { pattern: '魔防', color: STATS_COLORS['魔防'] },
+  { pattern: '速度', color: STATS_COLORS['速度'] },
 ]
 
 // Element type pattern: "X系" where X is any element name
