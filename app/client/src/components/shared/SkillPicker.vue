@@ -2,7 +2,8 @@
   <div class="relative">
     <!-- Selected -->
     <div v-if="selectedSkill" class="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50 dark:bg-white/5">
-      <img v-if="selectedSkill.element_icon" :src="selectedSkill.element_icon" class="w-5 h-5 flex-shrink-0" />
+      <img v-if="selectedSkill.icon_url" :src="selectedSkill.icon_url" class="w-6 h-6 object-contain flex-shrink-0" />
+      <img v-if="selectedSkill.element_icon" :src="selectedSkill.element_icon" class="w-4 h-4 flex-shrink-0" />
       <div class="flex-1 min-w-0">
         <div class="text-xs font-medium truncate">{{ selectedSkill.name }}</div>
       </div>
@@ -27,6 +28,7 @@
         <div v-for="skill in results" :key="skill.uid" @click="selectSkill(skill)"
           class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors"
           :class="isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'">
+          <img v-if="skill.icon_url" :src="skill.icon_url" class="w-5 h-5 object-contain flex-shrink-0" />
           <img v-if="skill.element_icon" :src="skill.element_icon" class="w-4 h-4 flex-shrink-0" />
           <div class="flex-1 min-w-0">
             <div class="text-xs truncate">{{ skill.name }}</div>
@@ -100,6 +102,7 @@
               <table class="w-full text-sm">
                 <thead>
                   <tr class="text-left text-muted text-xs">
+                    <th class="py-2 px-2 w-10">图标</th>
                     <th class="py-2 px-2">名称</th>
                     <th class="py-2 px-2">属性</th>
                     <th class="py-2 px-2">分类</th>
@@ -114,6 +117,10 @@
                     class="border-t transition-colors cursor-pointer"
                     :class="isDark ? 'border-gray-700 hover:bg-white/5' : 'border-gray-100 hover:bg-gray-50'"
                     @click="selectFromBrowser(skill)">
+                    <td class="py-2 px-2">
+                      <img v-if="skill.icon_url" :src="skill.icon_url" class="w-6 h-6 object-contain" />
+                      <span v-else class="w-6 h-6 inline-block"></span>
+                    </td>
                     <td class="py-2 px-2 font-medium text-xs">{{ skill.name }}</td>
                     <td class="py-2 px-2">
                       <span class="flex items-center gap-1">
