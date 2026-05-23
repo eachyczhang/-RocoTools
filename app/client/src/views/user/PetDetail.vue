@@ -1,7 +1,7 @@
 <template>
   <div v-if="pet">
     <!-- 返回 -->
-    <router-link to="/pets" class="text-sm sm:text-base text-muted hover:text-primary-500 mb-3 sm:mb-4 inline-block">← 返回列表</router-link>
+    <button @click="goBack" class="text-sm sm:text-base text-muted hover:text-primary-500 mb-3 sm:mb-4 inline-block cursor-pointer">← 返回列表</button>
 
     <!-- 形态切换 -->
     <div class="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 flex-wrap" v-if="pet.variants && pet.variants.length > 1">
@@ -77,12 +77,12 @@
           </div>
 
           <!-- 特性 -->
-          <div class="flex items-center gap-2 mb-2 sm:mb-3 justify-center sm:justify-start">
+          <div class="flex items-start gap-2.5 sm:gap-3 mb-3 sm:mb-4 justify-center sm:justify-start p-2.5 sm:p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03]">
             <img v-if="pet.detail?.ability_icon" :src="pet.detail.ability_icon"
-              class="w-7 h-7 sm:w-9 sm:h-9 rounded object-contain flex-shrink-0" loading="lazy" />
-            <div class="text-left">
-              <div class="font-medium text-xs sm:text-sm">{{ pet.ability_name }}</div>
-              <SkillDescription :text="pet.ability_desc" class="text-xs text-muted" />
+              class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg object-contain flex-shrink-0 mt-0.5" loading="lazy" />
+            <div class="text-left flex-1 min-w-0">
+              <div class="font-semibold text-sm sm:text-base mb-0.5 sm:mb-1">{{ pet.ability_name }}</div>
+              <SkillDescription :text="pet.ability_desc" class="text-xs sm:text-sm leading-relaxed text-muted" />
             </div>
           </div>
 
@@ -237,6 +237,15 @@ import { getEggGroupColor } from '@/constants/eggGroupColors'
 const route = useRoute()
 const router = useRouter()
 const pet = ref(null)
+
+/** Navigate back: if previous route was pets list, go back to preserve state; otherwise navigate to /pets */
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/pets')
+  }
+}
 
 /** Format evolve_condition object to display text */
 function formatEvoCondition(cond) {

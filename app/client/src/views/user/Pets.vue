@@ -46,19 +46,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
 import PetCard from '@/components/shared/PetCard.vue'
+
+const route = useRoute()
+const router = useRouter()
 
 const pets = ref([])
 const elements = ref([])
 const shinyMap = ref({})
 const total = ref(0)
-const page = ref(1)
 const limit = ref(30)
-const search = ref('')
-const elementId = ref('')
-const sortBy = ref('pet_id')
+
+// Initialize state from URL query params (restore on back navigation)
+const page = ref(Number(route.query.page) || 1)
+const search = ref(route.query.search || '')
+const elementId = ref(route.query.element_id || '')
+const sortBy = ref(route.query.sort_by || 'pet_id')
+
+/** Sync current filter state to URL query (replace, not push) */
+function syncQuery() {
+  const query = {}
+  if (page.value > 1) query.page = page.value
+  if (search.value) query.search = search.value
+  if (elementId.value) query.element_id = elementId.value
+  if (sortBy.value && sortBy.value !== 'pet_id') query.sort_by = sortBy.value
+  router.replace({ query })
+}
 
 let debounceTimer = null
 function debouncedFetch() {
@@ -72,6 +88,7 @@ function filterChanged() {
 }
 
 async function fetchData() {
+  syncQuery()
   const res = await petsApi.list({
     page: page.value, limit: limit.value,
     search: search.value, element_id: elementId.value,
