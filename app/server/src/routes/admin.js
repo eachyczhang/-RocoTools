@@ -70,7 +70,8 @@ function syncVariantsMap(db, petId) {
 
 /**
  * Sync evolution_chain to all pets in the chain.
- * When one pet's evolution chain is saved, propagate the same chain to all other pets referenced in it.
+ * When one pet's evolution chain is saved, MERGE the new routes into each target pet's existing chain.
+ * This prevents overwriting when different routes are saved separately.
  * Supports both 1D (single route) and 2D (multi-route) formats.
  * @param {object} db - writable database connection
  * @param {string} currentPetUid - the pet_uid that triggered the save
@@ -87,16 +88,16 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
   if (!Array.isArray(chain) || chain.length === 0) return;
 
   // Normalize to 2D array
-  let routes;
+  let newRoutes;
   if (Array.isArray(chain[0])) {
-    routes = chain; // Already 2D
+    newRoutes = chain; // Already 2D
   } else {
-    routes = [chain]; // Wrap 1D as single route
+    newRoutes = [chain]; // Wrap 1D as single route
   }
 
   // Collect all unique pet names across all routes
   const allNames = new Set();
-  for (const route of routes) {
+  for (const route of newRoutes) {
     if (!Array.isArray(route)) continue;
     for (const stage of route) {
       const name = typeof stage === 'string' ? stage : stage.name;
@@ -104,8 +105,14 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
     }
   }
 
-  // Find all pet uids in the chain (by name lookup) and sync
+  // Helper: get route signature (ordered names) for deduplication
+  function routeSignature(route) {
+    return route.map(s => (typeof s === 'string' ? s : s.name) || '').join('→');
+  }
+
+  // Find all pet uids in the chain and merge
   const findPet = db.prepare('SELECT uid FROM pets WHERE name = ? LIMIT 1');
+  const getDetail = db.prepare('SELECT evolution_chain FROM pet_details WHERE pet_uid = ?');
   const upsertDetail = db.prepare(
     `INSERT INTO pet_details (pet_uid, evolution_chain, manual_edit) VALUES (?, ?, 1)
      ON CONFLICT(pet_uid) DO UPDATE SET evolution_chain = excluded.evolution_chain, manual_edit = 1`
@@ -113,8 +120,32 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
 
   for (const name of allNames) {
     const match = findPet.get(name);
-    if (!match || match.uid === currentPetUid) continue; // Skip self (already saved) and unknown pets
-    upsertDetail.run(match.uid, evoChainJson);
+    if (!match || match.uid === currentPetUid) continue; // Skip self and unknown pets
+
+    // Read existing evolution_chain for this pet
+    const existing = getDetail.get(match.uid);
+    let existingRoutes = [];
+    if (existing && existing.evolution_chain) {
+      try {
+        const parsed = JSON.parse(existing.evolution_chain);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          existingRoutes = Array.isArray(parsed[0]) ? parsed : [parsed];
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Merge: add new routes that don't already exist (by signature)
+    const existingSigs = new Set(existingRoutes.map(r => routeSignature(r)));
+    const merged = [...existingRoutes];
+    for (const route of newRoutes) {
+      const sig = routeSignature(route);
+      if (!existingSigs.has(sig)) {
+        merged.push(route);
+        existingSigs.add(sig);
+      }
+    }
+
+    upsertDetail.run(match.uid, JSON.stringify(merged));
   }
 }
 
