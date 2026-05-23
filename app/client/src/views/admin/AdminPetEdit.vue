@@ -188,33 +188,58 @@
     <!-- 进化链配置 -->
     <div class="card mb-4">
       <h2 class="font-roco text-base text-primary-500 mb-3">进化链 <span class="text-xs text-muted font-normal">（选填）</span></h2>
-      <p class="text-xs text-muted mb-3">配置精灵的进化路线，按进化顺序排列。进化等级留空表示特殊进化。</p>
+      <p class="text-xs text-muted mb-3">配置精灵的进化路线，按进化顺序排列。可通过精灵选取组件选择已有精灵，或手动输入名称。</p>
 
       <div v-if="evolutionChain.length === 0" class="text-xs text-muted py-3 text-center">暂未配置进化链</div>
 
-      <div v-else class="space-y-2 mb-3">
+      <div v-else class="space-y-3 mb-3">
         <div v-for="(stage, idx) in evolutionChain" :key="idx"
-          class="flex items-center gap-2 p-2.5 rounded-lg border transition-colors"
+          class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
           :class="isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'">
-          <span class="text-xs text-muted w-5 flex-shrink-0 text-center">{{ idx + 1 }}</span>
-          <div class="flex-1 min-w-0">
-            <input v-model="stage.name" class="input w-full text-sm" placeholder="精灵名称" />
+          <!-- Stage number -->
+          <div class="flex flex-col items-center gap-1 flex-shrink-0">
+            <span class="text-xs font-medium text-muted">{{ idx + 1 }}</span>
+            <div class="flex flex-col gap-0.5">
+              <button v-if="idx > 0" @click="moveEvoStage(idx, -1)" class="text-xs text-muted hover:text-primary-500 leading-none" title="上移">↑</button>
+              <button v-if="idx < evolutionChain.length - 1" @click="moveEvoStage(idx, 1)" class="text-xs text-muted hover:text-primary-500 leading-none" title="下移">↓</button>
+            </div>
           </div>
-          <div class="w-20 flex-shrink-0">
-            <input v-model="stage.evolve_level" class="input w-full text-sm text-center" placeholder="等级" type="number" min="1" />
+
+          <!-- Pet thumbnail -->
+          <div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img v-if="stage.thumb_url" :src="stage.thumb_url" class="w-full h-full object-contain" />
+            <span v-else class="text-lg text-muted">?</span>
           </div>
-          <div class="flex gap-1 flex-shrink-0">
-            <button v-if="idx > 0" @click="moveEvoStage(idx, -1)" class="text-xs text-muted hover:text-primary-500" title="上移">↑</button>
-            <button v-if="idx < evolutionChain.length - 1" @click="moveEvoStage(idx, 1)" class="text-xs text-muted hover:text-primary-500" title="下移">↓</button>
-            <button @click="removeEvoStage(idx)" class="text-red-400 hover:text-red-600 text-sm" title="删除">✕</button>
+
+          <!-- Pet selection + level -->
+          <div class="flex-1 min-w-0 flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <!-- Use PetPicker for selection -->
+              <div class="flex-1 min-w-0">
+                <PetPicker
+                  :model-value="stage.pet_uid || ''"
+                  @update:model-value="(uid) => onEvoStageSelect(idx, uid)"
+                  placeholder="选择精灵..."
+                />
+              </div>
+              <!-- Evolve level -->
+              <div class="w-20 flex-shrink-0">
+                <input v-model="stage.evolve_level" class="input w-full text-sm text-center" placeholder="等级" type="number" min="1" />
+              </div>
+            </div>
+            <!-- Manual name input (fallback for pets not in DB) -->
+            <div v-if="!stage.pet_uid" class="flex items-center gap-2">
+              <span class="text-[10px] text-muted flex-shrink-0">或手动输入：</span>
+              <input v-model="stage.name" class="input flex-1 text-xs" placeholder="精灵名称（未入库时使用）" />
+            </div>
           </div>
+
+          <!-- Delete -->
+          <button @click="removeEvoStage(idx)" class="text-red-400 hover:text-red-600 text-lg flex-shrink-0 w-6 text-center" title="删除">✕</button>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button @click="addEvoStage" class="text-xs text-primary-500 hover:underline">+ 添加进化阶段</button>
-        <span class="text-[10px] text-muted">（第一阶段的进化等级可留空）</span>
-      </div>
+      <button @click="addEvoStage" class="text-xs text-primary-500 hover:underline">+ 添加进化阶段</button>
     </div>
 
     <!-- 蛋组配置 -->
@@ -453,6 +478,7 @@ import { useImagePreview } from '@/composables/useImagePreview'
 import { useTheme } from '@/composables/useTheme'
 import SearchSelect from '@/components/shared/SearchSelect.vue'
 import ImageUploader from '@/components/shared/ImageUploader.vue'
+import PetPicker from '@/components/shared/PetPicker.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -497,7 +523,7 @@ const detailForm = ref({ height: '', weight: '', location: '' })
 const evolutionChain = ref([])
 
 function addEvoStage() {
-  evolutionChain.value.push({ name: '', evolve_level: '' })
+  evolutionChain.value.push({ name: '', evolve_level: '', pet_uid: '', thumb_url: '' })
 }
 
 function removeEvoStage(idx) {
@@ -510,6 +536,26 @@ function moveEvoStage(idx, dir) {
   const temp = evolutionChain.value[idx]
   evolutionChain.value[idx] = evolutionChain.value[target]
   evolutionChain.value[target] = temp
+}
+
+async function onEvoStageSelect(idx, petUid) {
+  const stage = evolutionChain.value[idx]
+  if (!petUid) {
+    stage.pet_uid = ''
+    stage.name = ''
+    stage.thumb_url = ''
+    return
+  }
+  stage.pet_uid = petUid
+  // Fetch pet info to get name and thumb
+  try {
+    const pet = await petsApi.get(petUid)
+    stage.name = pet.name || ''
+    stage.thumb_url = pet.thumb_url || pet.image_url || ''
+  } catch {
+    stage.name = petUid
+    stage.thumb_url = ''
+  }
 }
 
 // Egg groups
@@ -699,8 +745,13 @@ async function loadData() {
       }
       // Load evolution chain (raw JSON from DB, already parsed by backend)
       evolutionChain.value = (data.detail.evolution_chain || []).map(stage => {
-        if (typeof stage === 'string') return { name: stage, evolve_level: '' }
-        return { name: stage.name || '', evolve_level: stage.evolve_level || '' }
+        if (typeof stage === 'string') return { name: stage, evolve_level: '', pet_uid: '', thumb_url: '' }
+        return {
+          name: stage.name || '',
+          evolve_level: stage.evolve_level || '',
+          pet_uid: stage.uid || '',
+          thumb_url: stage.thumb_url || '',
+        }
       })
     }
 
