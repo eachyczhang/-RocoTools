@@ -460,6 +460,8 @@ const currentPage = ref(1)
 const pageSize = ref(24) // 减少每页数量，减轻带宽压力
 const uploadProgress = ref(null)
 const currentPageFiles = ref([]) // 当前页的实际图片数据
+const totalFiles = ref(0) // 后端分页的总文件数
+const totalPages = ref(1) // 后端分页的总页数
 
 // Directory management
 const directories = ref([])
@@ -759,18 +761,17 @@ const filteredFiles = computed(() => {
   return files
 })
 
-const totalPages = computed(() => {
-  if (pageSize.value === 0) return 1
-  return Math.max(1, Math.ceil(filteredFiles.value.length / pageSize.value))
-})
+// 使用后端分页数据，不再需要前端计算
+// const totalPages = computed(() => {
+//   if (pageSize.value === 0) return 1
+//   return Math.max(1, Math.ceil(filteredFiles.value.length / pageSize.value))
+// })
 
 
 
-// 监听分页变化，实现真正的懒加载
-watch([currentPage, filteredFiles], () => {
-  updateCurrentPageFiles()
-  // 预加载下一页图片（如果存在）
-  preloadNextPage()
+// 监听分页变化，重新加载数据
+watch([currentPage, pageSize], () => {
+  loadAllMedia()
 }, { immediate: true })
 
 // 预加载下一页图片
@@ -861,20 +862,48 @@ function toggleSelect(file) {
 async function loadAllMedia() {
   loading.value = true
   try {
-    const res = await adminApi.mediaList()
-    allFiles.value = (res.files || []).map(f => {
-      const category = getFileCategory(f.fullPath)
+    let res
+    
+    // 如果是素材库分类，使用素材库API的分页
+    if (currentCategory.value === 'library') {
+      res = await adminApi.libraryList({
+        page: currentPage.value,
+        pageSize: pageSize.value
+      })
+    } else {
+      // 其他分类使用主媒体API的分页
+      res = await adminApi.mediaList({
+        page: currentPage.value,
+        pageSize: pageSize.value
+      })
+    }
+    
+    // 如果是第一页，初始化文件列表
+    if (currentPage.value === 1) {
+      allFiles.value = []
+    }
+    
+    // 添加新加载的文件
+    const newFiles = (res.files || []).map(f => {
+      const category = getFileCategory(f.fullPath || f.path)
       return {
         ...f,
         category,
         categoryLabel: getCategoryLabel(category),
-        petSub: category === 'pets' ? getPetSubCategory(f.fullPath) : null,
+        petSub: category === 'pets' ? getPetSubCategory(f.fullPath || f.path) : null,
         displayName: f.filename.replace(/^\d+_/, ''),
+        fullPath: f.fullPath || f.path // 兼容两种API返回格式
       }
     })
     
-    // 只加载第一页的图片数据
-    updateCurrentPageFiles()
+    allFiles.value = [...allFiles.value, ...newFiles]
+    
+    // 更新分页信息
+    totalFiles.value = res.total || 0
+    totalPages.value = res.totalPages || 1
+    
+    // 更新当前页文件
+    currentPageFiles.value = newFiles
     
     if (currentCategory.value === 'library') {
       await loadDirectories()
@@ -886,12 +915,7 @@ async function loadAllMedia() {
   }
 }
 
-// 更新当前页的图片数据（真正的懒加载）
-function updateCurrentPageFiles() {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  currentPageFiles.value = filteredFiles.value.slice(start, end)
-}
+// 后端分页已处理，不再需要前端分页函数
 
 // Upload methods...
 async function handleUpload(e) {

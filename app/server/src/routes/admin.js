@@ -1204,7 +1204,21 @@ router.get('/library', authAdmin, (req, res) => {
 
   scanLibrary(LIBRARY_DIR, '');
   files.sort((a, b) => b.mtime - a.mtime);
-  res.json({ files });
+  
+  // Apply pagination
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = parseInt(req.query.pageSize) || 24; // Reasonable default for performance
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedFiles = files.slice(startIndex, endIndex);
+
+  res.json({ 
+    files: paginatedFiles, 
+    total: files.length,
+    page,
+    pageSize,
+    totalPages: Math.ceil(files.length / pageSize)
+  });
 });
 
 // ============================================================
@@ -1429,6 +1443,7 @@ router.post('/library/batch-rename', authAdmin, (req, res) => {
 /**
  * GET /api/admin/media
  * List all images across all directories (library + uploads + public)
+ * Query params: page, pageSize, category
  */
 router.get('/media', authAdmin, (req, res) => {
   const IMAGE_EXT = /\.(png|jpe?g|webp|gif)$/i;
@@ -1446,14 +1461,52 @@ router.get('/media', authAdmin, (req, res) => {
         try {
           const stat = fs.statSync(fullPath);
           
-          // For library images, check if thumbnail exists
+          // Check if thumbnail exists for all image types
           let thumbPath = null;
+          
+          // For library images
           if (urlPrefix.startsWith('/uploads/library')) {
             const thumbFilename = entry.name.replace(/\.[^.]+$/, '.webp');
             const relativePath = fullPath.replace(LIBRARY_DIR, '').replace(/^[\\\/]/, '');
             const thumbFullPath = path.join(LIBRARY_DIR, '.thumbs', relativePath.replace(/\.[^.]+$/, '.webp'));
             if (fs.existsSync(thumbFullPath)) {
               thumbPath = `/uploads/library/.thumbs/${relativePath.replace(/\.[^.]+$/, '.webp')}`;
+            }
+          }
+          // For pet thumbnails (already optimized WebP files)
+          else if (urlPrefix.startsWith('/public/pets/thumbs')) {
+            // Pet thumbnails are already optimized WebP files, use directly
+            thumbPath = urlPrefix + '/' + entry.name;
+          }
+          // For other pet images (default, shiny, etc.) - use existing thumbnails
+          else if (urlPrefix.startsWith('/public/pets/') && !urlPrefix.includes('/thumbs')) {
+            const thumbDir = path.join(PUBLIC_DIR, 'pets', 'thumbs');
+            const uid = entry.name.replace(/_.*\.png$/, ''); // Extract UID from filename
+            const thumbFilename = `${uid}_default.webp`;
+            const thumbFullPath = path.join(thumbDir, thumbFilename);
+            if (fs.existsSync(thumbFullPath)) {
+              thumbPath = `/public/pets/thumbs/${thumbFilename}`;
+            }
+          }
+          // For skill icons - use existing WebP versions if available
+          else if (urlPrefix.startsWith('/public/skills/')) {
+            const webpPath = fullPath.replace('.png', '.webp');
+            if (fs.existsSync(webpPath)) {
+              thumbPath = urlPrefix + '/' + entry.name.replace('.png', '.webp');
+            }
+          }
+          // For element icons - use existing WebP versions if available
+          else if (urlPrefix.startsWith('/public/elements/')) {
+            const webpPath = fullPath.replace('.png', '.webp');
+            if (fs.existsSync(webpPath)) {
+              thumbPath = urlPrefix + '/' + entry.name.replace('.png', '.webp');
+            }
+          }
+          // For uploaded images (pika, seasons, events) - check if WebP version exists
+          else if (urlPrefix.startsWith('/uploads/') && !urlPrefix.includes('/library')) {
+            const webpPath = fullPath.replace(/\.(png|jpe?g|gif)$/i, '.webp');
+            if (fs.existsSync(webpPath)) {
+              thumbPath = urlPrefix + '/' + entry.name.replace(/\.(png|jpe?g|gif)$/i, '.webp');
             }
           }
           
@@ -1480,7 +1533,20 @@ router.get('/media', authAdmin, (req, res) => {
   // Sort by modification time (newest first)
   files.sort((a, b) => b.mtime - a.mtime);
 
-  res.json({ files, total: files.length });
+  // Apply pagination
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = parseInt(req.query.pageSize) || 24; // Reasonable default for performance
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedFiles = files.slice(startIndex, endIndex);
+
+  res.json({ 
+    files: paginatedFiles, 
+    total: files.length,
+    page,
+    pageSize,
+    totalPages: Math.ceil(files.length / pageSize)
+  });
 });
 
 /**

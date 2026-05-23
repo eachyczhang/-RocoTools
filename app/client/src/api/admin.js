@@ -145,7 +145,7 @@ export const adminApi = {
   }),
 
   // 素材库
-  libraryList: () => adminRequest('/library'),
+  libraryList: (params) => adminRequest('/library', { params }),
   libraryUpload: (file, folder) => {
     const form = new FormData()
     form.append('file', file)

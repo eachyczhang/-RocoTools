@@ -232,6 +232,46 @@ router.use((req, res, next) => {
 
 **规则**：只有素材库分类（用户自己上传的文件）可以批量操作，其他分类的图片受保护。
 
+### 后端分页
+
+素材管理的所有图片列表接口均采用**后端分页**，前端不再做全量加载后切片：
+
+| 接口 | 分页参数 | 默认值 |
+|------|----------|--------|
+| `GET /api/admin/library` | `page`, `pageSize` | page=1, pageSize=24 |
+| `GET /api/admin/media` | `page`, `pageSize` | page=1, pageSize=24 |
+
+**返回格式**：
+
+```json
+{
+  "files": [...],
+  "total": 150,
+  "page": 1,
+  "pageSize": 24,
+  "totalPages": 7
+}
+```
+
+**规则**：
+- 前端切换分类/页码/每页数量时，重新请求后端获取对应页数据
+- 前端 `pageSize` 可选值：36、72、120、全部（0）
+- 后端先扫描全部文件并排序（按修改时间倒序），再切片返回
+- 切换分类时 `currentPage` 重置为 1
+
+### 缩略图查找策略
+
+`GET /api/admin/media` 接口为所有图片类型自动查找缩略图（`thumb_path` 字段）：
+
+| 图片类型 | 缩略图查找规则 |
+|----------|----------------|
+| 素材库 (`/uploads/library/`) | 查找 `.thumbs/` 目录下同名 `.webp` 文件 |
+| 精灵缩略图 (`/public/pets/thumbs/`) | 直接使用（已是优化后的 WebP） |
+| 精灵其他图 (`/public/pets/`) | 查找 `thumbs/{uid}_default.webp` |
+| 技能图标 (`/public/skills/`) | 查找同名 `.webp` 版本 |
+| 属性图标 (`/public/elements/`) | 查找同名 `.webp` 版本 |
+| 上传图片 (`/uploads/` 非 library) | 查找同名 `.webp` 版本 |
+
 ### 切换分类行为
 
 - 切换分类/搜索/子分类时**自动清空已选状态**
@@ -294,9 +334,9 @@ router.use((req, res, next) => {
 | `/api/admin/skills-next-uid` | GET | 获取下一个技能 UID |
 | `/api/admin/skills-search?q=` | GET | 技能名称搜索（自动补全） |
 | `/api/admin/library/upload` | POST | 素材库上传 |
-| `/api/admin/library` | GET | 素材库列表 |
+| `/api/admin/library` | GET | 素材库列表（支持 `page`/`pageSize` 分页） |
 | `/api/admin/library/:filename` | DELETE | 素材库删除 |
-| `/api/admin/media` | GET | 所有图片列表 |
+| `/api/admin/media` | GET | 所有图片列表（支持 `page`/`pageSize` 分页） |
 | `/api/admin/media` | DELETE | 按路径删除图片 |
 | `/api/admin/media/copy-to-business` | POST | 素材库复制到业务目录 |
 
@@ -308,7 +348,40 @@ router.use((req, res, next) => {
 
 ---
 
-## 八、manual_edit 保护机制
+## 八、Nginx 性能优化配置
+
+### 压缩策略
+
+| 压缩方式 | 优先级 | 适用内容 |
+|----------|--------|----------|
+| Brotli | 优先 | 文本类资源（JS/CSS/JSON/HTML/SVG/字体/WASM） |
+| Gzip | 备用 | 同上（不支持 Brotli 的客户端回退） |
+
+**Brotli 参数**：`brotli_comp_level 6`，`brotli_min_length 512`
+
+### 静态资源缓存
+
+| 资源路径 | 缓存时长 | Cache-Control |
+|----------|----------|---------------|
+| `/public/` | 365天 | `public, immutable, max-age=31536000` |
+| `/uploads/` | 365天 | `public, immutable, max-age=31536000` |
+| `*.webp/jpg/jpeg/png/gif/svg` | 365天 | `public, immutable, max-age=31536000` |
+
+**规则**：
+- 图片资源关闭 gzip（已是压缩格式，gzip 无收益）
+- 启用 `brotli_static on` 和 `gzip_static on`（优先使用预压缩文件）
+- 启用 `sendfile`、`tcp_nopush`、`tcp_nodelay` 优化传输
+- 所有图片响应添加 `Vary: Accept` 头（支持内容协商）
+
+### 配置文件
+
+- Nginx 配置模板：项目根目录 `nginx.conf`
+- 占位符 `<PROJECT_DIR>` 需替换为服务器实际部署路径
+- Brotli 模块需服务器额外安装（`nginx-module-brotli`）
+
+---
+
+## 九、manual_edit 保护机制
 
 | 表 | 字段 | 说明 |
 |----|------|------|
