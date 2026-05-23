@@ -1,6 +1,7 @@
 const BASE = '/api'
 const MAX_RETRIES = 2
 const RETRY_DELAY = 500
+const REQUEST_TIMEOUT = 20000 // 20s timeout for user-facing API
 
 async function request(path, params, retries = MAX_RETRIES) {
   const url = new URL(path, window.location.origin)
@@ -9,16 +10,23 @@ async function request(path, params, retries = MAX_RETRIES) {
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v)
     })
   }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
   try {
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
     if (!res.ok) throw new Error(`API Error: ${res.status}`)
     return res.json()
   } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接')
+    }
     if (retries > 0 && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
       await new Promise(r => setTimeout(r, RETRY_DELAY))
       return request(path, params, retries - 1)
     }
     throw err
+  } finally {
+    clearTimeout(timer)
   }
 }
 

@@ -166,6 +166,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
 import { useModalState } from '@/composables/useModal'
 import { useImagePreview } from '@/composables/useImagePreview'
+import { usePageVisibility } from '@/composables/usePageVisibility'
 import ModalDialog from '@/components/shared/ModalDialog.vue'
 import ImagePreview from '@/components/shared/ImagePreview.vue'
 
@@ -183,6 +184,16 @@ const { state: modalState, onConfirm: modalConfirm, onCancel: modalCancel } = us
 
 // 全局图片预览（仅管理端）
 const { showPreview, previewSrc, closePreview } = useImagePreview()
+
+// Page visibility recovery: auto-reload when returning from background after long idle
+usePageVisibility({
+  requiresAdmin: isAdminRoute.value,
+  onResume(hiddenDuration) {
+    // Page was hidden for 5+ minutes - reload current route to refresh data
+    // This prevents "unresponsive" state caused by stale connections/data
+    router.replace(route.fullPath)
+  },
+})
 
 // 分组导航标签（父子结构）
 const navTabsGrouped = computed(() => {

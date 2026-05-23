@@ -29,6 +29,8 @@ export function isLoggedIn() {
   }
 }
 
+const REQUEST_TIMEOUT = 30000 // 30s default timeout for API requests
+
 async function adminRequest(path, options = {}) {
   const token = getToken()
   const headers = { ...options.headers }
@@ -37,16 +39,37 @@ async function adminRequest(path, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers })
-  if (res.status === 401) {
-    clearToken()
-    throw new Error('未登录或 token 已过期')
+  // Setup AbortController for timeout (skip if caller already provides signal)
+  let controller = null
+  let timer = null
+  if (!options.signal) {
+    controller = new AbortController()
+    timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
   }
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
-    throw new Error(err.error || `请求失败: ${res.status}`)
+
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal || (controller ? controller.signal : undefined),
+    })
+    if (res.status === 401) {
+      clearToken()
+      throw new Error('未登录或 token 已过期')
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+      throw new Error(err.error || `请求失败: ${res.status}`)
+    }
+    return res.json()
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接后重试')
+    }
+    throw err
+  } finally {
+    if (timer) clearTimeout(timer)
   }
-  return res.json()
 }
 
 export const adminApi = {
