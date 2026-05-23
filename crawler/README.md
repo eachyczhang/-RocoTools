@@ -69,7 +69,7 @@ python crawler/scrapers/fetch_pet_detail.py
 
 1. 各爬虫脚本运行后自动生成 `*_report.md` 校验报告
 2. `run.py` 完成后打印全局数据完整性汇总
-3. 检测到 `app/server/node_modules` 存在时，自动同步数据到 SQLite
+3. 检测到 `app/server/node_modules` 存在时，自动同步数据到 SQLite（含进化链同步）
 
 ## 数据产出
 

@@ -14,8 +14,8 @@
 | 首页 | `/rocotools/` | 数据概览（调用 /api/stats）、快速导航、版权声明 |
 | 赛季 | `/rocotools/season` | 赛季封面+精灵展示，支持过往赛季切换 |
 | 活动日历 | `/rocotools/events` | 当前赛季活跃活动时间轴 |
-| 精灵图鉴 | `/rocotools/pets` | 搜索/属性筛选/排序/分页，支持异色预览 |
-| 精灵详情 | `/rocotools/pets/:uid` | 立绘切换、种族值雷达图、属性克制、技能列表 |
+| 精灵图鉴 | `/rocotools/pets` | 搜索/属性筛选/排序/分页，URL 状态同步（返回保持筛选） |
+| 精灵详情 | `/rocotools/pets/:uid` | 立绘切换、种族值雷达图、属性克制、技能列表、进化链（可点击跳转）、特性描述（关键词高亮） |
 | 技能列表 | `/rocotools/skills` | 按属性/分类/应对/效果关键词筛选 |
 | 技能详情 | `/rocotools/skills/:uid` | 技能数据 + 可学习精灵（按来源分类） |
 | 打击面分析 | `/rocotools/coverage` | 选属性组合 → 查匹配精灵（含血脉） |
@@ -34,7 +34,7 @@
 | 后台 | Node.js, Express, better-sqlite3, API 内存缓存 |
 | 前端 | Vue 3, Vue Router, Vite, TailwindCSS, Sass |
 | 数据库 | SQLite3（轻量单文件） |
-| 部署 | Nginx (HTTP/2) + PM2 + Let's Encrypt SSL |
+| 部署 | Nginx (HTTP/2 + Brotli) + PM2 + Let's Encrypt SSL |
 
 ---
 
@@ -55,13 +55,19 @@
 ├── app/
 │   ├── server/             # Express 后台（SQLite + RESTful API）
 │   │   ├── src/            # 路由、Service、数据库
+│   │   ├── scripts/        # 工具脚本（进化链同步等）
 │   │   ├── gen_thumbnails.js  # 缩略图生成
 │   │   ├── gen_webp.js     # WebP 批量转换
-│   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入）
+│   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入+进化链）
 │   └── client/             # Vue3 前端（Vite + TailwindCSS）
 │       ├── RESPONSIVE.md   # 响应式适配规范
 │       └── DESIGN.md       # 视觉设计规范
-├── nginx.conf              # Nginx 站点配置
+├── docs/                   # 文档
+│   ├── ARCHITECTURE.md     # 工程架构设计图（Mermaid）
+│   ├── TEXT_HIGHLIGHT_COLORS.md  # 文本高亮颜色规范
+│   └── game-notes/         # 游戏设定笔记
+├── .dev/skills/            # AI Skills（开发参考）
+├── nginx.conf              # Nginx 站点配置（Brotli + 长缓存）
 └── deploy.sh               # 一键部署脚本
 ```
 
@@ -89,7 +95,7 @@ python crawler/run.py --full
 # 3. 初始化后台
 cd app/server
 npm install
-node sync_db.js          # 生成缩略图 + WebP + 建库导入
+node sync_db.js          # 生成缩略图 + WebP + 建库导入 + 进化链同步
 
 # 4. 启动后台
 npm run dev              # http://localhost:3000
@@ -124,18 +130,40 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 
 ---
 
+## 核心特性
+
+### 进化链系统
+
+- 结构化进化条件配置（4 种类型：文本/技能/属性/精灵）
+- BFS 图论算法自动发现进化链组，合并多路线分支
+- 管理端可视化编辑，用户端可点击跳转精灵/技能详情
+
+### 文本高亮系统
+
+- 技能描述 & 特性描述关键词自动变色
+- 18 种属性色系 + 状态/印记/六维属性等 40+ 关键词映射
+- 属性系文本（如"火系"）动态匹配对应颜色
+
+### 智能图标 Fallback
+
+- 技能无专属图标时自动显示对应属性图标
+- 统一应用于所有技能展示位置
+
+---
+
 ## 性能优化
 
 | 优化项 | 说明 |
 |--------|------|
 | HTTP/2 | 多路复用，消除并发连接限制 |
+| Brotli 压缩 | 优先 Brotli (level 6)，Gzip 备用 |
 | WebP 自动返回 | Nginx 检测浏览器支持，透明返回 WebP |
 | 图片懒加载 | IntersectionObserver + 并发队列（max 6） |
 | API 缓存 | 内存缓存 5-10 分钟，减少 DB 查询 |
-| Gzip 压缩 | 文本资源全量压缩 |
-| 长缓存 | Vite 带 hash 的 assets 缓存 1 年 |
-| 代码分割 | Vue 框架独立 chunk |
+| 长缓存 | 静态资源 365 天 immutable 缓存 |
+| 代码分割 | Vue 框架独立 chunk，路由级懒加载 |
 | 系统字体 | 不加载网络字体，零额外请求 |
+| 路由滚动恢复 | scrollBehavior 延迟恢复，等待异步数据渲染 |
 
 ---
 
@@ -199,8 +227,8 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 | `GET /api/skills/:uid` | 技能详情 + 学习者 |
 | `GET /api/eggs` | 蛋组列表 |
 | `GET /api/eggs/:id` | 蛋组精灵 |
-| `GET /api/pets?page&limit&search&element_id&sort_by&order` | 精灵列表 |
-| `GET /api/pets/:uid` | 精灵完整详情 |
+| `GET /api/pets?page&limit&search&element_id&sort_by&order&all_variants` | 精灵列表 |
+| `GET /api/pets/:uid` | 精灵完整详情（含进化链） |
 | `GET /api/pets/shiny` | 异色精灵列表 |
 | `GET /api/natures` | 性格列表（30种） |
 | `GET /api/seasons` | 所有赛季 |
