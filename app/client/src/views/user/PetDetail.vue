@@ -223,7 +223,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
 import SkillTable from '@/components/user/SkillTable.vue'
@@ -414,4 +414,13 @@ const statsBarList = computed(() => {
 })
 
 onMounted(() => loadPet(route.params.uid))
+
+// Re-load when route param changes (same-route navigation, e.g. clicking evo chain links)
+watch(() => route.params.uid, (newUid, oldUid) => {
+  if (newUid && newUid !== oldUid) {
+    initialCoverage.value = []
+    initialBloodline.value = ''
+    loadPet(newUid)
+  }
+})
 </script>
