@@ -68,6 +68,39 @@ function syncVariantsMap(db, petId) {
   }
 }
 
+/**
+ * Sync evolution_chain to all pets in the chain.
+ * When one pet's evolution chain is saved, propagate the same chain to all other pets referenced in it.
+ * @param {object} db - writable database connection
+ * @param {string} currentPetUid - the pet_uid that triggered the save
+ * @param {string|null} evoChainJson - the evolution_chain JSON string (or null to clear)
+ */
+function syncEvolutionChain(db, currentPetUid, evoChainJson) {
+  if (!evoChainJson) return; // Nothing to sync if chain is cleared
+
+  let chain;
+  try {
+    chain = JSON.parse(evoChainJson);
+  } catch { return; }
+
+  if (!Array.isArray(chain) || chain.length === 0) return;
+
+  // Find all pet uids in the chain (by name lookup)
+  const findPet = db.prepare('SELECT uid FROM pets WHERE name = ? LIMIT 1');
+  const upsertDetail = db.prepare(
+    `INSERT INTO pet_details (pet_uid, evolution_chain, manual_edit) VALUES (?, ?, 1)
+     ON CONFLICT(pet_uid) DO UPDATE SET evolution_chain = excluded.evolution_chain, manual_edit = 1`
+  );
+
+  for (const stage of chain) {
+    const name = typeof stage === 'string' ? stage : stage.name;
+    if (!name) continue;
+    const match = findPet.get(name);
+    if (!match || match.uid === currentPetUid) continue; // Skip self (already saved) and unknown pets
+    upsertDetail.run(match.uid, evoChainJson);
+  }
+}
+
 /** 安全解析 JSON 文件（损坏时返回默认值） */
 function safeReadJSON(filepath, fallback = []) {
   try {
@@ -364,6 +397,11 @@ router.put('/data/:table/:id', (req, res) => {
       }
     }
 
+    // Auto-sync evolution_chain to all pets in the chain
+    if (table === 'pet_details' && updates.evolution_chain !== undefined) {
+      syncEvolutionChain(db, id, updates.evolution_chain);
+    }
+
     db.close();
     if (result.changes === 0) return res.status(404).json({ error: '记录不存在' });
     return res.json({ success: true, changes: result.changes });
@@ -422,6 +460,12 @@ router.post('/data/:table', (req, res) => {
     // Auto-sync variants_map when creating a pet
     if (table === 'pets' && req.body.pet_id) {
       syncVariantsMap(db, req.body.pet_id);
+    }
+
+    // Auto-sync evolution_chain to all pets in the chain
+    if (table === 'pet_details' && req.body.evolution_chain) {
+      const petUid = req.body.pet_uid || req.body[config.primaryKey];
+      syncEvolutionChain(db, petUid, req.body.evolution_chain);
     }
 
     db.close();
