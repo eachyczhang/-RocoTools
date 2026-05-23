@@ -196,12 +196,15 @@
         <div v-for="(stage, idx) in evolutionChain" :key="idx"
           class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
           :class="isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'">
-          <!-- Stage number + move arrows (horizontal) -->
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <button v-if="idx > 0" @click="moveEvoStage(idx, -1)" class="text-base font-bold text-gray-400 hover:text-primary-500 leading-none" title="上移">◀</button>
-            <span class="text-sm font-bold text-muted w-5 text-center">{{ idx + 1 }}</span>
-            <button v-if="idx < evolutionChain.length - 1" @click="moveEvoStage(idx, 1)" class="text-base font-bold text-gray-400 hover:text-primary-500 leading-none" title="下移">▶</button>
-            <span v-else class="w-4"></span>
+          <!-- Stage number + move arrows -->
+          <div class="flex flex-col items-center gap-0.5 flex-shrink-0 w-7">
+            <button v-if="idx > 0" @click="moveEvoStage(idx, -1)"
+              class="w-5 h-5 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-600 hover:bg-primary-500 hover:text-white text-gray-500 dark:text-gray-300 text-[10px] transition-colors" title="上移">▲</button>
+            <span v-else class="h-5"></span>
+            <span class="text-xs font-bold text-primary-500 leading-none">{{ idx + 1 }}</span>
+            <button v-if="idx < evolutionChain.length - 1" @click="moveEvoStage(idx, 1)"
+              class="w-5 h-5 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-600 hover:bg-primary-500 hover:text-white text-gray-500 dark:text-gray-300 text-[10px] transition-colors" title="下移">▼</button>
+            <span v-else class="h-5"></span>
           </div>
 
           <!-- Pet selection + level -->
