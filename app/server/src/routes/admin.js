@@ -240,7 +240,7 @@ const EDITABLE_TABLES = {
   pet_details: {
     label: '精灵详情',
     primaryKey: 'pet_uid',
-    editableFields: ['ability_icon', 'image_default', 'image_shiny', 'image_fruit', 'image_egg', 'height', 'weight', 'location'],
+    editableFields: ['ability_icon', 'image_default', 'image_shiny', 'image_fruit', 'image_egg', 'height', 'weight', 'location', 'evolution_chain'],
   },
   egg_groups: {
     label: '蛋组',

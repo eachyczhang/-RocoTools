@@ -185,6 +185,38 @@
       </div>
     </div>
 
+    <!-- 进化链配置 -->
+    <div class="card mb-4">
+      <h2 class="font-roco text-base text-primary-500 mb-3">进化链 <span class="text-xs text-muted font-normal">（选填）</span></h2>
+      <p class="text-xs text-muted mb-3">配置精灵的进化路线，按进化顺序排列。进化等级留空表示特殊进化。</p>
+
+      <div v-if="evolutionChain.length === 0" class="text-xs text-muted py-3 text-center">暂未配置进化链</div>
+
+      <div v-else class="space-y-2 mb-3">
+        <div v-for="(stage, idx) in evolutionChain" :key="idx"
+          class="flex items-center gap-2 p-2.5 rounded-lg border transition-colors"
+          :class="isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'">
+          <span class="text-xs text-muted w-5 flex-shrink-0 text-center">{{ idx + 1 }}</span>
+          <div class="flex-1 min-w-0">
+            <input v-model="stage.name" class="input w-full text-sm" placeholder="精灵名称" />
+          </div>
+          <div class="w-20 flex-shrink-0">
+            <input v-model="stage.evolve_level" class="input w-full text-sm text-center" placeholder="等级" type="number" min="1" />
+          </div>
+          <div class="flex gap-1 flex-shrink-0">
+            <button v-if="idx > 0" @click="moveEvoStage(idx, -1)" class="text-xs text-muted hover:text-primary-500" title="上移">↑</button>
+            <button v-if="idx < evolutionChain.length - 1" @click="moveEvoStage(idx, 1)" class="text-xs text-muted hover:text-primary-500" title="下移">↓</button>
+            <button @click="removeEvoStage(idx)" class="text-red-400 hover:text-red-600 text-sm" title="删除">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button @click="addEvoStage" class="text-xs text-primary-500 hover:underline">+ 添加进化阶段</button>
+        <span class="text-[10px] text-muted">（第一阶段的进化等级可留空）</span>
+      </div>
+    </div>
+
     <!-- 蛋组配置 -->
     <div v-if="!isNew" class="card mb-4">
       <div class="flex items-center justify-between mb-3">
@@ -461,6 +493,25 @@ const form = ref({
 
 const detailForm = ref({ height: '', weight: '', location: '' })
 
+// Evolution chain
+const evolutionChain = ref([])
+
+function addEvoStage() {
+  evolutionChain.value.push({ name: '', evolve_level: '' })
+}
+
+function removeEvoStage(idx) {
+  evolutionChain.value.splice(idx, 1)
+}
+
+function moveEvoStage(idx, dir) {
+  const target = idx + dir
+  if (target < 0 || target >= evolutionChain.value.length) return
+  const temp = evolutionChain.value[idx]
+  evolutionChain.value[idx] = evolutionChain.value[target]
+  evolutionChain.value[target] = temp
+}
+
 // Egg groups
 const allEggGroups = ref([])
 const selectedEggGroups = ref([])
@@ -646,6 +697,11 @@ async function loadData() {
       detailForm.value = {
         height: data.detail.height, weight: data.detail.weight, location: data.detail.location,
       }
+      // Load evolution chain (raw JSON from DB, already parsed by backend)
+      evolutionChain.value = (data.detail.evolution_chain || []).map(stage => {
+        if (typeof stage === 'string') return { name: stage, evolve_level: '' }
+        return { name: stage.name || '', evolve_level: stage.evolve_level || '' }
+      })
     }
 
     // Load variants
@@ -719,7 +775,10 @@ async function save() {
       if (!newUid) { await modal.warning('提示', '编号无效'); saving.value = false; return }
       await adminApi.create('pets', { uid: newUid, ...form.value })
       // Create pet_details first so upload UPSERT can find the record
-      await adminApi.create('pet_details', { pet_uid: newUid, ...detailForm.value })
+      const evoChainJson = evolutionChain.value.filter(s => s.name?.trim()).length > 0
+        ? JSON.stringify(evolutionChain.value.filter(s => s.name?.trim()).map(s => ({ name: s.name.trim(), evolve_level: s.evolve_level || null })))
+        : null
+      await adminApi.create('pet_details', { pet_uid: newUid, ...detailForm.value, evolution_chain: evoChainJson })
 
       // Upload all pending images now that the pet exists
       const imageFieldMap = {
@@ -770,11 +829,15 @@ async function save() {
       router.replace(`/admin/pets/${newUid}`)
     } else {
       await adminApi.update('pets', uid, form.value)
+      const evoChainJson = evolutionChain.value.filter(s => s.name?.trim()).length > 0
+        ? JSON.stringify(evolutionChain.value.filter(s => s.name?.trim()).map(s => ({ name: s.name.trim(), evolve_level: s.evolve_level || null })))
+        : null
+      const detailPayload = { ...detailForm.value, evolution_chain: evoChainJson }
       if (detail.value) {
-        await adminApi.update('pet_details', uid, detailForm.value)
+        await adminApi.update('pet_details', uid, detailPayload)
       } else {
         // pet_details record doesn't exist yet, create it
-        await adminApi.create('pet_details', { pet_uid: uid, ...detailForm.value })
+        await adminApi.create('pet_details', { pet_uid: uid, ...detailPayload })
       }
       ok.value = true; msg.value = '保存成功'
       loadData()
