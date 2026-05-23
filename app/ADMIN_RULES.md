@@ -288,6 +288,45 @@ router.use((req, res, next) => {
 | JSON 解析失败 | try-catch 静默失败 | 格式异常时函数直接 return，不影响其他功能 |
 | 精灵名称变更 | 按名称查找 | 如果精灵改名，旧进化链中的名称将无法匹配（需手动更新） |
 
+#### 进化条件结构化配置（evolve_condition）
+
+进化条件从纯文本升级为**结构化对象**，支持4种类型：
+
+| 类型 | type 值 | 字段 | 展示效果 |
+|------|---------|------|----------|
+| 纯文本 | `text` | `text` | 直接显示文本（如"使用火之石"） |
+| 技能类 | `skill` | `skill_name`, `skill_uid`, `skill_count`, `need_win` | "使用3次火焰冲击(需战胜)" |
+| 属性类 | `element` | `element_name`, `element_id`, `element_count` | "击败5只火属性精灵" |
+| 精灵类 | `pet` | `pet_name`, `pet_uid`, `pet_count` | "击败3次喵喵" |
+
+**数据格式示例**：
+
+```json
+// 纯文本
+{ "type": "text", "text": "使用火之石" }
+
+// 技能类
+{ "type": "skill", "skill_name": "火焰冲击", "skill_uid": "skill_42", "skill_count": 3, "need_win": true }
+
+// 属性类
+{ "type": "element", "element_name": "火", "element_id": 2, "element_count": 5 }
+
+// 精灵类
+{ "type": "pet", "pet_name": "喵喵", "pet_uid": "pet_001", "pet_count": 3 }
+```
+
+**向后兼容**：
+- 旧数据中 `evolve_condition` 为纯字符串 → 后端 `normalizeEvolutionChain` 自动转为 `{ type: "text", text: "..." }`
+- 旧数据中 `evolve_condition` 为 `null` → 保持 `null`
+- 用户端 `formatEvoCondition` 函数兼容字符串和对象两种格式
+
+**管理端配置组件**：
+- 下拉选择条件类型（无条件/文本/技能/属性/精灵）
+- 技能类：使用 `SkillPicker` 弹窗选择技能（绑定 `skill_uid`），配置使用次数和是否需要战胜
+- 属性类：使用属性下拉选择器（带图标，绑定 `element_id`），配置击败次数
+- 精灵类：使用 `PetPicker` 组件选择精灵（绑定 `pet_uid`，启用 `all-variants` 和 `compact`），配置击败次数
+- 次数输入框宽度至少 `w-20`（支持3-4位数显示）
+
 #### 管理端配置方式
 
 1. 进入精灵编辑页面
@@ -517,16 +556,43 @@ router.use((req, res, next) => {
 |------|------|------|
 | DatePicker | `components/shared/DatePicker.vue` | 日期选择器 |
 | SearchSelect | `components/shared/SearchSelect.vue` | 搜索下拉选择 |
-| PetPicker | `components/shared/PetPicker.vue` | 精灵选择器 |
+| PetPicker | `components/shared/PetPicker.vue` | 精灵选择器（支持 `allVariants`/`compact` props） |
 | ModalDialog | `components/shared/ModalDialog.vue` | 模态弹窗 |
 | ImagePreview | `components/shared/ImagePreview.vue` | 图片预览 |
 | ImageUploader | `components/shared/ImageUploader.vue` | 图片上传（支持本地+素材库） |
 | PetCard | `components/shared/PetCard.vue` | 精灵卡片 |
 | StatsRadar | `components/shared/StatsRadar.vue` | 种族值雷达图 |
 
----
+#### PetPicker 组件 Props
 
-## 七、后端接口规范
+| Prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `modelValue` | String | `''` | 绑定的精灵 uid（v-model） |
+| `placeholder` | String | `'搜索精灵（名称/编号）'` | 输入框占位文本 |
+| `allVariants` | Boolean | `false` | 是否返回所有形态（传递 `all_variants` 参数给后端） |
+| `compact` | Boolean | `false` | 紧凑模式（已选中状态：6×6图标+单行名称，适用于行内嵌入场景） |
+
+**使用场景**：
+- 进化链阶段选择精灵：默认模式
+- 进化条件中选择精灵：启用 `all-variants` + `compact`（需要选择所有形态，且行高不能过大）
+### 用户端 API 参数
+
+#### `GET /api/pets` 精灵列表
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | number | 1 | 页码 |
+| `limit` | number | 50 | 每页数量（最大200） |
+| `element_id` | number | — | 按属性筛选 |
+| `egg_group` | number | — | 按蛋组筛选 |
+| `search` | string | — | 名称模糊搜索 |
+| `sort_by` | string | `pet_id` | 排序字段（pet_id/name/total/hp/speed/atk/matk/def/mdef） |
+| `order` | string | `asc` | 排序方向（asc/desc） |
+| `all_variants` | any | — | **传入任意值时返回所有形态**，不传则只返回每个 pet_id 的第一形态 |
+
+**`all_variants` 使用场景**：
+- 进化条件中的精灵选择器需要选择所有形态（如异色形态）
+- `PetPicker` 组件通过 `allVariants` prop 控制是否传递此参数
 
 ### 管理端专用接口
 
