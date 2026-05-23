@@ -30,16 +30,12 @@ const { DATA_DIR, getDb } = require('./db/connection');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 静态资源：data/public/ → /public/
-app.use('/public', express.static(path.join(DATA_DIR, 'public')));
-
-// 手动上传资源：data/uploads/ → /uploads/
-app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads')));
-
+// === Core middleware (must be first) ===
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
+// === API routes FIRST - ensures API requests are never blocked by static file I/O ===
 // RESTful API 路由（带缓存：5 分钟）
 app.use('/api/elements', apiCache(600), elementsRouter);
 app.use('/api/skills', apiCache(300), skillsRouter);
@@ -81,6 +77,18 @@ app.get('/api', (req, res) => {
     ],
   });
 });
+
+// === Static files AFTER API routes ===
+// In production, Nginx serves /public/ and /uploads/ directly (bypassing Express).
+// These express.static calls are only used in development or as fallback.
+app.use('/public', express.static(path.join(DATA_DIR, 'public'), {
+  maxAge: '7d',
+  immutable: true,
+}));
+app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads'), {
+  maxAge: '7d',
+  immutable: true,
+}));
 
 // 根路径静态文件（验证文件、证书等）
 const ROOT_STATIC_DIR = path.join(__dirname, '..', 'root-static');
