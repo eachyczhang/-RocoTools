@@ -1207,28 +1207,6 @@ router.get('/library', authAdmin, (req, res) => {
   res.json({ files });
 });
 
-/**
- * DELETE /api/admin/library/:filename
- * 删除素材库图片
- */
-router.delete('/library/:filename', authAdmin, (req, res) => {
-  const { filename } = req.params;
-  if (!isSafeFilename(filename)) return res.status(400).json({ error: '非法文件名' });
-  const filepath = path.join(LIBRARY_DIR, filename);
-  if (!isPathWithin(filepath, LIBRARY_DIR)) return res.status(400).json({ error: '路径非法' });
-  if (!fs.existsSync(filepath)) return res.status(404).json({ error: '文件不存在' });
-  fs.unlinkSync(filepath);
-
-  // Also delete corresponding thumbnail
-  const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
-  const thumbPath = path.join(LIBRARY_DIR, '.thumbs', thumbFilename);
-  if (fs.existsSync(thumbPath)) {
-    try { fs.unlinkSync(thumbPath); } catch (e) { /* ignore */ }
-  }
-
-  res.json({ success: true });
-});
-
 // ============================================================
 // 素材库目录管理接口
 // ============================================================
@@ -1359,6 +1337,28 @@ router.delete('/library/directories', authAdmin, (req, res) => {
     console.error('删除目录失败:', error);
     res.status(500).json({ error: '删除目录失败：' + error.message });
   }
+});
+
+/**
+ * DELETE /api/admin/library/:filename
+ * 删除素材库图片
+ */
+router.delete('/library/:filename', authAdmin, (req, res) => {
+  const { filename } = req.params;
+  if (!isSafeFilename(filename)) return res.status(400).json({ error: '非法文件名' });
+  const filepath = path.join(LIBRARY_DIR, filename);
+  if (!isPathWithin(filepath, LIBRARY_DIR)) return res.status(400).json({ error: '路径非法' });
+  if (!fs.existsSync(filepath)) return res.status(404).json({ error: '文件不存在' });
+  fs.unlinkSync(filepath);
+
+  // Also delete corresponding thumbnail
+  const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
+  const thumbPath = path.join(LIBRARY_DIR, '.thumbs', thumbFilename);
+  if (fs.existsSync(thumbPath)) {
+    try { fs.unlinkSync(thumbPath); } catch (e) { /* ignore */ }
+  }
+
+  res.json({ success: true });
 });
 
 /**
