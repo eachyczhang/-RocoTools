@@ -212,7 +212,7 @@ erDiagram
         text image_shiny
         text image_fruit
         text image_egg
-        text evolution_chain "JSON"
+        text evolution_chain "JSON 2D array [[{name,evolve_level,evolve_condition},...],...]"
         int manual_edit
     }
 

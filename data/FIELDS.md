@@ -86,7 +86,7 @@
 | height | 身高 | string |
 | weight | 体重 | string |
 | location | 精灵分布 | string |
-| evolution_chain | 进化链 | list[string] |
+| evolution_chain | 进化链 | list[list[object]] | ⚠️ 二维数组（多路线），每个对象含 name/evolve_level/evolve_condition；旧数据可能是 list[string] 或 list[object]，后端读取时自动标准化 |
 | restrain_strong | 克制 | list[string] |
 | restrain_weak | 被克制 | list[string] |
 | restrain_resist | 抵抗 | list[string] |
