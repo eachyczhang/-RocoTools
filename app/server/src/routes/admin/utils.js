@@ -425,4 +425,61 @@ module.exports = {
   handleUpload,
   IMAGE_TYPES,
   EDITABLE_TABLES,
+  cleanupDuplicateDefaultAchievements,
 };
+
+/**
+ * 清理重复的默认课题（一次性清理历史数据）
+ * @param {Database} db - 数据库连接
+ * @param {string} petUid - 精灵UID，如果为空则清理所有精灵
+ */
+function cleanupDuplicateDefaultAchievements(db, petUid = null) {
+  console.log(`[cleanupDuplicateDefaultAchievements] Starting cleanup for ${petUid || 'all pets'}`);
+  
+  // 查询所有有重复默认课题的精灵
+  const petCondition = petUid ? 'AND pet_uid = ?' : '';
+  const params = petUid ? [petUid] : [];
+  
+  const duplicateQuery = `
+    SELECT pet_uid, title, COUNT(*) as count
+    FROM pet_achievements 
+    WHERE is_default = 1 ${petCondition}
+    GROUP BY pet_uid, title
+    HAVING COUNT(*) > 1
+  `;
+  
+  const duplicates = db.prepare(duplicateQuery).all(...params);
+  
+  if (duplicates.length === 0) {
+    console.log('[cleanupDuplicateDefaultAchievements] No duplicate default achievements found');
+    return;
+  }
+  
+  console.log(`[cleanupDuplicateDefaultAchievements] Found ${duplicates.length} types of duplicate default achievements`);
+  
+  let totalCleaned = 0;
+  const deleteStmt = db.prepare('DELETE FROM pet_achievements WHERE id = ?');
+  
+  for (const dup of duplicates) {
+    console.log(`[cleanupDuplicateDefaultAchievements] Cleaning duplicates for pet ${dup.pet_uid}, title: "${dup.title}" (${dup.count} duplicates)`);
+    
+    // 获取该精灵该标题的所有默认课题，保留第一个，删除其他
+    const achievements = db.prepare(`
+      SELECT id FROM pet_achievements 
+      WHERE pet_uid = ? AND title = ? AND is_default = 1 
+      ORDER BY id ASC
+    `).all(dup.pet_uid, dup.title);
+    
+    // 保留第一个，删除其他
+    const toDelete = achievements.slice(1);
+    
+    for (const ach of toDelete) {
+      deleteStmt.run(ach.id);
+      totalCleaned++;
+    }
+    
+    console.log(`[cleanupDuplicateDefaultAchievements] Kept 1, deleted ${toDelete.length} duplicates for "${dup.title}"`);
+  }
+  
+  console.log(`[cleanupDuplicateDefaultAchievements] Cleanup completed. Total deleted: ${totalCleaned}`);
+}

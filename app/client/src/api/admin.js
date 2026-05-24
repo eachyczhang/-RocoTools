@@ -310,4 +310,10 @@ export const adminApi = {
     method: 'POST',
     body: JSON.stringify({ operations }),
   }),
+
+  // 清理重复的默认课题
+  cleanupDuplicateAchievements: (pet_uid) => adminRequest('/cleanup-duplicate-achievements', {
+    method: 'POST',
+    body: JSON.stringify({ pet_uid }),
+  }),
 }

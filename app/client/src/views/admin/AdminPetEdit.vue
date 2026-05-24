@@ -629,9 +629,14 @@
     <div v-if="!isNew" class="card mb-4">
       <div class="flex items-center justify-between mb-3">
 <h2 class="font-roco text-base text-primary-500">图鉴课题</h2>
-        <button @click="saveAchievements" :disabled="achievementsSaving" class="btn text-xs">
+        <div class="flex gap-2">
+          <button @click="cleanupDuplicates" class="btn text-xs bg-orange-500 hover:bg-orange-600">
+🧹 清理重复
+          </button>
+          <button @click="saveAchievements" :disabled="achievementsSaving" class="btn text-xs">
 {{ achievementsSaving ? '保存中...' : '💾 保存课题' }}
-        </button>
+          </button>
+        </div>
       </div>
       <span v-if="achievementsMsg" class="text-xs mb-2 inline-block" :class="achievementsOk ? 'text-green-600' : 'text-red-500'">{{ achievementsMsg }}</span>
 
@@ -1662,6 +1667,22 @@ async function saveAchievements() {
     achievementsMsg.value = err.message
   } finally {
     achievementsSaving.value = false
+  }
+}
+
+// 清理重复的默认课题
+async function cleanupDuplicates() {
+  if (!confirm('确定要清理重复的默认课题吗？此操作不可撤销。')) {
+    return;
+  }
+  
+  try {
+    await adminApi.cleanupDuplicateAchievements(uid);
+    await modal.success('清理成功', '重复的默认课题已清理完成');
+    // 重新加载数据以刷新界面
+    await loadAchievements();
+  } catch (err) {
+    await modal.alert('清理失败', err.message);
   }
 }
 

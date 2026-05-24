@@ -98,4 +98,23 @@ router.use(exportRouter);
 // 精灵技能 / 蛋组 / 特性管理
 router.use(petSkillsRouter);
 
+// ============================================================
+// 数据清理工具
+// ============================================================
+const { cleanupDuplicateDefaultAchievements } = require('./utils');
+
+// 清理重复的默认课题
+router.post('/cleanup-duplicate-achievements', (req, res) => {
+  const { pet_uid } = req.body;
+  const db = require('../../db/connection').getWriteDb();
+  
+  try {
+    cleanupDuplicateDefaultAchievements(db, pet_uid);
+    res.json({ success: true, message: '重复默认课题清理完成' });
+  } catch (err) {
+    console.error('[cleanup-duplicate-achievements] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
