@@ -482,6 +482,42 @@ onMounted(async () => {
 :deep(.prose-dark td) {
   border-bottom: 1px solid #1e2433;
 }
+/* Sticky first column */
+:deep(.prose-announcement th:first-child),
+:deep(.prose-announcement td:first-child) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  font-weight: 600;
+}
+:deep(.prose-light th:first-child),
+:deep(.prose-light td:first-child) {
+  background: #fff;
+  box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.06);
+}
+:deep(.prose-dark th:first-child),
+:deep(.prose-dark td:first-child) {
+  background: #1f2937;
+  box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.3);
+}
+:deep(.prose-light th:first-child) {
+  background: rgba(214, 159, 35, 0.1);
+}
+:deep(.prose-dark th:first-child) {
+  background: rgba(255, 202, 40, 0.1);
+}
+:deep(.prose-light tr:nth-child(even) td:first-child) {
+  background: #fafafa;
+}
+:deep(.prose-dark tr:nth-child(even) td:first-child) {
+  background: #1a2332;
+}
+:deep(.prose-light tr:hover td:first-child) {
+  background: rgba(214, 159, 35, 0.05);
+}
+:deep(.prose-dark tr:hover td:first-child) {
+  background: rgba(255, 202, 40, 0.05);
+}
 /* Zebra striping */
 :deep(.prose-light tr:nth-child(even) td) {
   background: #fafafa;
