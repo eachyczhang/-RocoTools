@@ -251,9 +251,12 @@ function parseMarkdown(md) {
   return html
 }
 
-// Inline formatting: bold, italic, code, links
+// Inline formatting: bold, italic, code, links, inline icons
 function inline(text) {
   return text
+    // Custom inline icons: ![pet:uid] and ![skill:uid]
+    .replace(/!\[pet:([^\]]+)\]/g, '<img class="inline-icon pet-icon" src="/public/pets/thumbs/$1_default.webp" alt="" loading="lazy" />')
+    .replace(/!\[skill:([^\]]+)\]/g, '<img class="inline-icon skill-icon" src="/public/skills/icons/$1.png" alt="" loading="lazy" />')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code>$1</code>')
@@ -563,5 +566,47 @@ onMounted(async () => {
 }
 :deep(.prose-dark a:hover) {
   color: #FFD54F;
+}
+
+/* Inline icons — pet thumbnails & skill icons */
+:deep(.prose-announcement .inline-icon) {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 4px;
+  object-fit: contain;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+:deep(.prose-announcement .pet-icon) {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+:deep(.prose-light .pet-icon) {
+  background: rgba(214, 159, 35, 0.08);
+  border: 1px solid rgba(214, 159, 35, 0.2);
+}
+:deep(.prose-dark .pet-icon) {
+  background: rgba(255, 202, 40, 0.08);
+  border: 1px solid rgba(255, 202, 40, 0.2);
+}
+:deep(.prose-announcement .skill-icon) {
+  width: 20px;
+  height: 20px;
+}
+:deep(.prose-light .skill-icon) {
+  background: rgba(0, 0, 0, 0.03);
+}
+:deep(.prose-dark .skill-icon) {
+  background: rgba(255, 255, 255, 0.05);
+}
+/* Larger icons in table cells for better visibility */
+:deep(.prose-announcement td .pet-icon) {
+  width: 28px;
+  height: 28px;
+}
+:deep(.prose-announcement td .skill-icon) {
+  width: 22px;
+  height: 22px;
 }
 </style>

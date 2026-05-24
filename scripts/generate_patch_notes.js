@@ -82,6 +82,14 @@ db1.prepare('SELECT uid, name FROM pets').all().forEach(r => { oldPetNames[r.uid
 const elementNames = {};
 db2.prepare('SELECT id, name FROM elements').all().forEach(r => { elementNames[r.id] = r.name; });
 
+// Skill icon lookup
+const skillIcons = {};
+db2.prepare('SELECT uid, icon_url FROM skills WHERE icon_url IS NOT NULL').all().forEach(r => { skillIcons[r.uid] = r.icon_url; });
+
+// Pet thumb lookup
+const petThumbs = {};
+db2.prepare('SELECT uid, thumb_url FROM pets WHERE thumb_url IS NOT NULL').all().forEach(r => { petThumbs[r.uid] = r.thumb_url; });
+
 // --- Skills ---
 const skills1 = getRows(db1, 'skills', ['uid']);
 const skills2 = getRows(db2, 'skills', ['uid']);
@@ -201,7 +209,7 @@ for (const p of newPets) {
   petGroups[baseId].push(p);
 }
 for (const [, group] of Object.entries(petGroups)) {
-  const names = group.map(p => `**${p.name}**`).join(' → ');
+  const names = group.map(p => `![pet:${p.uid}] **${p.name}**`).join(' → ');
   const first = group[0];
   const elemName = elementNames[first.element_id] || '';
   const subElemName = first.sub_element_id ? `/${elementNames[first.sub_element_id] || ''}` : '';
@@ -216,7 +224,7 @@ if (newSkills.length > 0) {
   w(`| 技能名 | 属性 | 类型 | 能耗 | 威力 | 描述 |`);
   w(`|--------|------|------|------|------|------|`);
   for (const s of newSkills) {
-    w(`| ${s.name} | ${s.element || '-'} | ${s.type || '-'} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
+    w(`| ![skill:${s.uid}] ${s.name} | ${s.element || '-'} | ${s.type || '-'} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
   }
   w();
 }
@@ -225,7 +233,7 @@ if (newSkills.length > 0) {
 w(`## ⚔️ 技能调整（${modifiedSkills.length} 个）`);
 w();
 for (const { skill, changes, relevantFields } of modifiedSkills) {
-  w(`### ${skill.name}`);
+  w(`### ![skill:${skill.uid}] ${skill.name}`);
   w();
   for (const field of relevantFields) {
     const { old: oldVal, new: newVal } = changes[field];
@@ -264,18 +272,21 @@ if (abilityChangedPets.length > 0) {
     const descChange = changes.ability_desc;
     if (descChange) {
       const key = `${descChange.old}|||${descChange.new}`;
-      if (!abilityGroups[key]) abilityGroups[key] = { old: descChange.old, new: descChange.new, pets: [] };
+      if (!abilityGroups[key]) abilityGroups[key] = { old: descChange.old, new: descChange.new, pets: [], petUids: [] };
       abilityGroups[key].pets.push(pet.name);
+      abilityGroups[key].petUids.push(pet.uid);
     } else if (changes.ability_name) {
-      w(`- **${pet.name}**：特性名 ${changes.ability_name.old} → ${changes.ability_name.new}`);
+      w(`- ![pet:${pet.uid}] **${pet.name}**：特性名 ${changes.ability_name.old} → ${changes.ability_name.new}`);
     }
   }
   w();
-  for (const { old: oldDesc, new: newDesc, pets: petList } of Object.values(abilityGroups)) {
-    const names = petList.length <= 3 ? petList.join('、') : `${petList.slice(0, 3).join('、')}等${petList.length}只`;
-    w(`**${names}**`);
-    w(`- 旧：${oldDesc}`);
-    w(`- 新：${newDesc}`);
+  for (const group of Object.values(abilityGroups)) {
+    const names = group.pets.length <= 3 ? group.pets.join('、') : `${group.pets.slice(0, 3).join('、')}等${group.pets.length}只`;
+    // Add pet icons for the group
+    const icons = group.petUids.slice(0, 3).map(uid => `![pet:${uid}]`).join(' ');
+    w(`${icons} **${names}**`);
+    w(`- 旧：${group.old}`);
+    w(`- 新：${group.new}`);
     w();
   }
 }
@@ -293,7 +304,7 @@ if (statChangedPets.length > 0) {
       const diff = n - o;
       return `${o}→${n}(${diff > 0 ? '+' : ''}${diff})`;
     };
-    w(`| ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
+    w(`| ![pet:${pet.uid}] ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
   }
   w();
 }
@@ -309,7 +320,7 @@ if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
     const grouped = groupByPet(skillsAdded);
     for (const [uid, skills] of Object.entries(grouped)) {
       const name = petNames[uid] || uid;
-      w(`- **${name}**：${skills.map(s => `${s.name}(Lv${s.level})`).join('、')}`);
+      w(`- ![pet:${uid}] **${name}**：${skills.map(s => `${s.name}(Lv${s.level})`).join('、')}`);
     }
     w();
   }
@@ -320,7 +331,7 @@ if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
     const grouped = groupByPet(skillsRemoved);
     for (const [uid, skills] of Object.entries(grouped)) {
       const name = oldPetNames[uid] || petNames[uid] || uid;
-      w(`- **${name}**：${skills.map(s => s.name).join('、')}`);
+      w(`- ![pet:${uid}] **${name}**：${skills.map(s => s.name).join('、')}`);
     }
     w();
   }
