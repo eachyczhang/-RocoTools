@@ -103,15 +103,18 @@ router.put('/data/:table/:id', (req, res) => {
       if (updates.pet_id && updates.pet_id !== pet?.pet_id) {
         syncVariantsMap(db, updates.pet_id);
       }
-      // Auto-sync default achievements when is_final_form changes
-      if (updates.is_final_form !== undefined) {
-        syncDefaultAchievements(db, id);
-      }
+      // Always sync default achievements when saving pets (handles is_final_form, name changes)
+      syncDefaultAchievements(db, id);
     }
 
     // Auto-sync evolution_chain to all pets in the chain
     if (table === 'pet_details' && updates.evolution_chain !== undefined) {
       syncEvolutionChain(db, id, updates.evolution_chain);
+    }
+
+    // Sync achievements when image_shiny changes (affects shiny achievement)
+    if (table === 'pet_details' && updates.image_shiny !== undefined) {
+      syncDefaultAchievements(db, id);
     }
 
     db.close();
