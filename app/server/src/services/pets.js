@@ -157,6 +157,13 @@ function getByUid(uid) {
   `).all(pet.pet_id);
   pet.variants = variants.length > 1 ? variants : [];
 
+  // Achievements (图鉴课题)
+  pet.achievements = db.prepare(`
+    SELECT title, reward_desc, is_default FROM pet_achievements
+    WHERE pet_uid = ?
+    ORDER BY sort_order, id
+  `).all(pet.uid);
+
   return pet;
 }
 

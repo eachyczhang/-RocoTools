@@ -142,6 +142,19 @@
       </div>
     </div>
 
+    <!-- 图鉴课题 -->
+    <div class="card mb-4 sm:mb-6" v-if="pet.achievements?.length">
+      <h3 class="font-roco text-sm sm:text-base mb-2 sm:mb-3">图鉴课题</h3>
+      <div class="space-y-1.5">
+        <div v-for="(ach, idx) in pet.achievements" :key="idx"
+          class="flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+          <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400">{{ idx + 1 }}</span>
+          <span class="text-xs sm:text-sm flex-1">{{ ach.title }}</span>
+          <span v-if="ach.reward_desc" class="text-[10px] sm:text-xs text-muted flex-shrink-0">{{ ach.reward_desc }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 种族值 -->
     <div class="card mb-4 sm:mb-6">
       <h3 class="font-roco text-sm sm:text-base mb-3 sm:mb-4">种族值 <span class="text-primary-500 font-bold ml-2">{{ pet.total }}</span></h3>
