@@ -51,17 +51,33 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
 import SearchSelect from '@/components/shared/SearchSelect.vue'
 
+const route = useRoute()
+const router = useRouter()
+
 const pets = ref([])
 const total = ref(0)
-const page = ref(1)
 const limit = ref(30)
-const search = ref('')
-const elementFilter = ref('')
-const bossFilter = ref(false)
 const elements = ref([])
+
+// Initialize state from URL query params (restore on back navigation)
+const page = ref(Number(route.query.page) || 1)
+const search = ref(route.query.search || '')
+const elementFilter = ref(route.query.element_id || '')
+const bossFilter = ref(route.query.boss === '1')
+
+/** Sync current filter state to URL query (replace, not push) */
+function syncQuery() {
+  const query = {}
+  if (page.value > 1) query.page = page.value
+  if (search.value) query.search = search.value
+  if (elementFilter.value) query.element_id = elementFilter.value
+  if (bossFilter.value) query.boss = '1'
+  router.replace({ query })
+}
 
 let timer = null
 function debouncedFetch() {
@@ -77,6 +93,7 @@ function filterChanged() {
 watch(elementFilter, () => { page.value = 1; fetchData() })
 
 async function fetchData() {
+  syncQuery()
   const params = { page: page.value, limit: limit.value, search: search.value }
   if (elementFilter.value) params.element_id = elementFilter.value
   if (bossFilter.value) params.is_boss_form = '1'
