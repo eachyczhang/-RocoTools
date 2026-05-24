@@ -71,8 +71,9 @@ function list({ page = 1, limit = 50, element_id, egg_group, search, sort_by = '
   let params = [];
   let joins = '';
 
-  // 只取每个 pet_id 的第一个形态（uid 最小的），除非指定 all_variants
-  if (!all_variants) {
+  // 只取每个 pet_id 的第一个形态（uid 最小的），除非指定 all_variants 或筛选特定形态标记
+  const variantTags = ['is_boss_form'];
+  if (!all_variants && !(tag && variantTags.includes(tag))) {
     where.push(`p.uid = (SELECT MIN(p2.uid) FROM pets p2 WHERE p2.pet_id = p.pet_id)`);
   }
 
