@@ -1,118 +1,263 @@
-# RocoTools 脚本工具
+# RocoTools 脚本命令手册
 
-## 一、服务器数据同步脚本
+> 本文档列出项目中所有可执行的脚本及其命令行用法。
 
-`scripts/sync_from_server.sh` 用于将服务器上的数据库和图片同步到本地开发环境。
+---
 
-### 使用方法
+## 目录
 
-```bash
-# 仅同步数据库
-bash scripts/sync_from_server.sh --db
+- [一、远程数据同步（sync_from_server.sh）](#一远程数据同步)
+- [二、本地数据同步（sync_db.js）](#二本地数据同步)
+- [三、独立迁移/维护脚本](#三独立迁移维护脚本)
+- [四、图片处理脚本](#四图片处理脚本)
+- [五、赛季公告生成脚本](#五赛季公告生成脚本)
 
-# 仅同步图片（增量）
-bash scripts/sync_from_server.sh --images
+---
 
-# 仅同步赛季备份文件
-bash scripts/sync_from_server.sh --seasons
+## 一、远程数据同步
 
-# 全部同步
-bash scripts/sync_from_server.sh --all
-```
+**脚本**：`scripts/sync_from_server.sh`
 
-### 功能说明
-
-| 选项 | 说明 |
-|------|------|
-| `--db` | 下载服务器当前 `roco.db`，覆盖本地（自动备份旧文件） |
-| `--images` | rsync 增量同步 `public/` 和 `uploads/` 目录 |
-| `--seasons` | rsync 同步赛季备份到 `temp/seasons/` |
-| `--all` | 以上全部 |
+将服务器上的数据库、图片、赛季备份同步到本地开发环境。
 
 ### 前置条件
 
-- 创建配置文件 `scripts/.env`（已被 gitignore 忽略）：
-  ```bash
-  cp scripts/.env.example scripts/.env
-  # 编辑 scripts/.env 填入你的服务器信息
-  ```
-- 本机已配置 SSH 免密登录到服务器（`ssh-copy-id user@your.server.ip`）
-- 本机已安装 `rsync`（Git Bash 自带）
+1. 创建配置文件：
+   ```bash
+   cp scripts/.env.example scripts/.env
+   # 编辑填入服务器信息：REMOTE_USER / REMOTE_HOST / REMOTE_PROJECT
+   ```
+2. 配置 SSH 免密登录：`ssh-copy-id user@your.server.ip`
+3. 推荐安装 `rsync`（有则增量同步，无则自动 fallback 到 scp+tar 差异同步）
 
-### 管理端下载
+### 命令一览
 
-也可以通过管理端 Dashboard 页面直接下载：
-- **下载当前 DB** 按钮：下载当前线上数据库
+```bash
+# 查看帮助
+bash scripts/sync_from_server.sh --help
+
+# 仅同步数据库（自动备份本地旧DB + 完整性校验）
+bash scripts/sync_from_server.sh --db
+
+# 仅同步图片（增量，基于上次同步时间戳自动判断）
+bash scripts/sync_from_server.sh --images
+
+# 同步图片 - 强制全量（忽略时间戳，下载所有文件）
+bash scripts/sync_from_server.sh --images --full
+
+# 同步图片 - 指定天数（只同步最近N天的变更）
+bash scripts/sync_from_server.sh --images --since 7
+
+# 仅同步赛季备份文件（到 temp/seasons/）
+bash scripts/sync_from_server.sh --seasons
+
+# 全部同步（数据库 + 图片 + 赛季备份）
+bash scripts/sync_from_server.sh --all
+
+# 全部同步 + 强制全量图片
+bash scripts/sync_from_server.sh --all --full
+```
+
+### 选项说明
+
+| 选项 | 说明 |
+|------|------|
+| `--db` | 下载服务器 `roco.db`，覆盖本地（自动备份旧文件 + 完整性校验） |
+| `--images` | 增量同步 `data/public/` 和 `data/uploads/` 目录 |
+| `--seasons` | 同步赛季备份到 `temp/seasons/` |
+| `--all` | 以上全部 |
+| `--full` | 强制全量同步图片（忽略 `.last_image_sync` 时间戳） |
+| `--since N` | 仅同步最近 N 天内变更的文件 |
+| `--help` | 显示帮助信息 |
+
+### 同步机制
+
+- **有 rsync**：直接 rsync 增量同步，最高效
+- **无 rsync（Windows Git Bash）**：
+  1. 生成本地文件列表
+  2. 上传到服务器对比差异
+  3. 服务器打包差异文件
+  4. scp 下载 + 本地解压
+- **时间戳**：每次成功同步后记录到 `scripts/.last_image_sync`，下次自动增量
+
+### 管理端下载（替代方案）
+
+也可通过管理端 Dashboard 页面直接下载：
+- **下载当前 DB** 按钮：下载线上数据库
 - 各备份列表的 **下载** 按钮：下载指定备份文件
 
 ---
 
-## 二、赛季公告生成脚本
+## 二、本地数据同步
 
-`scripts/generate_patch_notes.js` 用于对比两个赛季的数据库快照，自动生成格式化的赛季更新公告文档（Markdown）。
+**脚本**：`app/server/sync_db.js`
 
-### 使用方法
+一键执行完整的本地数据处理流程：生成缩略图 → 建表 → 导入数据 → 迁移 → 同步。
 
-#### 前置条件
+### 命令
 
-1. 从服务器下载两个赛季的数据库备份到 `temp/seasons/` 目录：
+```bash
+cd app/server && node sync_db.js
+```
+
+### 执行步骤（按顺序）
+
+| # | 步骤 | 需要 sharp |
+|---|------|-----------|
+| 1 | 生成缩略图 + 更新 pet_list.json | ✅ |
+| 2 | 生成 WebP 副本（全部图片） | ✅ |
+| 3 | 初始化数据库（建表） | — |
+| 4 | 导入数据（JSON → SQLite） | — |
+| 5 | 迁移 show_shiny 列 | — |
+| 6 | 规范化身高体重数据 | — |
+| 7 | 清洗技能等级字段 | — |
+| 8 | 同步进化链（多路线合并） | — |
+| 9 | 同步最终形态标记 | — |
+| 10 | 同步默认图鉴课题 | — |
+
+> 如果未安装 `sharp`，步骤 1-2 会自动跳过。
+
+### 前置条件
+
+```bash
+cd app/server && npm install
+```
+
+---
+
+## 三、独立迁移/维护脚本
+
+位于 `app/server/scripts/` 目录，可单独执行：
+
+```bash
+# 所有脚本均在 app/server 目录下执行
+cd app/server
+```
+
+### 数据迁移
+
+| 命令 | 说明 | 使用场景 |
+|------|------|----------|
+| `node scripts/migrate-show-shiny.js` | 添加 `show_shiny` 列到 pets 表（默认值1） | 已集成到 sync_db |
+| `node scripts/migrate-height-weight.js` | 规范化身高体重格式（`"1.5~2.15"` → `"1.50-2.15"`） | 已集成到 sync_db |
+| `node scripts/migrate-pet-tags.js` | 添加标签列到 pets 表 | 首次部署执行一次 |
+| `node scripts/migrate-achievements.js` | 迁移图鉴课题表结构 | 首次部署执行一次 |
+| `node scripts/normalize-skill-levels.js` | 清洗技能等级字段（`"LV1"` → `"1"`） | 已集成到 sync_db |
+
+### 数据同步
+
+| 命令 | 说明 | 使用场景 |
+|------|------|----------|
+| `node scripts/sync-evolution-chains.js` | 同步进化链（多路线合并） | 已集成到 sync_db |
+| `node scripts/sync-final-forms.js` | 同步最终形态标记 | 已集成到 sync_db |
+| `node scripts/sync-default-achievements.js` | 同步默认图鉴课题 | 已集成到 sync_db |
+
+### 调试模式（dry-run）
+
+```bash
+# 预览最终形态检测结果（不写入数据库）
+node scripts/sync-final-forms.js --dry-run
+
+# 预览课题同步结果（不写入数据库）
+node scripts/sync-default-achievements.js --dry-run
+```
+
+---
+
+## 四、图片处理脚本
+
+位于 `app/server/` 目录，需要安装 `sharp`：
+
+```bash
+cd app/server
+npm install sharp  # 如未安装
+```
+
+| 命令 | 说明 |
+|------|------|
+| `node gen_thumbnails.js` | 为精灵图片生成缩略图（WebP格式） + 更新 pet_list.json |
+| `node gen_webp.js` | 将所有精灵原图转换为 WebP 副本 |
+
+> 这两个脚本已集成到 `sync_db.js` 流程中，通常不需要单独执行。
+
+---
+
+## 五、赛季公告生成脚本
+
+**脚本**：`scripts/generate_patch_notes.js`
+
+对比两个赛季的数据库快照，自动生成格式化的赛季更新公告（Markdown）。
+
+### 前置条件
+
+1. 下载赛季数据库备份：
    ```bash
    # 方式一：使用同步脚本
    bash scripts/sync_from_server.sh --seasons
 
-   # 方式二：手动 scp（替换为你的服务器信息）
-   scp user@server:/var/www/roco/app/server/data/backups/seasons/season_S1_*.db temp/seasons/
-   scp user@server:/var/www/roco/app/server/data/backups/seasons/season_S2_*.db temp/seasons/
+   # 方式二：手动 scp
+   scp user@server:/path/to/backups/seasons/season_S1_*.db temp/seasons/
+   scp user@server:/path/to/backups/seasons/season_S2_*.db temp/seasons/
    ```
 
-2. 确保 `app/server/node_modules/better-sqlite3` 已安装。
+2. 确保 `better-sqlite3` 已安装（`cd app/server && npm install`）
 
-### 运行命令
+### 命令
 
 ```bash
-node scripts/generate_patch_notes.js <旧版本db> <新版本db> [--output <输出路径>]
+# 基本用法：对比旧版本 → 新版本
+node scripts/generate_patch_notes.js <旧版本.db> <新版本.db>
+
+# 指定输出路径
+node scripts/generate_patch_notes.js <旧版本.db> <新版本.db> --output <输出路径.md>
 ```
 
 ### 示例
 
 ```bash
 # 对比 S1 → S2，输出到 temp/patch_S2.md
-node scripts/generate_patch_notes.js temp/seasons/season_S1_20260521.db temp/seasons/season_S2_20260524.db --output temp/patch_S2.md
+node scripts/generate_patch_notes.js \
+  temp/seasons/season_S1_20260521.db \
+  temp/seasons/season_S2_20260524.db \
+  --output temp/patch_S2.md
 
 # 不指定输出路径，默认输出到 temp/patch_notes_<新db文件名>.md
-node scripts/generate_patch_notes.js temp/seasons/season_S1_20260521.db temp/seasons/season_S2_20260524.db
+node scripts/generate_patch_notes.js \
+  temp/seasons/season_S1_20260521.db \
+  temp/seasons/season_S2_20260524.db
 ```
 
-## 输出内容
+### 输出内容
 
-生成的公告文档包含以下章节：
+1. **更新概览** — 各类变更的数量汇总
+2. **新增精灵** — 按进化线分组展示
+3. **新增技能** — 表格展示
+4. **技能调整** — 逐个列出能耗/威力/效果变化
+5. **精灵特性调整** — 按相同改动分组，合并进化线
+6. **精灵数值调整** — 表格展示六维变化和差值
+7. **技能学习面变动** — 已有精灵新增/移除的可学习技能
 
-1. **更新概览** - 各类变更的数量汇总
-2. **新增精灵** - 按进化线分组展示
-3. **新增技能** - 表格展示（如有）
-4. **技能调整** - 逐个列出能耗/威力/效果变化
-5. **精灵特性调整** - 按相同改动分组，合并进化线
-6. **精灵数值调整** - 表格展示六维变化和差值
-7. **技能学习面变动** - 已有精灵新增/移除的可学习技能（如有）
+### 自动过滤
 
-## 过滤规则
+脚本自动忽略以下非游戏性变更：
+- `manual_edit`、`version`、标签列（`is_final_form` 等）、`show_shiny`、`level` 格式变化
 
-脚本自动过滤以下非游戏性变更：
-- `manual_edit` 标记变化
-- `version` 字段变化
-- 标签列变化（`is_final_form`, `is_legendary` 等）
-- `show_shiny` 字段变化
-- `level` 格式变化（如 "LV1" → "1"）
+---
 
-## 数据库备份命名规范
+## 快速参考
 
-建议格式：`season_{赛季ID}_{日期YYYYMMDD}.db`
+```bash
+# === 日常开发 ===
+bash scripts/sync_from_server.sh --db          # 拉取最新数据库
+bash scripts/sync_from_server.sh --images      # 增量同步图片
 
-例如：
-- `season_S1_20260521.db`
-- `season_S2_20260524.db`
-- `season_S3_20260701.db`
+# === 首次搭建 / 数据重建 ===
+bash scripts/sync_from_server.sh --all --full  # 全量同步所有数据
+cd app/server && node sync_db.js               # 重建本地数据库
 
-## 扩展
-
-如需添加新的对比维度，修改 `scripts/generate_patch_notes.js` 中对应的数据收集和 Markdown 生成部分。
+# === 赛季更新 ===
+bash scripts/sync_from_server.sh --seasons     # 下载赛季备份
+node scripts/generate_patch_notes.js \         # 生成更新公告
+  temp/seasons/old.db temp/seasons/new.db \
+  --output temp/patch.md
+```
