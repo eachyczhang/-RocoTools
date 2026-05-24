@@ -189,12 +189,12 @@ CREATE TABLE IF NOT EXISTS pika_monthly_pets (
   FOREIGN KEY (monthly_id) REFERENCES pika_monthlies(id) ON DELETE CASCADE
 );
 
--- 精灵成就任务
+-- 精灵图鉴课题
 CREATE TABLE IF NOT EXISTS pet_achievements (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   pet_uid     TEXT NOT NULL,
   type        TEXT NOT NULL,        -- 'text' | 'skill'
-  title       TEXT,                 -- 成就标题/描述
+  title       TEXT,                 -- 课题标题/描述
   skill_ref_uid TEXT,               -- 技能类：关联 skills 表
   skill_name  TEXT,                 -- 技能类：技能名称（冗余）
   use_count   INTEGER DEFAULT 0,    -- 技能类：需要使用次数

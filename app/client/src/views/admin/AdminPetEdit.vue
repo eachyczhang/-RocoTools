@@ -542,12 +542,12 @@
       </Transition>
     </Teleport>
 
-    <!-- 成就任务配置 -->
+    <!-- 图鉴课题配置 -->
     <div v-if="!isNew" class="card mb-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-roco text-base text-primary-500">成就任务</h2>
+<h2 class="font-roco text-base text-primary-500">图鉴课题</h2>
         <button @click="saveAchievements" :disabled="achievementsSaving" class="btn text-xs">
-          {{ achievementsSaving ? '保存中...' : '💾 保存成就' }}
+{{ achievementsSaving ? '保存中...' : '💾 保存课题' }}
         </button>
       </div>
       <span v-if="achievementsMsg" class="text-xs mb-2 inline-block" :class="achievementsOk ? 'text-green-600' : 'text-red-500'">{{ achievementsMsg }}</span>
@@ -566,7 +566,7 @@
           <div class="flex-1 min-w-0 space-y-1.5">
             <!-- Text type -->
             <template v-if="ach.type === 'text'">
-              <input v-model="ach.title" class="input w-full text-xs" placeholder="成就描述（如：累计登录7天）" />
+              <input v-model="ach.title" class="input w-full text-xs" placeholder="课题描述（如：累计登录7天）" />
               <input v-model="ach.reward_desc" class="input w-full text-xs" placeholder="奖励描述（可选）" />
             </template>
 

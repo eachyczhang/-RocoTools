@@ -258,7 +258,7 @@ export const adminApi = {
     body: JSON.stringify({ egg_group_ids: eggGroupIds }),
   }),
 
-  // 精灵成就任务管理
+  // 精灵图鉴课题管理
   getPetAchievements: (uid) => adminRequest(`/pet-achievements/${uid}`),
   savePetAchievements: (uid, achievements) => adminRequest(`/pet-achievements/${uid}`, {
     method: 'PUT',
