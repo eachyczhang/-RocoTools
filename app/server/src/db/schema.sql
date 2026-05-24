@@ -201,6 +201,7 @@ CREATE TABLE IF NOT EXISTS pet_achievements (
   reward_desc TEXT,                 -- 奖励描述（如"获得XX技能石"）
   sort_order  INTEGER DEFAULT 0,
   is_default  INTEGER DEFAULT 0,    -- 是否为系统默认课题（1=是，0=否）
+  hidden      INTEGER DEFAULT 0,    -- 是否隐藏（1=隐藏，0=显示，仅对默认课题有效）
   FOREIGN KEY (pet_uid) REFERENCES pets(uid),
   FOREIGN KEY (skill_ref_uid) REFERENCES skills(uid)
 );

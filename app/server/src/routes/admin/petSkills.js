@@ -364,14 +364,15 @@ router.put('/pet-achievements/:uid', authAdmin, (req, res) => {
 
   const db = getWriteDb();
   try {
-    const deleteAll = db.prepare('DELETE FROM pet_achievements WHERE pet_uid = ?');
+    // Only delete non-default achievements; defaults are managed by syncDefaultAchievements
+    const deleteNonDefaults = db.prepare('DELETE FROM pet_achievements WHERE pet_uid = ? AND (is_default = 0 OR is_default IS NULL)');
     const insert = db.prepare(`
-      INSERT INTO pet_achievements (pet_uid, type, title, skill_ref_uid, skill_name, use_count, reward_desc, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO pet_achievements (pet_uid, type, title, skill_ref_uid, skill_name, use_count, reward_desc, sort_order, is_default)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
     `);
 
     const tx = db.transaction(() => {
-      deleteAll.run(uid);
+      deleteNonDefaults.run(uid);
       achievements.forEach((a, idx) => {
         insert.run(
           uid,
@@ -392,6 +393,30 @@ router.put('/pet-achievements/:uid', authAdmin, (req, res) => {
   } catch (err) {
     db.close();
     console.error('[PetAchievements PUT]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/pet-achievements/:id/toggle-hidden
+ * Toggle the hidden state of a default achievement
+ */
+router.patch('/pet-achievements/:id/toggle-hidden', authAdmin, (req, res) => {
+  const { id } = req.params;
+  const db = getWriteDb();
+  try {
+    const row = db.prepare('SELECT id, hidden FROM pet_achievements WHERE id = ? AND is_default = 1').get(id);
+    if (!row) {
+      db.close();
+      return res.status(404).json({ error: '课题不存在或非默认课题' });
+    }
+    const newHidden = row.hidden ? 0 : 1;
+    db.prepare('UPDATE pet_achievements SET hidden = ? WHERE id = ?').run(newHidden, id);
+    db.close();
+    res.json({ success: true, hidden: newHidden });
+  } catch (err) {
+    db.close();
+    console.error('[PetAchievements PATCH toggle-hidden]', err);
     res.status(500).json({ error: err.message });
   }
 });

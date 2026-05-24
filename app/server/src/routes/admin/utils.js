@@ -119,11 +119,15 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
 
 /**
  * Sync default achievements (图鉴课题) for a single pet.
- * Called when is_final_form changes in the admin panel.
+ * Called when saving a pet in the admin panel.
  * - All pets: "捕捉1只{name}", "捕捉1只了不起天分的{name}"
  * - Non-final forms: "使{name}成功进化1次"
  * - Final forms: "获得【命定勇者】奖牌", "捕捉一只炫彩突变的{name}"
  * - Final forms with shiny: "捕捉一只异色突变的{name}"
+ *
+ * Respects the `hidden` field: if an admin has manually hidden/shown a default
+ * achievement, that state is preserved across syncs.
+ *
  * @param {object} db - writable database instance
  * @param {string} petUid - the pet uid to sync achievements for
  */
@@ -134,6 +138,17 @@ function syncDefaultAchievements(db, petUid) {
   const isFinalForm = pet.is_final_form === 1;
   const detail = db.prepare('SELECT image_shiny FROM pet_details WHERE pet_uid = ?').get(petUid);
   const hasShiny = !!(detail && detail.image_shiny);
+
+  // Ensure hidden column exists
+  const cols = db.prepare("PRAGMA table_info(pet_achievements)").all();
+  const hasHiddenCol = cols.some(c => c.name === 'hidden');
+  if (!hasHiddenCol) {
+    db.prepare("ALTER TABLE pet_achievements ADD COLUMN hidden INTEGER DEFAULT 0").run();
+  }
+  const hasIsDefault = cols.some(c => c.name === 'is_default');
+  if (!hasIsDefault) {
+    db.prepare("ALTER TABLE pet_achievements ADD COLUMN is_default INTEGER DEFAULT 0").run();
+  }
 
   // Build expected default achievements
   const expected = [
@@ -155,34 +170,27 @@ function syncDefaultAchievements(db, petUid) {
 
   const expectedTitles = new Set(expected.map(a => a.title));
 
-  // Get existing defaults for this pet
-  const existing = db.prepare('SELECT id, title FROM pet_achievements WHERE pet_uid = ? AND is_default = 1').all(petUid);
-  const existingTitles = new Map(existing.map(r => [r.title, r.id]));
-
-  // Ensure is_default column exists
-  const cols = db.prepare("PRAGMA table_info(pet_achievements)").all();
-  const hasIsDefault = cols.some(c => c.name === 'is_default');
-  if (!hasIsDefault) {
-    db.prepare("ALTER TABLE pet_achievements ADD COLUMN is_default INTEGER DEFAULT 0").run();
-  }
+  // Get existing defaults for this pet (preserve hidden state)
+  const existing = db.prepare('SELECT id, title, hidden FROM pet_achievements WHERE pet_uid = ? AND is_default = 1').all(petUid);
+  const existingTitles = new Map(existing.map(r => [r.title, r]));
 
   const insertStmt = db.prepare(`
-    INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default)
-    VALUES (?, 'text', ?, ?, 1)
+    INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default, hidden)
+    VALUES (?, 'text', ?, ?, 1, 0)
   `);
   const deleteStmt = db.prepare('DELETE FROM pet_achievements WHERE id = ?');
 
-  // Insert missing
+  // Insert missing (only those not already present)
   for (const ach of expected) {
     if (!existingTitles.has(ach.title)) {
       insertStmt.run(petUid, ach.title, ach.sort_order);
     }
   }
 
-  // Remove outdated
-  for (const [title, id] of existingTitles) {
+  // Remove outdated (achievements no longer applicable)
+  for (const [title, row] of existingTitles) {
     if (!expectedTitles.has(title)) {
-      deleteStmt.run(id);
+      deleteStmt.run(row.id);
     }
   }
 }

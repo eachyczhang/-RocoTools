@@ -264,6 +264,9 @@ export const adminApi = {
     method: 'PUT',
     body: JSON.stringify({ achievements }),
   }),
+  toggleAchievementHidden: (id) => adminRequest(`/pet-achievements/${id}/toggle-hidden`, {
+    method: 'PATCH',
+  }),
 
   // 素材库目录管理
   libraryDirectories: () => adminRequest('/library/directories'),

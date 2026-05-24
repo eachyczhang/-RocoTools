@@ -554,18 +554,23 @@
 
       <!-- Achievement list -->
       <div class="space-y-2 mb-3">
-        <div v-for="(ach, idx) in achievements" :key="idx"
-          class="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+      <div v-for="(ach, idx) in achievements" :key="idx"
+          class="flex items-center gap-2 p-3 rounded-lg"
+          :class="[ach.hidden ? 'bg-gray-100/50 dark:bg-white/[0.02] opacity-50' : 'bg-gray-50 dark:bg-white/5']">
           <!-- Type badge -->
           <span class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
-            :class="ach.type === 'skill' ? 'bg-primary-500/15 text-primary-500' : 'bg-gray-200 dark:bg-white/10 text-muted'">
-            {{ ach.type === 'skill' ? '技能' : '文本' }}
+            :class="ach.is_default ? 'bg-green-100 dark:bg-green-500/15 text-green-600 dark:text-green-400' : (ach.type === 'skill' ? 'bg-primary-500/15 text-primary-500' : 'bg-gray-200 dark:bg-white/10 text-muted')">
+            {{ ach.is_default ? '默认' : (ach.type === 'skill' ? '技能' : '文本') }}
           </span>
 
           <!-- Content -->
           <div class="flex-1 min-w-0 space-y-1.5">
+            <!-- Default achievement (read-only) -->
+            <template v-if="ach.is_default">
+              <div class="text-xs py-1" :class="ach.hidden ? 'line-through text-muted' : ''">{{ ach.title }}</div>
+            </template>
             <!-- Text type -->
-            <template v-if="ach.type === 'text'">
+            <template v-else-if="ach.type === 'text'">
               <input v-model="ach.title" class="input w-full text-xs" placeholder="课题描述（如：累计登录7天）" />
               <input v-model="ach.reward_desc" class="input w-full text-xs" placeholder="奖励描述（可选）" />
             </template>
@@ -610,9 +615,16 @@
 
           <!-- Actions -->
           <div class="flex flex-col gap-0.5 flex-shrink-0">
-            <button v-if="idx > 0" @click="moveAchievement(idx, -1)" class="text-[10px] text-muted hover:text-foreground">▲</button>
-            <button v-if="idx < achievements.length - 1" @click="moveAchievement(idx, 1)" class="text-[10px] text-muted hover:text-foreground">▼</button>
-            <button @click="removeAchievement(idx)" class="text-red-400 hover:text-red-600 text-xs" title="删除">✕</button>
+            <template v-if="ach.is_default">
+              <button @click="toggleAchievementHidden(ach)" class="text-sm" :title="ach.hidden ? '点击显示' : '点击隐藏'">
+                {{ ach.hidden ? '👁️‍🗨️' : '👁️' }}
+              </button>
+            </template>
+            <template v-else>
+              <button v-if="idx > 0" @click="moveAchievement(idx, -1)" class="text-[10px] text-muted hover:text-foreground">▲</button>
+              <button v-if="idx < achievements.length - 1" @click="moveAchievement(idx, 1)" class="text-[10px] text-muted hover:text-foreground">▼</button>
+              <button @click="removeAchievement(idx)" class="text-red-400 hover:text-red-600 text-xs" title="删除">✕</button>
+            </template>
           </div>
         </div>
         <div v-if="!achievements.length" class="text-center text-xs text-muted py-4">暂无成就任务</div>
@@ -1384,6 +1396,16 @@ function removeAchievement(idx) {
   achievements.value.splice(idx, 1)
 }
 
+async function toggleAchievementHidden(ach) {
+  if (!ach.id) return
+  try {
+    const res = await adminApi.toggleAchievementHidden(ach.id)
+    ach.hidden = res.hidden
+  } catch (err) {
+    console.error('Toggle hidden failed:', err)
+  }
+}
+
 function moveAchievement(idx, dir) {
   const target = idx + dir
   if (target < 0 || target >= achievements.value.length) return
@@ -1434,6 +1456,7 @@ async function loadAchievements() {
   try {
     const data = await adminApi.getPetAchievements(uid)
     achievements.value = (data.achievements || []).map(a => ({
+      id: a.id,
       type: a.type,
       title: a.title || '',
       skill_ref_uid: a.skill_ref_uid || '',
@@ -1442,6 +1465,8 @@ async function loadAchievements() {
       reward_desc: a.reward_desc || '',
       skill_icon: a.skill_icon || '',
       element_icon: a.element_icon || '',
+      is_default: a.is_default || 0,
+      hidden: a.hidden || 0,
     }))
   } catch (err) {
     console.error('Load achievements failed:', err)
@@ -1452,7 +1477,9 @@ async function saveAchievements() {
   achievementsSaving.value = true
   achievementsMsg.value = ''
   try {
-    const payload = achievements.value.map((a, idx) => ({
+    // Only save non-default achievements; defaults are managed by syncDefaultAchievements
+    const nonDefaults = achievements.value.filter(a => !a.is_default)
+    const payload = nonDefaults.map((a, idx) => ({
       type: a.type,
       title: a.title || null,
       skill_ref_uid: a.skill_ref_uid || null,
@@ -1463,7 +1490,7 @@ async function saveAchievements() {
     }))
     await adminApi.savePetAchievements(uid, payload)
     achievementsOk.value = true
-    achievementsMsg.value = '成就任务保存成功'
+    achievementsMsg.value = '课题保存成功'
   } catch (err) {
     achievementsOk.value = false
     achievementsMsg.value = err.message

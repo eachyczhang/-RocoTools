@@ -43,6 +43,11 @@ if (!hasIsDefault) {
   db.prepare("ALTER TABLE pet_achievements ADD COLUMN is_default INTEGER DEFAULT 0").run();
   console.log('✅ Added is_default column to pet_achievements table');
 }
+const hasHidden = cols.some(c => c.name === 'hidden');
+if (!hasHidden) {
+  db.prepare("ALTER TABLE pet_achievements ADD COLUMN hidden INTEGER DEFAULT 0").run();
+  console.log('✅ Added hidden column to pet_achievements table');
+}
 
 // ============================================================
 // Step 1: Load all pets and their details (shiny info)
@@ -107,8 +112,8 @@ for (const row of existingDefaults) {
 }
 
 const insertStmt = db.prepare(`
-  INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default)
-  VALUES (?, 'text', ?, ?, 1)
+  INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default, hidden)
+  VALUES (?, 'text', ?, ?, 1, 0)
 `);
 const deleteStmt = db.prepare('DELETE FROM pet_achievements WHERE id = ?');
 

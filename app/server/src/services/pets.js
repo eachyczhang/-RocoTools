@@ -157,10 +157,10 @@ function getByUid(uid) {
   `).all(pet.pet_id);
   pet.variants = variants.length > 1 ? variants : [];
 
-  // Achievements (图鉴课题)
+  // Achievements (图鉴课题) - exclude hidden ones
   pet.achievements = db.prepare(`
     SELECT title, reward_desc, is_default FROM pet_achievements
-    WHERE pet_uid = ?
+    WHERE pet_uid = ? AND (hidden IS NULL OR hidden = 0)
     ORDER BY sort_order, id
   `).all(pet.uid);
 
