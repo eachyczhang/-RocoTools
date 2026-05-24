@@ -25,6 +25,7 @@ const IMPORT_SCRIPT = path.join(SERVER_DIR, 'src', 'db', 'import.js');
 const EVOLUTION_SCRIPT = path.join(SERVER_DIR, 'scripts', 'sync-evolution-chains.js');
 const NORMALIZE_LEVELS_SCRIPT = path.join(SERVER_DIR, 'scripts', 'normalize-skill-levels.js');
 const FINAL_FORMS_SCRIPT = path.join(SERVER_DIR, 'scripts', 'sync-final-forms.js');
+const DEFAULT_ACHIEVEMENTS_SCRIPT = path.join(SERVER_DIR, 'scripts', 'sync-default-achievements.js');
 
 console.log('============================================================');
 console.log('[SYNC] 数据同步（缩略图 + SQLite）');
@@ -56,6 +57,7 @@ steps.push(
   { label: '清洗技能等级字段', script: NORMALIZE_LEVELS_SCRIPT },
   { label: '同步进化链（多路线合并）', script: EVOLUTION_SCRIPT },
   { label: '同步最终形态标记', script: FINAL_FORMS_SCRIPT },
+  { label: '同步默认图鉴课题', script: DEFAULT_ACHIEVEMENTS_SCRIPT },
 );
 
 for (const { label, script } of steps) {
