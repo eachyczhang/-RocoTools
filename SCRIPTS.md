@@ -100,7 +100,12 @@ node sync_db.js
 2. 生成 WebP 副本（全部图片，需要 sharp）
 3. 初始化数据库（建表）
 4. 导入数据（JSON → SQLite）
-5. 同步进化链（多路线合并）
+5. 迁移 show_shiny 列（默认值1）
+6. 规范化身高体重数据
+7. 清洗技能等级字段
+8. 同步进化链（多路线合并）
+9. 同步最终形态标记
+10. 同步默认图鉴课题
 
 **前置条件**：
 ```bash
@@ -164,18 +169,37 @@ node src/db/import.js
 | 脚本 | 路径 | 用途 |
 |------|------|------|
 | `sync-evolution-chains.js` | `app/server/scripts/sync-evolution-chains.js` | 批量合并所有精灵的进化链多路线数据 |
+| `sync-final-forms.js` | `app/server/scripts/sync-final-forms.js` | 自动检测并标记最终形态精灵 |
+| `sync-default-achievements.js` | `app/server/scripts/sync-default-achievements.js` | 同步默认图鉴课题 |
+| `migrate-show-shiny.js` | `app/server/scripts/migrate-show-shiny.js` | 添加 show_shiny 列（已集成到 sync_db） |
+| `migrate-height-weight.js` | `app/server/scripts/migrate-height-weight.js` | 规范化身高体重格式（已集成到 sync_db） |
+| `migrate-pet-tags.js` | `app/server/scripts/migrate-pet-tags.js` | 添加标签列到 pets 表（首次部署） |
+| `migrate-achievements.js` | `app/server/scripts/migrate-achievements.js` | 迁移图鉴课题表结构（首次部署） |
+| `normalize-skill-levels.js` | `app/server/scripts/normalize-skill-levels.js` | 清洗技能等级字段（已集成到 sync_db） |
 
 **用法**：
 
 ```bash
 cd app/server
+
+# 同步进化链（多路线合并）
 node scripts/sync-evolution-chains.js
+
+# 同步最终形态标记
+node scripts/sync-final-forms.js
+
+# 同步默认图鉴课题
+node scripts/sync-default-achievements.js
+
+# 预览模式（不写入数据库）
+node scripts/sync-final-forms.js --dry-run
+node scripts/sync-default-achievements.js --dry-run
 ```
 
 **说明**：
+- 以上同步脚本已集成到 `sync_db.js`，通常无需单独执行
 - 扫描所有精灵的进化链数据，将分支进化路线合并为完整的二维数组
 - 跳过 `manual_edit=1` 的记录（不覆盖手动配置）
-- `sync_db.js` 已自动包含此步骤，通常无需单独执行
 
 **需要单独执行的场景**：
 - 直接操作了数据库而没有走管理端保存流程

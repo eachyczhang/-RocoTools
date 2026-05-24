@@ -845,6 +845,40 @@ router.use((req, res, next) => {
 - 图鉴课题模块位于属性克制关系和打击面分析之间
 - 首领形态精灵不显示图鉴课题模块
 
+#### 技能类型课题展示
+
+技能类型课题在用户端展示完整的技能信息卡片：
+
+| 展示项 | 数据来源 | 说明 |
+|--------|----------|------|
+| 课题标题 | `use_count` + `skill_name` | 格式："使用{N}次{技能名}" |
+| 技能图标 | `skills.icon_url` | 通过 `skill_ref_uid` 关联查询 |
+| 属性标签 | `skills.element_*` | 带属性图标和颜色 |
+| 类型 | `skills.category` | 物攻/魔攻/防御/状态，带颜色 |
+| 学习等级 | `pet_skills.level` | 从精灵自身的升级技能列表中获取 |
+| 能耗 | `skills.cost` | 优先使用 skills 表数据（权威数据源） |
+| 威力 | `skills.power` | 优先使用 skills 表数据（权威数据源） |
+
+**默认使用次数**：技能课题默认 `use_count = 2`
+
+### 技能能耗数据源规则
+
+后端查询精灵技能（精灵技能/血脉技能/可学技能石）时，`cost` 和 `power` 字段优先从 `skills` 表获取：
+
+```sql
+SELECT ps.*, sk.icon_url as skill_icon,
+       COALESCE(sk.cost, ps.cost) as cost,
+       COALESCE(sk.power, ps.power) as power
+FROM pet_skills ps LEFT JOIN skills sk ON ps.skill_ref_uid = sk.uid
+```
+
+**原因**：`pet_skills` 表的 `cost` 字段可能为 0（爬虫导入时未正确填充），`skills` 表是权威数据源。
+
+**前端显示规则**：
+- `cost` 为 0 时显示 `0`（不显示 `-`），因为有些技能确实是 0 能耗
+- `cost` 为 `null` 时显示 `-`
+- 使用 `!= null` 判断而非 `||` 运算符（避免 0 被当作 falsy）
+
 ---
 
 ## 十四、身高体重配置
