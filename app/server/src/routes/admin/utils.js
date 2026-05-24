@@ -179,25 +179,48 @@ function syncDefaultAchievements(db, petUid) {
   const existing = db.prepare('SELECT id, title, hidden FROM pet_achievements WHERE pet_uid = ? AND is_default = 1').all(petUid);
   const existingTitles = new Map(existing.map(r => [r.title, r]));
 
+  // Enhanced duplicate detection: log existing and expected achievements
+  console.log(`[syncDefaultAchievements] Pet ${petUid}: ${existing.length} existing defaults, ${expected.length} expected defaults`);
+  
   const insertStmt = db.prepare(`
     INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default, hidden)
     VALUES (?, 'text', ?, ?, 1, 0)
   `);
   const deleteStmt = db.prepare('DELETE FROM pet_achievements WHERE id = ?');
 
-  // Insert missing (only those not already present)
+  // Insert missing (only those not already present) with enhanced logging
+  let insertedCount = 0;
   for (const ach of expected) {
     if (!existingTitles.has(ach.title)) {
+      console.log(`[syncDefaultAchievements] Inserting default achievement: "${ach.title}"`);
       insertStmt.run(petUid, ach.title, ach.sort_order);
+      insertedCount++;
+    } else {
+      console.log(`[syncDefaultAchievements] Skipping duplicate: "${ach.title}" (already exists)`);
     }
+  }
+  
+  if (insertedCount > 0) {
+    console.log(`[syncDefaultAchievements] Inserted ${insertedCount} new default achievements for pet ${petUid}`);
   }
 
-  // Remove outdated (achievements no longer applicable)
+  // Remove outdated (achievements no longer applicable) with enhanced logging
+  let deletedCount = 0;
   for (const [title, row] of existingTitles) {
     if (!expectedTitles.has(title)) {
+      console.log(`[syncDefaultAchievements] Removing outdated default achievement: "${title}"`);
       deleteStmt.run(row.id);
+      deletedCount++;
     }
   }
+  
+  if (deletedCount > 0) {
+    console.log(`[syncDefaultAchievements] Removed ${deletedCount} outdated default achievements for pet ${petUid}`);
+  }
+  
+  // Final summary
+  const finalCount = db.prepare('SELECT COUNT(*) as count FROM pet_achievements WHERE pet_uid = ? AND is_default = 1').get(petUid);
+  console.log(`[syncDefaultAchievements] Final count for pet ${petUid}: ${finalCount.count} default achievements`);
 }
 
 /** 安全解析 JSON 文件（损坏时返回默认值） */
