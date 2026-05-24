@@ -117,6 +117,76 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
   }
 }
 
+/**
+ * Sync default achievements (图鉴课题) for a single pet.
+ * Called when is_final_form changes in the admin panel.
+ * - All pets: "捕捉1只{name}", "捕捉1只了不起天分的{name}"
+ * - Non-final forms: "使{name}成功进化1次"
+ * - Final forms: "获得【命定勇者】奖牌", "捕捉一只炫彩突变的{name}"
+ * - Final forms with shiny: "捕捉一只异色突变的{name}"
+ * @param {object} db - writable database instance
+ * @param {string} petUid - the pet uid to sync achievements for
+ */
+function syncDefaultAchievements(db, petUid) {
+  const pet = db.prepare('SELECT uid, name, is_final_form FROM pets WHERE uid = ?').get(petUid);
+  if (!pet) return;
+
+  const isFinalForm = pet.is_final_form === 1;
+  const detail = db.prepare('SELECT image_shiny FROM pet_details WHERE pet_uid = ?').get(petUid);
+  const hasShiny = !!(detail && detail.image_shiny);
+
+  // Build expected default achievements
+  const expected = [
+    { title: `捕捉1只${pet.name}`, sort_order: -100 },
+    { title: `捕捉1只了不起天分的${pet.name}`, sort_order: -99 },
+  ];
+
+  if (!isFinalForm) {
+    expected.push({ title: `使${pet.name}成功进化1次`, sort_order: -98 });
+  }
+
+  if (isFinalForm) {
+    expected.push({ title: `获得【命定勇者】奖牌`, sort_order: -97 });
+    expected.push({ title: `捕捉一只炫彩突变的${pet.name}`, sort_order: -96 });
+    if (hasShiny) {
+      expected.push({ title: `捕捉一只异色突变的${pet.name}`, sort_order: -95 });
+    }
+  }
+
+  const expectedTitles = new Set(expected.map(a => a.title));
+
+  // Get existing defaults for this pet
+  const existing = db.prepare('SELECT id, title FROM pet_achievements WHERE pet_uid = ? AND is_default = 1').all(petUid);
+  const existingTitles = new Map(existing.map(r => [r.title, r.id]));
+
+  // Ensure is_default column exists
+  const cols = db.prepare("PRAGMA table_info(pet_achievements)").all();
+  const hasIsDefault = cols.some(c => c.name === 'is_default');
+  if (!hasIsDefault) {
+    db.prepare("ALTER TABLE pet_achievements ADD COLUMN is_default INTEGER DEFAULT 0").run();
+  }
+
+  const insertStmt = db.prepare(`
+    INSERT INTO pet_achievements (pet_uid, type, title, sort_order, is_default)
+    VALUES (?, 'text', ?, ?, 1)
+  `);
+  const deleteStmt = db.prepare('DELETE FROM pet_achievements WHERE id = ?');
+
+  // Insert missing
+  for (const ach of expected) {
+    if (!existingTitles.has(ach.title)) {
+      insertStmt.run(petUid, ach.title, ach.sort_order);
+    }
+  }
+
+  // Remove outdated
+  for (const [title, id] of existingTitles) {
+    if (!expectedTitles.has(title)) {
+      deleteStmt.run(id);
+    }
+  }
+}
+
 /** 安全解析 JSON 文件（损坏时返回默认值） */
 function safeReadJSON(filepath, fallback = []) {
   try {
@@ -311,6 +381,7 @@ module.exports = {
   isPathWithin,
   syncVariantsMap,
   syncEvolutionChain,
+  syncDefaultAchievements,
   safeReadJSON,
   naturalCompare,
   getDisplayName,

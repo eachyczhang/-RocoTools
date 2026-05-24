@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb, getWriteDb } = require('../../db/connection');
-const { EDITABLE_TABLES, syncVariantsMap, syncEvolutionChain } = require('./utils');
+const { EDITABLE_TABLES, syncVariantsMap, syncEvolutionChain, syncDefaultAchievements } = require('./utils');
 
 // GET /api/admin/tables — 获取可管理的表
 router.get('/tables', (req, res) => {
@@ -102,6 +102,10 @@ router.put('/data/:table/:id', (req, res) => {
       if (pet) syncVariantsMap(db, pet.pet_id);
       if (updates.pet_id && updates.pet_id !== pet?.pet_id) {
         syncVariantsMap(db, updates.pet_id);
+      }
+      // Auto-sync default achievements when is_final_form changes
+      if (updates.is_final_form !== undefined) {
+        syncDefaultAchievements(db, id);
       }
     }
 
