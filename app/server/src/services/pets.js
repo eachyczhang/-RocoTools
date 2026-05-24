@@ -8,16 +8,24 @@ const eggStmt = db.prepare(`
 `);
 
 function getShinyList({ includeHidden } = {}) {
-  let sql = `
-    SELECT pd.pet_uid, pd.image_shiny FROM pet_details pd
-    JOIN pets p ON pd.pet_uid = p.uid
-    WHERE pd.image_shiny IS NOT NULL
-  `;
-  if (!includeHidden) {
-    sql += ` AND p.show_shiny = 1`;
+  try {
+    let sql = `
+      SELECT pd.pet_uid, pd.image_shiny FROM pet_details pd
+      JOIN pets p ON pd.pet_uid = p.uid
+      WHERE pd.image_shiny IS NOT NULL
+    `;
+    if (!includeHidden) {
+      sql += ` AND p.show_shiny = 1`;
+    }
+    const rows = db.prepare(sql).all();
+    return rows.map(r => ({ uid: r.pet_uid, image_shiny: r.image_shiny }));
+  } catch (e) {
+    // Fallback: show_shiny column may not exist yet
+    const rows = db.prepare(`
+      SELECT pet_uid, image_shiny FROM pet_details WHERE image_shiny IS NOT NULL
+    `).all();
+    return rows.map(r => ({ uid: r.pet_uid, image_shiny: r.image_shiny }));
   }
-  const rows = db.prepare(sql).all();
-  return rows.map(r => ({ uid: r.pet_uid, image_shiny: r.image_shiny }));
 }
 
 /**

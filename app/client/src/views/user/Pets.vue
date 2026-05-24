@@ -119,7 +119,9 @@ onMounted(async () => {
   ])
   elements.value = elemRes.elements
   const map = {}
-  for (const s of shinyList) map[s.uid] = s.image_shiny
+  if (Array.isArray(shinyList)) {
+    for (const s of shinyList) map[s.uid] = s.image_shiny
+  }
   shinyMap.value = map
   fetchData()
 })

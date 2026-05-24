@@ -190,7 +190,9 @@ onMounted(async () => {
     // 加载异色映射
     const shinyList = await petsApi.shiny()
     const map = {}
-    for (const s of shinyList) map[s.uid] = s.image_shiny
+    if (Array.isArray(shinyList)) {
+      for (const s of shinyList) map[s.uid] = s.image_shiny
+    }
     shinyMap.value = map
 
     // 加载所有赛季
