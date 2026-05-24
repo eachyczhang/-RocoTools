@@ -543,7 +543,7 @@
     </Teleport>
 
     <!-- 成就任务配置 -->
-    <div v-if="!isNew && form.is_final_form" class="card mb-4">
+    <div v-if="!isNew" class="card mb-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="font-roco text-base text-primary-500">成就任务</h2>
         <button @click="saveAchievements" :disabled="achievementsSaving" class="btn text-xs">
@@ -602,7 +602,7 @@
 
       <!-- Add buttons -->
       <div class="flex gap-2">
-        <button @click="addAchievement('skill')" class="text-xs text-primary-500 hover:underline"
+        <button v-if="form.is_final_form" @click="addAchievement('skill')" class="text-xs text-primary-500 hover:underline"
           :disabled="!levelUpSkills.length">
           + 添加技能成就
         </button>
@@ -610,7 +610,7 @@
           + 添加文本成就
         </button>
       </div>
-      <p v-if="!levelUpSkills.length" class="text-[10px] text-muted mt-1">提示：请先在技能配置中添加精灵技能，才能选择技能成就</p>
+      <p v-if="form.is_final_form && !levelUpSkills.length" class="text-[10px] text-muted mt-1">提示：请先在技能配置中添加精灵技能，才能选择技能成就</p>
     </div>
 
     <!-- 保存按钮 -->
