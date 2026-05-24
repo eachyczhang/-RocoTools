@@ -35,8 +35,8 @@
       </router-link>
     </div>
 
-    <!-- 分页 -->
-    <div class="flex justify-center items-center gap-3 mt-6" v-if="total > limit">
+    <!-- 分页 - 常驻底部 -->
+    <div class="sticky bottom-0 z-30 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex justify-center items-center gap-3 mt-6" v-if="total > limit">
       <button @click="page > 1 && (page--, fetchData())" :disabled="page <= 1" class="btn-ghost text-sm">← 上一页</button>
       <span class="text-sm text-muted">{{ page }} / {{ Math.ceil(total / limit) }}</span>
       <button @click="page < Math.ceil(total / limit) && (page++, fetchData())"
