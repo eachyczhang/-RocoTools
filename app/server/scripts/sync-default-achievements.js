@@ -2,15 +2,23 @@
  * Sync default achievements (图鉴课题) for all pets.
  *
  * Default achievements:
- *   1. "捕捉1只{精灵名}" — for ALL pets
- *   2. "捕捉1只了不起天分的{精灵名}" — for ALL pets
- *   3. "使{精灵名}成功进化1次" — only for NON-final-form pets
+ *   ALL pets:
+ *     1. "捕捉1只{精灵名}"
+ *     2. "捕捉1只了不起天分的{精灵名}"
+ *   NON-final-form pets only:
+ *     3. "使{精灵名}成功进化1次"
+ *   FINAL-form pets only:
+ *     4. "获得【命定勇者】奖牌"
+ *     5. "捕捉一只炫彩突变的{精灵名}"
+ *   FINAL-form pets WITH shiny variant:
+ *     6. "捕捉一只异色突变的{精灵名}"
  *
  * Rules:
  *   - Default achievements are marked with is_default=1
  *   - Manual achievements (is_default=0) are never touched
  *   - If a pet becomes final form, the evolution achievement is removed
  *   - If a pet is no longer final form, the evolution achievement is added
+ *   - Final-form-only achievements are added/removed based on is_final_form
  *
  * Usage: node app/server/scripts/sync-default-achievements.js [--dry-run]
  */
@@ -37,10 +45,18 @@ if (!hasIsDefault) {
 }
 
 // ============================================================
-// Step 1: Load all pets
+// Step 1: Load all pets and their details (shiny info)
 // ============================================================
 const allPets = db.prepare('SELECT uid, name, is_final_form FROM pets').all();
 console.log(`Total pets: ${allPets.length}`);
+
+// Load shiny info from pet_details
+const shinyPets = new Set();
+const detailRows = db.prepare(`SELECT pet_uid, image_shiny FROM pet_details WHERE image_shiny IS NOT NULL AND image_shiny != ''`).all();
+for (const row of detailRows) {
+  shinyPets.add(row.pet_uid);
+}
+console.log(`Pets with shiny variant: ${shinyPets.size}`);
 
 // ============================================================
 // Step 2: Define default achievement templates
@@ -50,9 +66,10 @@ console.log(`Total pets: ${allPets.length}`);
  * Generate default achievements for a pet.
  * @param {string} name - Pet name
  * @param {boolean} isFinalForm - Whether the pet is a final form
+ * @param {boolean} hasShiny - Whether the pet has a shiny variant
  * @returns {Array} Array of achievement objects
  */
-function getDefaultAchievements(name, isFinalForm) {
+function getDefaultAchievements(name, isFinalForm, hasShiny) {
   const achievements = [
     { title: `捕捉1只${name}`, sort_order: -100 },
     { title: `捕捉1只了不起天分的${name}`, sort_order: -99 },
@@ -60,6 +77,15 @@ function getDefaultAchievements(name, isFinalForm) {
 
   if (!isFinalForm) {
     achievements.push({ title: `使${name}成功进化1次`, sort_order: -98 });
+  }
+
+  if (isFinalForm) {
+    achievements.push({ title: `获得【命定勇者】奖牌`, sort_order: -97 });
+    achievements.push({ title: `捕捉一只炫彩突变的${name}`, sort_order: -96 });
+
+    if (hasShiny) {
+      achievements.push({ title: `捕捉一只异色突变的${name}`, sort_order: -95 });
+    }
   }
 
   return achievements;
@@ -92,7 +118,8 @@ let removed = 0;
 const tx = db.transaction(() => {
   for (const pet of allPets) {
     const isFinalForm = pet.is_final_form === 1;
-    const expected = getDefaultAchievements(pet.name, isFinalForm);
+    const hasShiny = shinyPets.has(pet.uid);
+    const expected = getDefaultAchievements(pet.name, isFinalForm, hasShiny);
     const expectedTitles = new Set(expected.map(a => a.title));
     const existing = existingMap.get(pet.uid) || new Map();
 
