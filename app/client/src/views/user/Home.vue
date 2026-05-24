@@ -463,14 +463,16 @@ onMounted(async () => {
   top: 0;
 }
 :deep(.prose-light th) {
-  background: rgba(214, 159, 35, 0.1);
+  background: #fdf6e3;
   color: #92700C;
   border-bottom: 2px solid rgba(214, 159, 35, 0.3);
+  z-index: 3;
 }
 :deep(.prose-dark th) {
-  background: rgba(255, 202, 40, 0.1);
+  background: #252d3a;
   color: #FFCA28;
   border-bottom: 2px solid rgba(255, 202, 40, 0.2);
+  z-index: 3;
 }
 :deep(.prose-announcement td) {
   padding: 0.4rem 0.6rem;
@@ -501,10 +503,10 @@ onMounted(async () => {
   box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.3);
 }
 :deep(.prose-light th:first-child) {
-  background: rgba(214, 159, 35, 0.1);
+  background: #fdf6e3;
 }
 :deep(.prose-dark th:first-child) {
-  background: rgba(255, 202, 40, 0.1);
+  background: #252d3a;
 }
 :deep(.prose-light tr:nth-child(even) td:first-child) {
   background: #fafafa;
