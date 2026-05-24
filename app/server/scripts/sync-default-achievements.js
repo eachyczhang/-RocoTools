@@ -3,15 +3,17 @@
  *
  * Default achievements:
  *   ALL pets:
- *     1. "捕捉1只{精灵名}"
- *     2. "捕捉1只了不起天分的{精灵名}"
+ *     1. "捕捉1只精灵"
+ *     2. "捕捉1只了不起天分的精灵"
  *   NON-final-form pets only:
- *     3. "使{精灵名}成功进化1次"
+ *     3. "使精灵成功进化1次"
  *   FINAL-form pets only:
  *     4. "获得【命定勇者】奖牌"
- *     5. "捕捉一只炫彩突变的{精灵名}"
+ *     5. "捕捉一只炫彩突变的精灵"
  *   FINAL-form pets WITH shiny variant:
- *     6. "捕捉一只异色突变的{精灵名}"
+ *     6. "捕捉一只异色突变的精灵"
+ *   Pets with has_boss_form:
+ *     7. "使用【进化之力】，将精灵进化为首领形态"
  *
  * Rules:
  *   - Default achievements are marked with is_default=1
@@ -19,6 +21,7 @@
  *   - If a pet becomes final form, the evolution achievement is removed
  *   - If a pet is no longer final form, the evolution achievement is added
  *   - Final-form-only achievements are added/removed based on is_final_form
+ *   - has_boss_form achievement is added/removed based on has_boss_form flag
  *
  * Usage: node app/server/scripts/sync-default-achievements.js [--dry-run]
  */
@@ -52,7 +55,7 @@ if (!hasHidden) {
 // ============================================================
 // Step 1: Load all pets and their details (shiny info)
 // ============================================================
-const allPets = db.prepare('SELECT uid, name, is_final_form, is_boss_form FROM pets').all();
+const allPets = db.prepare('SELECT uid, name, is_final_form, is_boss_form, has_boss_form FROM pets').all();
 console.log(`Total pets: ${allPets.length}`);
 
 // Load shiny info from pet_details
@@ -69,28 +72,33 @@ console.log(`Pets with shiny variant: ${shinyPets.size}`);
 
 /**
  * Generate default achievements for a pet.
- * @param {string} name - Pet name
- * @param {boolean} isFinalForm - Whether the pet is a final form
- * @param {boolean} hasShiny - Whether the pet has a shiny variant
+ * @param {object} opts - Options
+ * @param {boolean} opts.isFinalForm - Whether the pet is a final form
+ * @param {boolean} opts.hasShiny - Whether the pet has a shiny variant
+ * @param {boolean} opts.hasBossForm - Whether the pet has a boss form
  * @returns {Array} Array of achievement objects
  */
-function getDefaultAchievements(name, isFinalForm, hasShiny) {
+function getDefaultAchievements({ isFinalForm, hasShiny, hasBossForm }) {
   const achievements = [
-    { title: `捕捉1只${name}`, sort_order: -100 },
-    { title: `捕捉1只了不起天分的${name}`, sort_order: -99 },
+    { title: `捕捉1只精灵`, sort_order: -100 },
+    { title: `捕捉1只了不起天分的精灵`, sort_order: -99 },
   ];
 
   if (!isFinalForm) {
-    achievements.push({ title: `使${name}成功进化1次`, sort_order: -98 });
+    achievements.push({ title: `使精灵成功进化1次`, sort_order: -98 });
   }
 
   if (isFinalForm) {
     achievements.push({ title: `获得【命定勇者】奖牌`, sort_order: -97 });
-    achievements.push({ title: `捕捉一只炫彩突变的${name}`, sort_order: -96 });
+    achievements.push({ title: `捕捉一只炫彩突变的精灵`, sort_order: -96 });
 
     if (hasShiny) {
-      achievements.push({ title: `捕捉一只异色突变的${name}`, sort_order: -95 });
+      achievements.push({ title: `捕捉一只异色突变的精灵`, sort_order: -95 });
     }
+  }
+
+  if (hasBossForm) {
+    achievements.push({ title: `使用【进化之力】，将精灵进化为首领形态`, sort_order: -94 });
   }
 
   return achievements;
@@ -124,6 +132,7 @@ const tx = db.transaction(() => {
   for (const pet of allPets) {
     const isBossForm = pet.is_boss_form === 1;
     const isFinalForm = pet.is_final_form === 1;
+    const hasBossForm = pet.has_boss_form === 1;
     const hasShiny = shinyPets.has(pet.uid);
     const existing = existingMap.get(pet.uid) || new Map();
 
@@ -136,7 +145,7 @@ const tx = db.transaction(() => {
       continue;
     }
 
-    const expected = getDefaultAchievements(pet.name, isFinalForm, hasShiny);
+    const expected = getDefaultAchievements({ isFinalForm, hasShiny, hasBossForm });
     const expectedTitles = new Set(expected.map(a => a.title));
 
     // Insert missing defaults

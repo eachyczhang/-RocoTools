@@ -132,10 +132,11 @@ function syncEvolutionChain(db, currentPetUid, evoChainJson) {
  * @param {string} petUid - the pet uid to sync achievements for
  */
 function syncDefaultAchievements(db, petUid) {
-  const pet = db.prepare('SELECT uid, name, is_final_form FROM pets WHERE uid = ?').get(petUid);
+  const pet = db.prepare('SELECT uid, name, is_final_form, has_boss_form FROM pets WHERE uid = ?').get(petUid);
   if (!pet) return;
 
   const isFinalForm = pet.is_final_form === 1;
+  const hasBossForm = pet.has_boss_form === 1;
   const detail = db.prepare('SELECT image_shiny FROM pet_details WHERE pet_uid = ?').get(petUid);
   const hasShiny = !!(detail && detail.image_shiny);
 
@@ -152,20 +153,24 @@ function syncDefaultAchievements(db, petUid) {
 
   // Build expected default achievements
   const expected = [
-    { title: `捕捉1只${pet.name}`, sort_order: -100 },
-    { title: `捕捉1只了不起天分的${pet.name}`, sort_order: -99 },
+    { title: `捕捉1只精灵`, sort_order: -100 },
+    { title: `捕捉1只了不起天分的精灵`, sort_order: -99 },
   ];
 
   if (!isFinalForm) {
-    expected.push({ title: `使${pet.name}成功进化1次`, sort_order: -98 });
+    expected.push({ title: `使精灵成功进化1次`, sort_order: -98 });
   }
 
   if (isFinalForm) {
     expected.push({ title: `获得【命定勇者】奖牌`, sort_order: -97 });
-    expected.push({ title: `捕捉一只炫彩突变的${pet.name}`, sort_order: -96 });
+    expected.push({ title: `捕捉一只炫彩突变的精灵`, sort_order: -96 });
     if (hasShiny) {
-      expected.push({ title: `捕捉一只异色突变的${pet.name}`, sort_order: -95 });
+      expected.push({ title: `捕捉一只异色突变的精灵`, sort_order: -95 });
     }
+  }
+
+  if (hasBossForm) {
+    expected.push({ title: `使用【进化之力】，将精灵进化为首领形态`, sort_order: -94 });
   }
 
   const expectedTitles = new Set(expected.map(a => a.title));
