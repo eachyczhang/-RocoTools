@@ -651,37 +651,48 @@
 
             <!-- Skill type -->
             <template v-else-if="ach.type === 'skill'">
-              <div class="relative">
-                <!-- Selected skill display -->
-                <div v-if="ach.skill_ref_uid" class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700">
-                  <img v-if="getSkillIcon(ach.skill_ref_uid)" :src="getSkillIcon(ach.skill_ref_uid)" class="w-7 h-7 object-contain flex-shrink-0 rounded" />
-                  <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium truncate">{{ ach.skill_name }}</div>
-                    <div class="text-[10px] text-muted">{{ getSkillElement(ach.skill_ref_uid) }} · {{ getSkillCategory(ach.skill_ref_uid) }} · 威力 {{ getSkillPower(ach.skill_ref_uid) || '-' }}</div>
-                  </div>
-                  <span class="text-[10px] text-primary-500 font-medium flex-shrink-0">「{{ ach.skill_name }}」技能石</span>
-                  <button @click="onAchievementSkillSelect(idx, '')" class="text-[10px] text-muted hover:text-red-500 flex-shrink-0">✕</button>
-                </div>
-                <!-- Skill selector custom dropdown -->
-                <div v-else>
-                  <button @click="toggleAchSkillDropdown(idx)" type="button"
-                    class="select text-xs w-full text-left text-muted">
-                    选择升级技能...
-                  </button>
-                  <div v-if="achSkillDropdownIdx === idx"
-                    class="absolute z-50 bottom-full mb-1 w-full max-h-72 overflow-y-auto rounded-lg border shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                    <div v-for="s in levelUpSkills" :key="s.skill_ref_uid"
-                      @click="onAchievementSkillSelect(idx, s.skill_ref_uid); achSkillDropdownIdx = -1"
-                      class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <img v-if="s.skill_icon || getElementIcon(s.element)" :src="s.skill_icon || getElementIcon(s.element)" class="w-6 h-6 object-contain flex-shrink-0 rounded" />
-                      <div v-else class="w-6 h-6 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs font-medium truncate">{{ s.name }}</div>
-                        <div class="text-[10px] text-muted">{{ s.element || '无属性' }} · {{ s.type || '-' }} · 威力 {{ s.power || '-' }}</div>
-                      </div>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <div class="relative flex-1 min-w-0">
+                  <!-- Selected skill display -->
+                  <div v-if="ach.skill_ref_uid" class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700">
+                    <img v-if="getSkillIcon(ach.skill_ref_uid)" :src="getSkillIcon(ach.skill_ref_uid)" class="w-7 h-7 object-contain flex-shrink-0 rounded" />
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium truncate">{{ ach.skill_name }}</div>
+                      <div class="text-[10px] text-muted">{{ getSkillElement(ach.skill_ref_uid) }} · {{ getSkillCategory(ach.skill_ref_uid) }} · 威力 {{ getSkillPower(ach.skill_ref_uid) || '-' }}</div>
                     </div>
-                    <div v-if="!levelUpSkills.length" class="px-3 py-2 text-xs text-muted text-center">暂无可选技能</div>
+                    <span class="text-[10px] text-primary-500 font-medium flex-shrink-0">「{{ ach.skill_name }}」技能石</span>
+                    <button @click="onAchievementSkillSelect(idx, '')" class="text-[10px] text-muted hover:text-red-500 flex-shrink-0">✕</button>
                   </div>
+                  <!-- Skill selector custom dropdown -->
+                  <div v-else>
+                    <button @click="toggleAchSkillDropdown(idx)" type="button"
+                      class="select text-xs w-full text-left text-muted">
+                      选择升级技能...
+                    </button>
+                    <div v-if="achSkillDropdownIdx === idx"
+                      class="absolute z-50 bottom-full mb-1 w-full max-h-72 overflow-y-auto rounded-lg border shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                      <!-- Search input -->
+                      <div class="sticky top-0 p-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                        <input v-model="achSkillSearchQuery" type="text" class="input text-xs w-full" placeholder="输入技能名称筛选..." @click.stop />
+                      </div>
+                      <div v-for="s in filteredAchLevelUpSkills" :key="s.skill_ref_uid"
+                        @click="onAchievementSkillSelect(idx, s.skill_ref_uid); achSkillDropdownIdx = -1; achSkillSearchQuery = ''"
+                        class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                        <img v-if="s.skill_icon || getElementIcon(s.element)" :src="s.skill_icon || getElementIcon(s.element)" class="w-6 h-6 object-contain flex-shrink-0 rounded" />
+                        <div v-else class="w-6 h-6 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs font-medium truncate">{{ s.name }}</div>
+                          <div class="text-[10px] text-muted">{{ s.element || '无属性' }} · {{ s.type || '-' }} · 威力 {{ s.power || '-' }}</div>
+                        </div>
+                      </div>
+                      <div v-if="!filteredAchLevelUpSkills.length" class="px-3 py-2 text-xs text-muted text-center">暂无匹配技能</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Use count input -->
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  <span class="text-[10px] text-muted">次数</span>
+                  <input v-model.number="ach.use_count" type="number" min="1" max="999" class="input text-xs w-16 text-center" />
                 </div>
               </div>
             </template>
@@ -1497,13 +1508,22 @@ const achievementsSaving = ref(false)
 const achievementsMsg = ref('')
 const achievementsOk = ref(false)
 const achSkillDropdownIdx = ref(-1)
+const achSkillSearchQuery = ref('')
 
 function toggleAchSkillDropdown(idx) {
   achSkillDropdownIdx.value = achSkillDropdownIdx.value === idx ? -1 : idx
+  if (achSkillDropdownIdx.value === -1) achSkillSearchQuery.value = ''
 }
 
 // Get level-up skills (skill_type === 'skills') for skill achievement selection
 const levelUpSkills = computed(() => skillForms.skills.filter(s => s.skill_ref_uid))
+
+// Filtered level-up skills based on search query
+const filteredAchLevelUpSkills = computed(() => {
+  const q = achSkillSearchQuery.value.trim().toLowerCase()
+  if (!q) return levelUpSkills.value
+  return levelUpSkills.value.filter(s => s.name && s.name.toLowerCase().includes(q))
+})
 
 function addAchievement(type) {
   if (type === 'text') {
