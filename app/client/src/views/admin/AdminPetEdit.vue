@@ -1638,9 +1638,8 @@ async function saveAchievements() {
   achievementsSaving.value = true
   achievementsMsg.value = ''
   try {
-    // Only save non-default achievements; defaults are managed by syncDefaultAchievements
-    const nonDefaults = achievements.value.filter(a => !a.is_default)
-    const payload = nonDefaults.map((a, idx) => ({
+    // Send all achievements including defaults, with correct is_default flag
+    const payload = achievements.value.map((a, idx) => ({
       type: a.type,
       title: a.title || null,
       skill_ref_uid: a.skill_ref_uid || null,
@@ -1648,6 +1647,7 @@ async function saveAchievements() {
       use_count: a.use_count || 0,
       reward_desc: a.reward_desc || null,
       sort_order: idx,
+      is_default: a.is_default || 0,
     }))
     await adminApi.savePetAchievements(uid, payload)
     achievementsOk.value = true

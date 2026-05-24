@@ -382,7 +382,8 @@ router.put('/pet-achievements/:uid', authAdmin, (req, res) => {
           a.skill_name || null,
           a.use_count || 0,
           a.reward_desc || null,
-          a.sort_order ?? idx
+          a.sort_order ?? idx,
+          a.is_default || 0
         );
       });
     });
