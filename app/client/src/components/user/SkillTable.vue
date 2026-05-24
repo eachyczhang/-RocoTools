@@ -35,13 +35,13 @@
 
         <!-- 右侧数据 -->
         <div class="flex items-center gap-2 md:gap-4 flex-shrink-0 text-xs md:text-sm text-center">
-          <div class="w-8 md:w-12">
+          <div v-if="skill.level" class="w-8 md:w-12">
             <div class="text-muted text-[10px] md:text-xs">等级</div>
-            <div class="font-medium text-sm md:text-base">{{ skill.level || '-' }}</div>
+            <div class="font-medium text-sm md:text-base">{{ skill.level }}</div>
           </div>
           <div class="w-8 md:w-12">
             <div class="text-muted text-[10px] md:text-xs">能耗</div>
-            <div class="font-medium text-sm md:text-base">{{ skill.cost || '-' }}</div>
+            <div class="font-medium text-sm md:text-base">{{ skill.cost != null ? skill.cost : '-' }}</div>
           </div>
           <div class="w-8 md:w-12">
             <div class="text-muted text-[10px] md:text-xs">威力</div>

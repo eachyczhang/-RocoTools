@@ -219,9 +219,13 @@
                   <div class="text-muted text-[8px] sm:text-[10px]">类型</div>
                   <div class="font-medium" :style="{ color: categoryColor(skillCategories[ach.skill_ref_uid]) }">{{ skillCategories[ach.skill_ref_uid] }}</div>
                 </div>
+                <div v-if="skillLevels[ach.skill_ref_uid]" class="w-8 sm:w-10">
+                  <div class="text-muted text-[8px] sm:text-[10px]">等级</div>
+                  <div class="font-medium">{{ skillLevels[ach.skill_ref_uid] }}</div>
+                </div>
                 <div class="w-8 sm:w-10">
                   <div class="text-muted text-[8px] sm:text-[10px]">能耗</div>
-                  <div class="font-medium">{{ skillCosts[ach.skill_ref_uid] || '-' }}</div>
+                  <div class="font-medium">{{ skillCosts[ach.skill_ref_uid] != null ? skillCosts[ach.skill_ref_uid] : '-' }}</div>
                 </div>
                 <div class="w-8 sm:w-10">
                   <div class="text-muted text-[8px] sm:text-[10px]">威力</div>
@@ -377,6 +381,7 @@ const skillElements = ref({})
 const skillCategories = ref({})
 const skillCosts = ref({})
 const skillPowers = ref({})
+const skillLevels = ref({})
 
 // 响应式雷达图尺寸
 const windowWidth = ref(window.innerWidth)
@@ -419,6 +424,16 @@ async function loadSkillDetails(achievements) {
         skillPowers.value[uid] = skill.power
       }
     })
+    
+    // 从精灵的升级技能列表中获取学习等级（课题技能一定是升级学习）
+    if (pet.value && pet.value.skills) {
+      for (const uid of skillRefs) {
+        const petSkill = pet.value.skills.find(s => s.skill_ref_uid === uid)
+        if (petSkill && petSkill.level) {
+          skillLevels.value[uid] = petSkill.level
+        }
+      }
+    }
   } catch (err) {
     console.warn('Failed to load skill details:', err)
   }
