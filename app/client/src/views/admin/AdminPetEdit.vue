@@ -704,6 +704,11 @@
                   <input v-model.number="ach.use_count" type="number" min="1" max="999" class="input text-xs w-16 text-center" />
                 </div>
               </div>
+              <!-- Reward description -->
+              <div class="flex items-center gap-1 mt-2">
+                <span class="text-[10px] text-muted">奖励</span>
+                <input v-model="ach.reward_desc" type="text" class="input text-xs flex-1" placeholder="奖励描述" />
+              </div>
             </template>
           </div>
 

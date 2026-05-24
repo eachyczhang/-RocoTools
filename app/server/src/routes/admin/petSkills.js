@@ -368,7 +368,7 @@ router.put('/pet-achievements/:uid', authAdmin, (req, res) => {
     const deleteNonDefaults = db.prepare('DELETE FROM pet_achievements WHERE pet_uid = ? AND (is_default = 0 OR is_default IS NULL)');
     const insert = db.prepare(`
       INSERT INTO pet_achievements (pet_uid, type, title, skill_ref_uid, skill_name, use_count, reward_desc, sort_order, is_default)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const tx = db.transaction(() => {
