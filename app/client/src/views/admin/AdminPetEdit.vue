@@ -113,6 +113,15 @@
           <label class="text-xs text-muted">版本</label>
           <input v-model="form.version" class="input w-full" />
         </div>
+        <div class="flex items-center gap-2 self-end pb-1">
+          <label class="text-xs text-muted">最终形态</label>
+          <button @click="form.is_final_form = form.is_final_form ? 0 : 1"
+            class="relative w-10 h-5 rounded-full transition-colors"
+            :class="form.is_final_form ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'">
+            <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+              :class="form.is_final_form ? 'translate-x-5' : ''"></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -533,6 +542,77 @@
       </Transition>
     </Teleport>
 
+    <!-- 成就任务配置 -->
+    <div v-if="!isNew && form.is_final_form" class="card mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-roco text-base text-primary-500">成就任务</h2>
+        <button @click="saveAchievements" :disabled="achievementsSaving" class="btn text-xs">
+          {{ achievementsSaving ? '保存中...' : '💾 保存成就' }}
+        </button>
+      </div>
+      <span v-if="achievementsMsg" class="text-xs mb-2 inline-block" :class="achievementsOk ? 'text-green-600' : 'text-red-500'">{{ achievementsMsg }}</span>
+
+      <!-- Achievement list -->
+      <div class="space-y-2 mb-3">
+        <div v-for="(ach, idx) in achievements" :key="idx"
+          class="flex items-start gap-2 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+          <!-- Type badge -->
+          <span class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5"
+            :class="ach.type === 'skill' ? 'bg-primary-500/15 text-primary-500' : 'bg-gray-200 dark:bg-white/10 text-muted'">
+            {{ ach.type === 'skill' ? '技能' : '文本' }}
+          </span>
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0 space-y-1.5">
+            <!-- Text type -->
+            <template v-if="ach.type === 'text'">
+              <input v-model="ach.title" class="input w-full text-xs" placeholder="成就描述（如：累计登录7天）" />
+              <input v-model="ach.reward_desc" class="input w-full text-xs" placeholder="奖励描述（可选）" />
+            </template>
+
+            <!-- Skill type -->
+            <template v-else-if="ach.type === 'skill'">
+              <div class="flex items-center gap-2">
+                <select v-model="ach.skill_ref_uid" @change="onAchievementSkillSelect(idx, $event.target.value)"
+                  class="select text-xs flex-1">
+                  <option value="">选择升级技能...</option>
+                  <option v-for="s in levelUpSkills" :key="s.skill_ref_uid" :value="s.skill_ref_uid">
+                    {{ s.name }} ({{ s.element || '无属性' }})
+                  </option>
+                </select>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  <span class="text-[10px] text-muted">使用</span>
+                  <input v-model.number="ach.use_count" type="number" min="1" class="input w-14 text-xs text-center" />
+                  <span class="text-[10px] text-muted">次</span>
+                </div>
+              </div>
+              <input v-model="ach.reward_desc" class="input w-full text-xs" placeholder="奖励描述（如：获得「火焰冲击」技能石）" />
+            </template>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex flex-col gap-0.5 flex-shrink-0">
+            <button v-if="idx > 0" @click="moveAchievement(idx, -1)" class="text-[10px] text-muted hover:text-foreground">▲</button>
+            <button v-if="idx < achievements.length - 1" @click="moveAchievement(idx, 1)" class="text-[10px] text-muted hover:text-foreground">▼</button>
+            <button @click="removeAchievement(idx)" class="text-red-400 hover:text-red-600 text-xs" title="删除">✕</button>
+          </div>
+        </div>
+        <div v-if="!achievements.length" class="text-center text-xs text-muted py-4">暂无成就任务</div>
+      </div>
+
+      <!-- Add buttons -->
+      <div class="flex gap-2">
+        <button @click="addAchievement('skill')" class="text-xs text-primary-500 hover:underline"
+          :disabled="!levelUpSkills.length">
+          + 添加技能成就
+        </button>
+        <button @click="addAchievement('text')" class="text-xs text-primary-500 hover:underline">
+          + 添加文本成就
+        </button>
+      </div>
+      <p v-if="!levelUpSkills.length" class="text-[10px] text-muted mt-1">提示：请先在技能配置中添加精灵技能，才能选择技能成就</p>
+    </div>
+
     <!-- 保存按钮 -->
     <div class="flex gap-3 mb-8">
       <button @click="save" class="btn-primary shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" :disabled="saving">{{ saving ? '保存中...' : (isNew ? '✨ 创建精灵' : '💾 保存修改') }}</button>
@@ -590,6 +670,7 @@ const form = ref({
   pet_id: '', name: '', element_id: null, sub_element_id: null,
   ability_name: '', ability_desc: '', version: '',
   hp: 0, atk: 0, def: 0, matk: 0, mdef: 0, speed: 0, total: 0,
+  is_final_form: 0,
 })
 
 const detailForm = ref({ height: '', weight: '', location: '' })
@@ -932,6 +1013,7 @@ async function loadData() {
       version: data.version,
       hp: data.hp, atk: data.atk, def: data.def,
       matk: data.matk, mdef: data.mdef, speed: data.speed, total: data.total,
+      is_final_form: data.is_final_form || 0,
     }
 
     if (data.detail) {
@@ -958,6 +1040,8 @@ async function loadData() {
     await loadSkills()
     // Load egg groups
     await loadEggGroups()
+    // Load achievements
+    await loadAchievements()
   }
 
   loaded.value = true
@@ -1251,6 +1335,96 @@ async function saveSkills() {
     skillsMsg.value = err.message
   } finally {
     skillsSaving.value = false
+  }
+}
+
+// ============================================================
+// 成就任务配置
+// ============================================================
+const achievements = ref([])
+const achievementsSaving = ref(false)
+const achievementsMsg = ref('')
+const achievementsOk = ref(false)
+
+// Get level-up skills (skill_type === 'skills') for skill achievement selection
+const levelUpSkills = computed(() => skillForms.skills.filter(s => s.skill_ref_uid))
+
+function addAchievement(type) {
+  if (type === 'text') {
+    achievements.value.push({ type: 'text', title: '', reward_desc: '' })
+  } else if (type === 'skill') {
+    achievements.value.push({ type: 'skill', skill_ref_uid: '', skill_name: '', use_count: 10, reward_desc: '' })
+  }
+}
+
+function removeAchievement(idx) {
+  achievements.value.splice(idx, 1)
+}
+
+function moveAchievement(idx, dir) {
+  const target = idx + dir
+  if (target < 0 || target >= achievements.value.length) return
+  const temp = achievements.value[idx]
+  achievements.value[idx] = achievements.value[target]
+  achievements.value[target] = temp
+}
+
+function onAchievementSkillSelect(idx, skillRefUid) {
+  const a = achievements.value[idx]
+  if (!skillRefUid) {
+    a.skill_ref_uid = ''
+    a.skill_name = ''
+    a.reward_desc = ''
+    return
+  }
+  a.skill_ref_uid = skillRefUid
+  const skill = skillForms.skills.find(s => s.skill_ref_uid === skillRefUid)
+  if (skill) {
+    a.skill_name = skill.name
+    a.reward_desc = `获得「${skill.name}」技能石`
+  }
+}
+
+async function loadAchievements() {
+  if (isNew) return
+  try {
+    const data = await adminApi.getPetAchievements(uid)
+    achievements.value = (data.achievements || []).map(a => ({
+      type: a.type,
+      title: a.title || '',
+      skill_ref_uid: a.skill_ref_uid || '',
+      skill_name: a.skill_name || '',
+      use_count: a.use_count || 0,
+      reward_desc: a.reward_desc || '',
+      skill_icon: a.skill_icon || '',
+      element_icon: a.element_icon || '',
+    }))
+  } catch (err) {
+    console.error('Load achievements failed:', err)
+  }
+}
+
+async function saveAchievements() {
+  achievementsSaving.value = true
+  achievementsMsg.value = ''
+  try {
+    const payload = achievements.value.map((a, idx) => ({
+      type: a.type,
+      title: a.title || null,
+      skill_ref_uid: a.skill_ref_uid || null,
+      skill_name: a.skill_name || null,
+      use_count: a.use_count || 0,
+      reward_desc: a.reward_desc || null,
+      sort_order: idx,
+    }))
+    await adminApi.savePetAchievements(uid, payload)
+    achievementsOk.value = true
+    achievementsMsg.value = '成就任务保存成功'
+  } catch (err) {
+    achievementsOk.value = false
+    achievementsMsg.value = err.message
+  } finally {
+    achievementsSaving.value = false
   }
 }
 

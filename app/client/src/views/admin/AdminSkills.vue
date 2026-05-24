@@ -13,6 +13,7 @@
       <router-link v-for="skill in skills" :key="skill.uid" :to="`/admin/skills/${skill.uid}`"
         class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">
         <img v-if="skill.icon_url" :src="skill.icon_url" class="w-10 h-10 object-contain rounded flex-shrink-0" loading="lazy" />
+        <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-10 h-10 object-contain rounded flex-shrink-0" loading="lazy" />
         <div v-else class="w-10 h-10 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium truncate">{{ skill.name }}</div>

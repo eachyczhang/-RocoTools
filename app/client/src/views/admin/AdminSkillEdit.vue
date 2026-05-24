@@ -4,6 +4,7 @@
 
     <div class="flex items-center gap-3 mb-4">
       <img v-if="!isNew && skill?.icon_url" :src="skill.icon_url" class="w-12 h-12 object-contain" />
+      <img v-else-if="!isNew && skill?.element_icon" :src="skill.element_icon" class="w-12 h-12 object-contain" />
       <div>
         <h1 class="font-roco text-xl text-primary-500">{{ isNew ? '新增技能' : skill?.name }}</h1>
         <span v-if="!isNew" class="text-xs text-muted">{{ skill?.uid }}</span>

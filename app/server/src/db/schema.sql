@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS pets (
   version       TEXT,
   image_url     TEXT,
   thumb_url     TEXT,
+  is_final_form INTEGER DEFAULT 0,  -- 是否为最终形态（1=是，0=否）
   manual_edit   INTEGER DEFAULT 0,
   FOREIGN KEY (element_id) REFERENCES elements(id),
   FOREIGN KEY (sub_element_id) REFERENCES elements(id)
@@ -188,6 +189,21 @@ CREATE TABLE IF NOT EXISTS pika_monthly_pets (
   FOREIGN KEY (monthly_id) REFERENCES pika_monthlies(id) ON DELETE CASCADE
 );
 
+-- 精灵成就任务
+CREATE TABLE IF NOT EXISTS pet_achievements (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  pet_uid     TEXT NOT NULL,
+  type        TEXT NOT NULL,        -- 'text' | 'skill'
+  title       TEXT,                 -- 成就标题/描述
+  skill_ref_uid TEXT,               -- 技能类：关联 skills 表
+  skill_name  TEXT,                 -- 技能类：技能名称（冗余）
+  use_count   INTEGER DEFAULT 0,    -- 技能类：需要使用次数
+  reward_desc TEXT,                 -- 奖励描述（如"获得XX技能石"）
+  sort_order  INTEGER DEFAULT 0,
+  FOREIGN KEY (pet_uid) REFERENCES pets(uid),
+  FOREIGN KEY (skill_ref_uid) REFERENCES skills(uid)
+);
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_pets_pet_id ON pets(pet_id);
 CREATE INDEX IF NOT EXISTS idx_pets_element ON pets(element_id);
@@ -197,6 +213,7 @@ CREATE INDEX IF NOT EXISTS idx_pet_skills_type ON pet_skills(skill_type);
 CREATE INDEX IF NOT EXISTS idx_pet_egg_groups_pet ON pet_egg_groups(pet_uid);
 CREATE INDEX IF NOT EXISTS idx_pet_egg_groups_group ON pet_egg_groups(egg_group_id);
 CREATE INDEX IF NOT EXISTS idx_variants_map_pet_id ON variants_map(pet_id);
+CREATE INDEX IF NOT EXISTS idx_pet_achievements_pet ON pet_achievements(pet_uid);
 
 -- 用户端导航标签配置
 CREATE TABLE IF NOT EXISTS nav_tabs (

@@ -312,4 +312,73 @@ router.get('/skills-next-uid', authAdmin, (req, res) => {
   }
 });
 
+// ============================================================
+// 精灵成就任务管理（pet_achievements）
+// ============================================================
+
+/**
+ * GET /api/admin/pet-achievements/:uid
+ * Get all achievements for a pet
+ */
+router.get('/pet-achievements/:uid', authAdmin, (req, res) => {
+  const { uid } = req.params;
+  try {
+    const db = getDb();
+    const achievements = db.prepare(`
+      SELECT pa.*, sk.icon_url as skill_icon, e.icon as element_icon
+      FROM pet_achievements pa
+      LEFT JOIN skills sk ON pa.skill_ref_uid = sk.uid
+      LEFT JOIN elements e ON sk.element_id = e.id
+      WHERE pa.pet_uid = ?
+      ORDER BY pa.sort_order, pa.id
+    `).all(uid);
+    res.json({ achievements });
+  } catch (err) {
+    console.error('[PetAchievements GET]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/admin/pet-achievements/:uid
+ * Save all achievements for a pet (delete-then-insert strategy)
+ */
+router.put('/pet-achievements/:uid', authAdmin, (req, res) => {
+  const { uid } = req.params;
+  const { achievements = [] } = req.body;
+
+  const db = getWriteDb();
+  try {
+    const deleteAll = db.prepare('DELETE FROM pet_achievements WHERE pet_uid = ?');
+    const insert = db.prepare(`
+      INSERT INTO pet_achievements (pet_uid, type, title, skill_ref_uid, skill_name, use_count, reward_desc, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const tx = db.transaction(() => {
+      deleteAll.run(uid);
+      achievements.forEach((a, idx) => {
+        insert.run(
+          uid,
+          a.type || 'text',
+          a.title || null,
+          a.skill_ref_uid || null,
+          a.skill_name || null,
+          a.use_count || 0,
+          a.reward_desc || null,
+          a.sort_order ?? idx
+        );
+      });
+    });
+
+    tx();
+    db.close();
+    res.json({ success: true, total: achievements.length });
+  } catch (err) {
+    db.close();
+    console.error('[PetAchievements PUT]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

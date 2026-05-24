@@ -258,6 +258,13 @@ export const adminApi = {
     body: JSON.stringify({ egg_group_ids: eggGroupIds }),
   }),
 
+  // 精灵成就任务管理
+  getPetAchievements: (uid) => adminRequest(`/pet-achievements/${uid}`),
+  savePetAchievements: (uid, achievements) => adminRequest(`/pet-achievements/${uid}`, {
+    method: 'PUT',
+    body: JSON.stringify({ achievements }),
+  }),
+
   // 素材库目录管理
   libraryDirectories: () => adminRequest('/library/directories'),
   createLibraryDirectory: (dirPath) => adminRequest('/library/directories', {

@@ -246,7 +246,7 @@ const EDITABLE_TABLES = {
   pets: {
     label: '精灵',
     primaryKey: 'uid',
-    editableFields: ['pet_id', 'name', 'element_id', 'sub_element_id', 'ability_name', 'ability_desc', 'hp', 'speed', 'atk', 'matk', 'def', 'mdef', 'total', 'version', 'image_url', 'thumb_url'],
+    editableFields: ['pet_id', 'name', 'element_id', 'sub_element_id', 'ability_name', 'ability_desc', 'hp', 'speed', 'atk', 'matk', 'def', 'mdef', 'total', 'version', 'image_url', 'thumb_url', 'is_final_form'],
   },
   skills: {
     label: '技能',
