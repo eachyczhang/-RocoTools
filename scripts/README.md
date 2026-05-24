@@ -6,15 +6,119 @@
 
 ## 目录
 
-- [一、远程数据同步（sync_from_server.sh）](#一远程数据同步)
-- [二、本地数据同步（sync_db.js）](#二本地数据同步)
-- [三、独立迁移/维护脚本](#三独立迁移维护脚本)
-- [四、图片处理脚本](#四图片处理脚本)
-- [五、赛季公告生成脚本](#五赛季公告生成脚本)
+- [一、爬虫（crawler）](#一爬虫)
+- [二、远程数据同步（sync_from_server.sh）](#二远程数据同步)
+- [三、本地数据同步（sync_db.js）](#三本地数据同步)
+- [四、独立迁移/维护脚本](#四独立迁移维护脚本)
+- [五、图片处理脚本](#五图片处理脚本)
+- [六、赛季公告生成脚本](#六赛季公告生成脚本)
 
 ---
 
-## 一、远程数据同步
+## 一、爬虫
+
+**脚本**：`crawler/run.py`
+
+通过 MediaWiki API 从 [洛克王国世界 BWIKI](https://wiki.biligame.com/rocom) 爬取游戏数据。
+
+### 前置条件
+
+```bash
+# Python 3.10+
+pip install -r crawler/requirements.txt
+```
+
+### 命令一览
+
+```bash
+# 全量爬取（首次使用，约5-8分钟）
+python crawler/run.py --full
+
+# 增量更新（仅爬取 version 变更的精灵详情，日常使用）
+python crawler/run.py --update
+```
+
+### 单独运行某个爬虫
+
+```bash
+# 属性克制关系（18种属性）
+python crawler/scrapers/fetch_element_chart.py
+
+# 属性结构化处理（依赖上一步产出）
+python crawler/scrapers/process_element_chart.py
+
+# 技能列表 + 图标（469+）
+python crawler/scrapers/fetch_skill_list.py
+
+# 蛋组归属数据（15组）
+python crawler/scrapers/fetch_egg_group.py
+
+# 性格数据（30种）
+python crawler/scrapers/fetch_nature.py
+
+# 精灵列表 + 缩略图
+python crawler/scrapers/fetch_pet_list.py
+
+# 精灵详情 + 立绘 + 映射刷新
+python crawler/scrapers/fetch_pet_detail.py
+```
+
+### 执行顺序（run.py 内部）
+
+| # | 脚本 | 说明 |
+|---|------|------|
+| 1 | `fetch_element_chart.py` | 属性克制关系 |
+| 2 | `process_element_chart.py` | 属性结构化 + 图标本地化 |
+| 3 | `fetch_skill_list.py` | 技能列表 + 图标 |
+| 4 | `fetch_egg_group.py` | 蛋组归属数据 |
+| 5 | `fetch_nature.py` | 性格数据 |
+| 6 | `fetch_pet_list.py` | 精灵列表 + 注入 egg_groups |
+| 7 | `fetch_pet_detail.py` | 精灵详情 + 立绘 + UID映射 |
+
+### 数据产出
+
+| 数据 | 输出路径 | 格式 |
+|------|----------|------|
+| 属性 | `data/elements/` | JSON |
+| 技能 | `data/skills/` | JSON |
+| 蛋组 | `data/eggs/` | JSON |
+| 精灵 | `data/pets/` | JSON |
+| 图片 | `data/public/` | PNG |
+
+### 自动行为
+
+- 各爬虫运行后自动生成 `*_report.md` 校验报告
+- `run.py` 完成后打印全局数据完整性汇总
+- 检测到 `app/server/node_modules` 存在时，**自动执行 sync_db 同步数据到 SQLite**
+
+### 限流参数
+
+| 参数 | 值 |
+|------|------|
+| 详情页并发 | 5 线程，0.5s/线程间隔 |
+| 图片下载并发 | 10 线程，0.1s/线程间隔 |
+| 限流重试 | 60s × 次数（遇到 567/429） |
+| 步骤间冷却 | 2s |
+
+### 故障恢复
+
+```bash
+# 检查数据完整性
+node -e "const d=require('./data/pets/pet_detail.json'); \
+  const p=d.pets; const total=Object.keys(p).length; \
+  const hasSkills=Object.values(p).filter(x=>x.detail&&x.detail.skills&&x.detail.skills.length>0).length; \
+  console.log('总数:',total,'有技能:',hasSkills)"
+
+# 数据正确但确实减少 → 强制导入
+cd app/server && node src/db/import.js --force
+
+# 需要回滚 → 使用自动备份
+cp app/server/data/backups/auto_presync_最新.db app/server/data/roco.db
+```
+
+---
+
+## 二、远程数据同步
 
 **脚本**：`scripts/sync_from_server.sh`
 
@@ -88,7 +192,7 @@ bash scripts/sync_from_server.sh --all --full
 
 ---
 
-## 二、本地数据同步
+## 三、本地数据同步
 
 **脚本**：`app/server/sync_db.js`
 
@@ -125,7 +229,7 @@ cd app/server && npm install
 
 ---
 
-## 三、独立迁移/维护脚本
+## 四、独立迁移/维护脚本
 
 位于 `app/server/scripts/` 目录，可单独执行：
 
@@ -164,7 +268,7 @@ node scripts/sync-default-achievements.js --dry-run
 
 ---
 
-## 四、图片处理脚本
+## 五、图片处理脚本
 
 位于 `app/server/` 目录，需要安装 `sharp`：
 
@@ -173,16 +277,45 @@ cd app/server
 npm install sharp  # 如未安装
 ```
 
-| 命令 | 说明 |
-|------|------|
-| `node gen_thumbnails.js` | 为精灵图片生成缩略图（WebP格式） + 更新 pet_list.json |
-| `node gen_webp.js` | 将所有精灵原图转换为 WebP 副本 |
+### gen_thumbnails.js — 生成精灵缩略图
 
-> 这两个脚本已集成到 `sync_db.js` 流程中，通常不需要单独执行。
+```bash
+cd app/server && node gen_thumbnails.js
+```
+
+**功能**：
+- 将 `data/public/pets/default/` 下的大立绘压缩为 128px WebP 缩略图
+- 输出到 `data/public/pets/thumbs/`
+- 更新 `data/pets/pet_list.json`，写入 `thumb_url` 字段
+
+**特点**：增量处理，跳过已存在且比源文件新的缩略图
+
+### gen_webp.js — 批量生成 WebP 副本
+
+```bash
+cd app/server && node gen_webp.js
+```
+
+**功能**：遍历 `data/public/` 下所有 PNG 图片，在同目录生成同名 `.webp` 文件
+
+**处理目录**：
+- `public/pets/default/` — 精灵默认立绘
+- `public/pets/shiny/` — 异色立绘
+- `public/pets/fruit/` — 果实图片
+- `public/pets/egg/` — 蛋图片
+- `public/skills/icons/` — 技能图标
+- `public/elements/icons/` — 属性图标
+
+**参数**：质量 80，并发 10
+
+**特点**：增量处理，跳过已存在且比源文件新的 WebP
+
+> 这两个脚本已集成到 `sync_db.js` 流程中（步骤 1-2），通常不需要单独执行。
+> 配合 Nginx 的 WebP 自动返回策略，浏览器支持时自动获取 WebP 版本。
 
 ---
 
-## 五、赛季公告生成脚本
+## 六、赛季公告生成脚本
 
 **脚本**：`scripts/generate_patch_notes.js`
 
@@ -247,17 +380,31 @@ node scripts/generate_patch_notes.js \
 ## 快速参考
 
 ```bash
-# === 日常开发 ===
+# === 爬虫（获取最新游戏数据） ===
+python crawler/run.py --full                   # 全量爬取（首次）
+python crawler/run.py --update                 # 增量更新（日常）
+
+# === 远程同步（拉取服务器数据到本地） ===
 bash scripts/sync_from_server.sh --db          # 拉取最新数据库
 bash scripts/sync_from_server.sh --images      # 增量同步图片
-
-# === 首次搭建 / 数据重建 ===
 bash scripts/sync_from_server.sh --all --full  # 全量同步所有数据
-cd app/server && node sync_db.js               # 重建本地数据库
+
+# === 本地数据处理（JSON → SQLite + 图片优化） ===
+cd app/server && node sync_db.js               # 一键完整流程
+cd app/server && node gen_thumbnails.js        # 仅生成缩略图
+cd app/server && node gen_webp.js              # 仅生成 WebP 副本
 
 # === 赛季更新 ===
 bash scripts/sync_from_server.sh --seasons     # 下载赛季备份
 node scripts/generate_patch_notes.js \         # 生成更新公告
   temp/seasons/old.db temp/seasons/new.db \
   --output temp/patch.md
+
+# === 典型工作流 ===
+# 1. 爬取最新数据 → 自动同步到DB
+python crawler/run.py --update
+
+# 2. 或者直接从服务器拉取（不需要爬虫）
+bash scripts/sync_from_server.sh --db
+bash scripts/sync_from_server.sh --images
 ```
