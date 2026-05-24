@@ -603,6 +603,8 @@ router.use((req, res, next) => {
 | `/api/admin/data/:table/:id` | DELETE | 通用删除记录 |
 | `/api/admin/pet-skills/:uid` | GET/PUT | 精灵技能管理 |
 | `/api/admin/pet-egg-groups/:uid` | GET/PUT | 精灵蛋组管理 |
+| `/api/admin/pet-achievements/:uid` | GET/PUT | 精灵图鉴课题管理 |
+| `/api/admin/pet-achievements/:id/toggle-hidden` | PATCH | 切换默认课题显示/隐藏 |
 | `/api/admin/abilities` | GET | 特性聚合列表 |
 | `/api/admin/abilities/:name` | GET | 特性详情（含关联精灵） |
 | `/api/admin/abilities/:name` | PUT | 更新特性（更名/描述/图标） |
@@ -721,3 +723,219 @@ router.use((req, res, next) => {
 - 管理端编辑自动标记 `manual_edit=1`
 - 爬虫导入时跳过 `manual_edit=1` 的记录
 - 冲突数据存入 `pending_conflicts.json`，通过管理端审查页面处理
+
+---
+
+## 十二、精灵标签配置
+
+### 标签字段
+
+| 字段 | 含义 | 管理端颜色 | 用户端颜色 |
+|------|------|-----------|-----------|
+| `is_final_form` | 最终形态 | 主色 primary | `#D69F23` 金色 |
+| `is_legendary` | 传说精灵 | amber | `#E6A817` 金色 |
+| `is_season` | 赛季精灵 | blue | `#3B82F6` 蓝色 |
+| `is_pass` | 通行证精灵 | purple | `#8B5CF6` 紫色 |
+| `is_boss_form` | 首领形态 | red | `#EF4444` 红色 |
+| `has_boss_form` | 拥有首领形态 | orange | `#F97316` 橙色 |
+| 异色精灵 | 有 `image_shiny` 数据 | — | `#EC4899` 粉色 |
+
+### 管理端配置
+
+- 在精灵编辑页面的基本信息区域，以开关按钮形式配置
+- 各标签使用不同颜色区分
+- 保存精灵时自动同步图鉴课题
+
+### 用户端展示
+
+- 标签以彩色 badge 形式显示在蛋组标签下方
+- 异色精灵标签仅在切换到异色 Tab 时显示
+- 首领形态精灵不展示图鉴课题模块
+
+### 数据保护
+
+- 标签字段通过 `INSERT ON CONFLICT UPDATE` 策略保护
+- 爬虫导入时只更新爬虫提供的字段，不触碰标签字段
+- `sync-final-forms.js` 脚本可自动检测并设置 `is_final_form`
+
+---
+
+## 十三、图鉴课题管理
+
+### 数据表结构
+
+`pet_achievements` 表：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INTEGER PK | 自增主键 |
+| pet_uid | TEXT | 关联精灵 uid |
+| type | TEXT | 课题类型：'text' 或 'skill' |
+| title | TEXT | 课题标题/描述 |
+| skill_ref_uid | TEXT | 技能类：关联技能 uid |
+| skill_name | TEXT | 技能类：技能名称（冗余） |
+| use_count | INTEGER | 技能类：需要使用次数 |
+| reward_desc | TEXT | 奖励描述 |
+| sort_order | INTEGER | 排序权重 |
+| is_default | INTEGER | 是否为系统默认课题（1=是，0=否） |
+| hidden | INTEGER | 是否隐藏（1=隐藏，0=显示） |
+
+### 默认课题自动同步
+
+**触发时机**：
+- 管理端保存精灵基本信息时（每次保存都触发）
+- 管理端更新 `pet_details.image_shiny` 时
+- 执行 `sync_db.js` 流程时（批量脚本）
+
+**同步逻辑**（`syncDefaultAchievements` 函数）：
+1. 根据精灵的 `is_final_form`、`has_boss_form`、`image_shiny` 计算应有的默认课题
+2. 对比数据库中已有的默认课题（`is_default=1`）
+3. 插入缺失的课题，删除不再适用的课题
+4. **保留已有课题的 `hidden` 状态**（不覆盖管理员手动配置）
+
+**首领形态特殊处理**：
+- `is_boss_form=1` 的精灵不生成任何默认课题
+- 如果已有默认课题，会被自动清除
+
+### 管理端操作
+
+| 操作 | 说明 |
+|------|------|
+| 默认课题 | 显示绿色"默认"标签，内容只读，不可删除 |
+| 显示/隐藏切换 | 通过 👁️ 按钮切换默认课题的 hidden 状态 |
+| 自定义课题 | 可添加文本课题或技能课题，支持排序和删除 |
+| 保存课题 | 只保存自定义课题，默认课题由系统管理 |
+
+### API 接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/admin/pet-achievements/:uid` | GET | 获取精灵所有课题（含默认+自定义） |
+| `/api/admin/pet-achievements/:uid` | PUT | 保存自定义课题（不影响默认课题） |
+| `/api/admin/pet-achievements/:id/toggle-hidden` | PATCH | 切换默认课题的显示/隐藏状态 |
+
+### 用户端展示
+
+- 查询时自动过滤 `hidden=1` 的课题
+- 图鉴课题模块位于属性克制关系和打击面分析之间
+- 首领形态精灵不显示图鉴课题模块
+
+---
+
+## 十四、身高体重配置
+
+### 存储格式
+
+- 数据库字段：`pet_details.height`、`pet_details.weight`（TEXT 类型）
+- 存储格式：`"min-max"`（如 `"1.50-2.15"`）
+- 单值时：`"1.50-1.50"`
+
+### 管理端配置
+
+- 两组数字输入框（最低 ~ 最高），带 `−` / `+` 计数器按钮
+- 步进 0.01，保留两位小数
+- 保存时自动合并为 `"min-max"` 格式
+
+### 用户端显示
+
+- 范围不同时显示：`1.50~2.15m`
+- 范围相同时显示：`1.50m`
+- 使用 `formatRange` 函数解析和格式化
+
+### 数据迁移
+
+`migrate-height-weight.js` 脚本处理历史数据：
+
+| 输入格式 | 输出格式 |
+|----------|----------|
+| `"1.5~2.15"` | `"1.50-2.15"` |
+| `"1.5-2.15"` | `"1.50-2.15"` |
+| `"1.5"` | `"1.50-1.50"` |
+| 无法解析 | `NULL`（清空） |
+
+---
+
+## 十五、数据导入保护机制（UPSERT）
+
+### 问题背景
+
+爬虫导入使用 `INSERT OR REPLACE`（等同于 DELETE + INSERT），会将未指定的字段重置为默认值，导致管理端配置的标签、manual_edit 等字段丢失。
+
+### 解决方案
+
+将 `INSERT OR REPLACE` 改为 `INSERT ... ON CONFLICT DO UPDATE`，只更新爬虫提供的字段：
+
+#### pets 表
+
+```sql
+INSERT INTO pets (uid, pet_id, name, element_id, sub_element_id, ...)
+VALUES (?, ?, ?, ?, ?, ...)
+ON CONFLICT(uid) DO UPDATE SET
+  pet_id = excluded.pet_id, name = excluded.name,
+  element_id = excluded.element_id, ...
+```
+
+**保护的字段**：`is_final_form`, `is_legendary`, `is_season`, `is_pass`, `is_boss_form`, `has_boss_form`, `manual_edit`
+
+#### pet_details 表
+
+```sql
+INSERT INTO pet_details (pet_uid, element_id, ability_icon, ...)
+VALUES (?, ?, ?, ...)
+ON CONFLICT(pet_uid) DO UPDATE SET
+  element_id = excluded.element_id, ability_icon = excluded.ability_icon, ...
+```
+
+**保护的字段**：`manual_edit`
+
+### 各数据的保护状态
+
+| 数据 | 保护方式 |
+|------|----------|
+| 精灵标签（is_legendary 等） | UPSERT 不触碰 |
+| 图鉴课题（pet_achievements） | 爬虫不涉及此表 |
+| 课题 hidden 状态 | sync 脚本保留已有状态 |
+| manual_edit=1 的记录 | 爬虫导入时跳过 |
+| 进化链（手动编辑的） | manual_edit 保护 |
+
+---
+
+## 十六、sync_db 数据同步流程
+
+### 执行命令
+
+```bash
+node app/server/sync_db.js
+```
+
+### 执行步骤（按顺序）
+
+| 步骤 | 脚本 | 说明 |
+|------|------|------|
+| 1 | 生成缩略图 + 更新 JSON | 需要 sharp |
+| 2 | 生成 WebP 副本 | 需要 sharp |
+| 3 | `init-db.js` | 初始化数据库（建表） |
+| 4 | `import.js` | 导入数据（JSON → SQLite） |
+| 5 | `migrate-height-weight.js` | 规范化身高体重数据 |
+| 6 | `normalize-skill-levels.js` | 清洗技能等级字段 |
+| 7 | `sync-evolution-chains.js` | 同步进化链（多路线合并） |
+| 8 | `sync-final-forms.js` | 同步最终形态标记 |
+| 9 | `sync-default-achievements.js` | 同步默认图鉴课题 |
+
+### 脚本依赖关系
+
+```
+导入数据 → 规范化身高体重（清洗爬虫数据）
+         → 清洗技能等级（清洗爬虫数据）
+         → 同步进化链（需要完整的精灵数据）
+                → 同步最终形态（依赖进化链数据）
+                        → 同步默认课题（依赖 is_final_form + image_shiny）
+```
+
+### 独立脚本
+
+| 脚本 | 用途 | 使用场景 |
+|------|------|----------|
+| `migrate-pet-tags.js` | 添加标签列到 pets 表 | 首次部署时执行一次 |
+| `sync-final-forms.js --dry-run` | 预览最终形态检测结果 | 调试 |
+| `sync-default-achievements.js --dry-run` | 预览课题同步结果 | 调试 |
