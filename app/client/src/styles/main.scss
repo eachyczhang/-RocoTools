@@ -116,6 +116,41 @@
     }
   }
 
+  // Counter input group (for number steppers)
+  .btn-counter-left, .btn-counter-right {
+    @apply px-2 py-2 text-sm font-medium select-none cursor-pointer;
+    @apply bg-gray-100 border border-surface-light-border text-gray-600;
+    @apply hover:bg-gray-200 active:bg-gray-300 transition-colors;
+
+    .dark & {
+      @apply bg-surface-dark-alt border-surface-dark-border text-gray-300;
+      @apply hover:bg-white/10 active:bg-white/15;
+    }
+  }
+  .btn-counter-left {
+    @apply rounded-l-lg border-r-0;
+  }
+  .btn-counter-right {
+    @apply rounded-r-lg border-l-0;
+  }
+  .input-counter {
+    @apply w-full text-center text-sm py-2 outline-none;
+    @apply bg-white border border-surface-light-border;
+    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+    // Hide number input spinners
+    -moz-appearance: textfield;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .dark & {
+      @apply bg-surface-dark-alt border-surface-dark-border text-white;
+      @apply focus:border-primary-400 focus:ring-primary-400/20;
+    }
+  }
+
   .select {
     @apply input appearance-none cursor-pointer;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");

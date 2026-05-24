@@ -97,8 +97,8 @@
 
           <!-- 身高/体重/分布 -->
           <div class="flex gap-3 sm:gap-6 text-xs sm:text-sm justify-center sm:justify-start flex-wrap">
-            <div v-if="pet.detail?.height"><span class="text-muted">身高</span> {{ pet.detail.height }}m</div>
-            <div v-if="pet.detail?.weight"><span class="text-muted">体重</span> {{ pet.detail.weight }}kg</div>
+            <div v-if="pet.detail?.height"><span class="text-muted">身高</span> {{ formatRange(pet.detail.height, 'm') }}</div>
+            <div v-if="pet.detail?.weight"><span class="text-muted">体重</span> {{ formatRange(pet.detail.weight, 'kg') }}</div>
             <div v-if="pet.detail?.location"><span class="text-muted">分布</span> {{ pet.detail.location }}</div>
           </div>
         </div>
@@ -259,6 +259,20 @@ import { getEggGroupColor } from '@/constants/eggGroupColors'
 const route = useRoute()
 const router = useRouter()
 const pet = ref(null)
+
+// Format range string "1.50-2.15" to display "1.50~2.15m" or "1.50m" if same
+function formatRange(str, unit) {
+  if (!str) return ''
+  const m = String(str).match(/^([\d.]+)\s*[~\-]\s*([\d.]+)$/)
+  if (m) {
+    const a = parseFloat(m[1]).toFixed(2)
+    const b = parseFloat(m[2]).toFixed(2)
+    return a === b ? a + unit : a + '~' + b + unit
+  }
+  const single = String(str).match(/^([\d.]+)$/)
+  if (single) return parseFloat(single[1]).toFixed(2) + unit
+  return str + unit
+}
 
 // Pet special tags (displayed as badges)
 const petTags = computed(() => {

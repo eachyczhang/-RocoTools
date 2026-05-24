@@ -226,15 +226,41 @@
     <!-- 详情字段 -->
     <div class="card mb-4">
       <h2 class="font-roco text-base text-primary-500 mb-3">详情信息</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div>
-          <label class="text-xs text-muted">身高</label>
-          <input v-model="detailForm.height" class="input w-full" />
+          <label class="text-xs text-muted mb-1 block">身高 (m)</label>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center flex-1">
+              <button type="button" @click="stepValue('heightMin', -0.01)" class="btn-counter-left">−</button>
+              <input v-model="detailForm.heightMin" type="number" step="0.01" min="0" placeholder="最低" class="input-counter" />
+              <button type="button" @click="stepValue('heightMin', 0.01)" class="btn-counter-right">+</button>
+            </div>
+            <span class="text-muted text-xs">~</span>
+            <div class="flex items-center flex-1">
+              <button type="button" @click="stepValue('heightMax', -0.01)" class="btn-counter-left">−</button>
+              <input v-model="detailForm.heightMax" type="number" step="0.01" min="0" placeholder="最高" class="input-counter" />
+              <button type="button" @click="stepValue('heightMax', 0.01)" class="btn-counter-right">+</button>
+            </div>
+          </div>
         </div>
         <div>
-          <label class="text-xs text-muted">体重</label>
-          <input v-model="detailForm.weight" class="input w-full" />
+          <label class="text-xs text-muted mb-1 block">体重 (kg)</label>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center flex-1">
+              <button type="button" @click="stepValue('weightMin', -0.01)" class="btn-counter-left">−</button>
+              <input v-model="detailForm.weightMin" type="number" step="0.01" min="0" placeholder="最低" class="input-counter" />
+              <button type="button" @click="stepValue('weightMin', 0.01)" class="btn-counter-right">+</button>
+            </div>
+            <span class="text-muted text-xs">~</span>
+            <div class="flex items-center flex-1">
+              <button type="button" @click="stepValue('weightMax', -0.01)" class="btn-counter-left">−</button>
+              <input v-model="detailForm.weightMax" type="number" step="0.01" min="0" placeholder="最高" class="input-counter" />
+              <button type="button" @click="stepValue('weightMax', 0.01)" class="btn-counter-right">+</button>
+            </div>
+          </div>
         </div>
+      </div>
+      <div class="grid grid-cols-1 gap-3">
         <div>
           <label class="text-xs text-muted">分布</label>
           <input v-model="detailForm.location" class="input w-full" />
@@ -752,7 +778,44 @@ const form = ref({
   is_legendary: 0, is_season: 0, is_pass: 0, is_boss_form: 0, has_boss_form: 0,
 })
 
-const detailForm = ref({ height: '', weight: '', location: '' })
+const detailForm = ref({ heightMin: '', heightMax: '', weightMin: '', weightMax: '', location: '' })
+
+// Parse range string like "1.50-2.15" or "1.5~2.15" into [min, max]
+function parseRange(str) {
+  if (!str) return ['', '']
+  const s = String(str).trim()
+  const m = s.match(/^([\d.]+)\s*[~\-]\s*([\d.]+)$/)
+  if (m) return [m[1], m[2]]
+  const single = s.match(/^([\d.]+)$/)
+  if (single) return [single[1], single[1]]
+  return ['', '']
+}
+
+// Format min/max to stored string "min-max"
+function formatRange(min, max) {
+  const a = parseFloat(min), b = parseFloat(max)
+  if (isNaN(a) && isNaN(b)) return ''
+  const lo = isNaN(a) ? 0 : a
+  const hi = isNaN(b) ? lo : b
+  return lo.toFixed(2) + '-' + hi.toFixed(2)
+}
+
+// Step value for counter buttons
+function stepValue(field, delta) {
+  const cur = parseFloat(detailForm.value[field]) || 0
+  const next = Math.max(0, cur + delta)
+  detailForm.value[field] = next.toFixed(2)
+}
+
+// Build detail payload for saving (convert min/max back to single string)
+function buildDetailPayload() {
+  const { heightMin, heightMax, weightMin, weightMax, location } = detailForm.value
+  return {
+    height: formatRange(heightMin, heightMax),
+    weight: formatRange(weightMin, weightMax),
+    location,
+  }
+}
 
 // Evolution chain - multi-route format: [[{name, evolve_level, evolve_condition, pet_uid, thumb_url}, ...], ...]
 const evolutionRoutes = ref([])
@@ -1101,8 +1164,12 @@ async function loadData() {
     }
 
     if (data.detail) {
+      const hParts = parseRange(data.detail.height)
+      const wParts = parseRange(data.detail.weight)
       detailForm.value = {
-        height: data.detail.height, weight: data.detail.weight, location: data.detail.location,
+        heightMin: hParts[0], heightMax: hParts[1],
+        weightMin: wParts[0], weightMax: wParts[1],
+        location: data.detail.location,
       }
       // Load evolution chain (backend now returns 2D array: [[{name, evolve_level, evolve_condition, uid, thumb_url},...], ...])
       const rawChain = data.detail.evolution_chain || []
@@ -1191,7 +1258,7 @@ async function save() {
       await adminApi.create('pets', { uid: newUid, ...form.value })
       // Create pet_details first so upload UPSERT can find the record
       const evoChainJson = serializeEvoChain()
-      await adminApi.create('pet_details', { pet_uid: newUid, ...detailForm.value, evolution_chain: evoChainJson })
+      await adminApi.create('pet_details', { pet_uid: newUid, ...buildDetailPayload(), evolution_chain: evoChainJson })
 
       // Upload all pending images now that the pet exists
       const imageFieldMap = {
@@ -1243,7 +1310,7 @@ async function save() {
     } else {
       await adminApi.update('pets', uid, form.value)
       const evoChainJson = serializeEvoChain()
-      const detailPayload = { ...detailForm.value, evolution_chain: evoChainJson }
+      const detailPayload = { ...buildDetailPayload(), evolution_chain: evoChainJson }
       if (detail.value) {
         await adminApi.update('pet_details', uid, detailPayload)
       } else {
