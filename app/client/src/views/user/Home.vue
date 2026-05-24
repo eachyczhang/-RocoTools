@@ -18,7 +18,7 @@
       <Transition name="modal">
         <div v-if="showAnnouncement" class="fixed inset-0 z-[300] flex items-center justify-center p-4" @click.self="showAnnouncement = false">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div class="relative w-full max-w-3xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+<div class="relative w-full max-w-5xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             :class="isDark ? 'bg-gray-800' : 'bg-white'">
             <!-- 顶部 -->
             <div class="flex items-center justify-between px-5 py-3 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-100'">
