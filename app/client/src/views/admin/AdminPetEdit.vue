@@ -446,14 +446,27 @@
     <div v-if="!isNew" class="card mb-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="font-roco text-base text-primary-500">技能配置</h2>
-        <button @click="saveSkills" :disabled="skillsSaving" class="btn text-xs">
-          {{ skillsSaving ? '保存中...' : '💾 保存技能' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <button @click="copyAllSkills" class="px-2.5 py-1 text-[10px] rounded border transition-colors"
+            :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+            :disabled="!skillForms.skills.length && !skillForms.bloodline_skills.length && !skillForms.learnable_stones.length"
+            title="复制全部技能（精灵技能+血脉技能+技能石技能）到剪贴板">
+            📋 全部复制
+          </button>
+          <button @click="pasteAllSkills" class="px-2.5 py-1 text-[10px] rounded border transition-colors"
+            :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+            title="从剪贴板导入全部技能（覆盖当前所有分类）">
+            📥 全部导入
+          </button>
+          <button @click="saveSkills" :disabled="skillsSaving" class="btn text-xs">
+            {{ skillsSaving ? '保存中...' : '💾 保存技能' }}
+          </button>
+        </div>
       </div>
       <span v-if="skillsMsg" class="text-xs mb-2 inline-block" :class="skillsOk ? 'text-green-600' : 'text-red-500'">{{ skillsMsg }}</span>
 
       <!-- Skill tabs -->
-      <div class="flex gap-1 mb-3 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
+      <div class="flex items-center gap-1 mb-3 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
         <button v-for="tab in skillTabs" :key="tab.key" @click="activeSkillTab = tab.key"
           class="px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px"
           :class="activeSkillTab === tab.key
@@ -461,6 +474,18 @@
             : 'border-transparent text-muted hover:text-foreground'">
           {{ tab.label }} ({{ skillForms[tab.key].length }})
         </button>
+        <div class="ml-auto flex gap-1.5 pb-1">
+          <button @click="copySkills" class="px-2 py-1 text-[10px] rounded border transition-colors"
+            :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+            :disabled="!skillForms[activeSkillTab].length" title="复制当前分类技能到剪贴板">
+            📋 复制
+          </button>
+          <button @click="pasteSkills" class="px-2 py-1 text-[10px] rounded border transition-colors"
+            :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+            title="从剪贴板粘贴技能">
+            📥 粘贴
+          </button>
+        </div>
       </div>
 
       <!-- Skill list for active tab -->
@@ -1439,6 +1464,138 @@ function getCategoryColor(type) {
 
 function removeSkill(tabKey, idx) {
   skillForms[tabKey].splice(idx, 1)
+}
+
+// Copy/Paste ALL skills (all tabs)
+async function copyAllSkills() {
+  const allSkills = {
+    skills: skillForms.skills,
+    bloodline_skills: skillForms.bloodline_skills,
+    learnable_stones: skillForms.learnable_stones,
+  }
+  const total = allSkills.skills.length + allSkills.bloodline_skills.length + allSkills.learnable_stones.length
+  if (!total) {
+    skillsMsg.value = '当前没有任何技能可复制'
+    skillsOk.value = false
+    return
+  }
+  // Clean internal fields before copying
+  const clean = (arr) => arr.map(({ id, pet_uid, skill_type, ...rest }) => rest)
+  const payload = { type: 'all_skills', skills: clean(allSkills.skills), bloodline_skills: clean(allSkills.bloodline_skills), learnable_stones: clean(allSkills.learnable_stones) }
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(payload))
+    skillsMsg.value = `已复制全部技能到剪贴板（精灵技能${allSkills.skills.length}个 + 血脉技能${allSkills.bloodline_skills.length}个 + 技能石${allSkills.learnable_stones.length}个）`
+    skillsOk.value = true
+  } catch (err) {
+    skillsMsg.value = '复制失败：' + err.message
+    skillsOk.value = false
+  }
+}
+
+async function pasteAllSkills() {
+  try {
+    const text = await navigator.clipboard.readText()
+    let payload
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      skillsMsg.value = '剪贴板内容不是有效的技能数据'
+      skillsOk.value = false
+      return
+    }
+    // Support both "all_skills" format and single-tab format
+    if (payload && payload.type === 'all_skills') {
+      const sCount = (payload.skills || []).length
+      const bCount = (payload.bloodline_skills || []).length
+      const lCount = (payload.learnable_stones || []).length
+      if (!sCount && !bCount && !lCount) {
+        skillsMsg.value = '剪贴板中没有可导入的技能数据'
+        skillsOk.value = false
+        return
+      }
+      // Replace all tabs
+      const mapSkill = (s) => ({
+        level: s.level || '', name: s.name || '', element: s.element || '',
+        type: s.type || '', cost: s.cost || 0, power: s.power || 0,
+        description: s.description || '', skill_ref_uid: s.skill_ref_uid || '', skill_icon: s.skill_icon || '',
+      })
+      skillForms.skills = (payload.skills || []).map(mapSkill)
+      skillForms.bloodline_skills = (payload.bloodline_skills || []).map(mapSkill)
+      skillForms.learnable_stones = (payload.learnable_stones || []).map(mapSkill)
+      skillsMsg.value = `已导入全部技能（精灵技能${sCount}个 + 血脉技能${bCount}个 + 技能石${lCount}个）`
+      skillsOk.value = true
+    } else {
+      skillsMsg.value = '剪贴板中不是全部技能格式，请使用单分类粘贴按钮'
+      skillsOk.value = false
+    }
+  } catch (err) {
+    skillsMsg.value = '导入失败：' + err.message
+    skillsOk.value = false
+  }
+}
+
+// Copy/Paste skills for current active tab
+async function copySkills() {
+  const currentTab = activeSkillTab.value
+  const skills = skillForms[currentTab]
+  if (!skills.length) {
+    skillsMsg.value = '当前分类没有技能可复制'
+    skillsOk.value = false
+    return
+  }
+  // Clean internal fields before copying
+  const cleaned = skills.map(({ id, pet_uid, skill_type, ...rest }) => rest)
+  const payload = { tab: currentTab, skills: cleaned }
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(payload))
+    skillsMsg.value = `已复制 ${skills.length} 个${currentTab === 'skills' ? '精灵技能' : currentTab === 'bloodline_skills' ? '血脉技能' : '技能石技能'}到剪贴板`
+    skillsOk.value = true
+  } catch (err) {
+    skillsMsg.value = '复制失败：' + err.message
+    skillsOk.value = false
+  }
+}
+
+async function pasteSkills() {
+  try {
+    const text = await navigator.clipboard.readText()
+    let payload
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      skillsMsg.value = '剪贴板内容不是有效的技能数据'
+      skillsOk.value = false
+      return
+    }
+    if (!payload || !Array.isArray(payload.skills) || !payload.skills.length) {
+      skillsMsg.value = '剪贴板中没有可导入的技能数据'
+      skillsOk.value = false
+      return
+    }
+    const currentTab = activeSkillTab.value
+    const sourceLabel = payload.tab === 'skills' ? '精灵技能' : payload.tab === 'bloodline_skills' ? '血脉技能' : '技能石技能'
+    const targetLabel = currentTab === 'skills' ? '精灵技能' : currentTab === 'bloodline_skills' ? '血脉技能' : '技能石技能'
+    // Import skills into current tab
+    for (const s of payload.skills) {
+      skillForms[currentTab].push({
+        level: s.level || '',
+        name: s.name || '',
+        element: s.element || '',
+        type: s.type || '',
+        cost: s.cost || 0,
+        power: s.power || 0,
+        description: s.description || '',
+        skill_ref_uid: s.skill_ref_uid || '',
+        skill_icon: s.skill_icon || '',
+      })
+    }
+    const hint = payload.tab !== currentTab ? `（来源：${sourceLabel} → 目标：${targetLabel}）` : ''
+    skillsMsg.value = `已粘贴 ${payload.skills.length} 个技能${hint}`
+    skillsOk.value = true
+  } catch (err) {
+    skillsMsg.value = '粘贴失败：' + err.message
+    skillsOk.value = false
+  }
 }
 
 function openSkillPicker() {
