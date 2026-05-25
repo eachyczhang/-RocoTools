@@ -71,7 +71,7 @@ app/
         ├── styles/main.scss    # Tailwind + 全局组件类
         ├── views/
         │   ├── user/           # 用户端 12 个页面
-        │   └── admin/          # 管理端 14 个页面
+│   └── admin/          # 管理端 15 个页面
         └── components/
             └── shared/         # 可复用组件
                 ├── DatePicker.vue      # 日期选择器

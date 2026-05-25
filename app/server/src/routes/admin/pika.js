@@ -163,4 +163,99 @@ router.delete('/pika-monthlies/:id', (req, res) => {
   res.json({ success: true, changes: result.changes });
 });
 
+// ============================================================
+// 命定花种技能配置
+// ============================================================
+
+// GET /api/admin/fate-flower-skills/:monthlyId — 获取某期月刊所有精灵的命定花种技能配置
+router.get('/fate-flower-skills/:monthlyId', (req, res) => {
+  const { monthlyId } = req.params;
+  const db = getDb();
+
+  const monthlyPets = db.prepare(
+    'SELECT id, pet_uid, pet_name, fate_nature FROM pika_monthly_pets WHERE monthly_id = ? ORDER BY sort_order'
+  ).all(monthlyId);
+
+  const result = [];
+  for (const mp of monthlyPets) {
+    const skills = db.prepare(
+      'SELECT id, skill_ref_uid, skill_name, skill_source, sort_order FROM fate_flower_skills WHERE monthly_pet_id = ? ORDER BY sort_order'
+    ).all(mp.id);
+    result.push({
+      monthly_pet_id: mp.id,
+      pet_uid: mp.pet_uid,
+      pet_name: mp.pet_name,
+      fate_nature: mp.fate_nature || '',
+      skills,
+    });
+  }
+
+  res.json({ pets: result });
+});
+
+// PUT /api/admin/fate-flower-skills/:monthlyPetId — 保存某只精灵的命定花种技能配置
+router.put('/fate-flower-skills/:monthlyPetId', (req, res) => {
+  const { monthlyPetId } = req.params;
+  const { skills } = req.body; // Array of { skill_ref_uid, skill_name, skill_source, sort_order }
+
+  if (!Array.isArray(skills)) {
+    return res.status(400).json({ error: 'skills must be an array' });
+  }
+  if (skills.length > 3) {
+    return res.status(400).json({ error: '最多配置3个技能（愿力冲击为固定技能，无需配置）' });
+  }
+
+  const db = getWriteDb();
+  try {
+    // Verify monthly_pet exists
+    const mp = db.prepare('SELECT id FROM pika_monthly_pets WHERE id = ?').get(monthlyPetId);
+    if (!mp) {
+      db.close();
+      return res.status(404).json({ error: '精灵记录不存在' });
+    }
+
+    // Delete existing and re-insert
+    db.prepare('DELETE FROM fate_flower_skills WHERE monthly_pet_id = ?').run(monthlyPetId);
+
+    const insertStmt = db.prepare(`
+      INSERT INTO fate_flower_skills (monthly_pet_id, skill_ref_uid, skill_name, skill_source, sort_order)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    for (let i = 0; i < skills.length; i++) {
+      const s = skills[i];
+      if (!s.skill_ref_uid || !s.skill_source) continue;
+      insertStmt.run(monthlyPetId, s.skill_ref_uid, s.skill_name || '', s.skill_source, s.sort_order ?? i);
+    }
+
+    db.close();
+    res.json({ success: true });
+  } catch (err) {
+    db.close();
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/fate-flower-nature/:monthlyPetId — 保存某只精灵的命定花种固定性格
+router.put('/fate-flower-nature/:monthlyPetId', (req, res) => {
+  const { monthlyPetId } = req.params;
+  const { nature } = req.body;
+
+  const db = getWriteDb();
+  try {
+    const mp = db.prepare('SELECT id FROM pika_monthly_pets WHERE id = ?').get(monthlyPetId);
+    if (!mp) {
+      db.close();
+      return res.status(404).json({ error: '精灵记录不存在' });
+    }
+
+    db.prepare('UPDATE pika_monthly_pets SET fate_nature = ? WHERE id = ?').run(nature || '', monthlyPetId);
+    db.close();
+    res.json({ success: true });
+  } catch (err) {
+    db.close();
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

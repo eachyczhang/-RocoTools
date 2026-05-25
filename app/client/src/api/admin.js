@@ -113,6 +113,17 @@ export const adminApi = {
     method: 'DELETE',
   }),
 
+  // 命定花种技能配置
+  getFateFlowerSkills: (monthlyId) => adminRequest(`/fate-flower-skills/${monthlyId}`),
+  saveFateFlowerSkills: (monthlyPetId, skills) => adminRequest(`/fate-flower-skills/${monthlyPetId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ skills }),
+  }),
+  saveFateFlowerNature: (monthlyPetId, nature) => adminRequest(`/fate-flower-nature/${monthlyPetId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ nature }),
+  }),
+
   // 图片上传
   upload: (file, type, uid) => {
     const form = new FormData()

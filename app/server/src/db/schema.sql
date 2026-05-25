@@ -196,8 +196,20 @@ CREATE TABLE IF NOT EXISTS pika_monthly_pets (
   pet_icon    TEXT,                       -- 精灵图标（冗余）
   locke_male  TEXT,                       -- 该精灵的男洛克时装图片
   locke_female TEXT,                      -- 该精灵的女洛克时装图片
+  fate_nature TEXT,                       -- 命定花种固定性格名称
   sort_order  INTEGER DEFAULT 0,          -- 精灵排序
   FOREIGN KEY (monthly_id) REFERENCES pika_monthlies(id) ON DELETE CASCADE
+);
+
+-- 命定花种精灵技能配置（每只精灵最多4个技能，其中愿力冲击为固定技能）
+CREATE TABLE IF NOT EXISTS fate_flower_skills (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  monthly_pet_id  INTEGER NOT NULL,       -- 关联 pika_monthly_pets.id
+  skill_ref_uid   TEXT NOT NULL,          -- 关联 skills 表或 pet_skills 的 skill_ref_uid
+  skill_name      TEXT,                   -- 技能名称（冗余）
+  skill_source    TEXT NOT NULL,          -- 技能来源: 'skills' | 'bloodline_skills' | 'learnable_stones'
+  sort_order      INTEGER DEFAULT 0,
+  FOREIGN KEY (monthly_pet_id) REFERENCES pika_monthly_pets(id) ON DELETE CASCADE
 );
 
 -- 精灵图鉴课题

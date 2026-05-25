@@ -82,4 +82,5 @@ export const statsApi = {
 
 export const pikaApi = {
   list: () => request(`${BASE}/pika-monthlies`),
+  getFateFlowerSkills: (petUid) => request(`${BASE}/pika-monthlies/fate-flower-skills/${petUid}`),
 }

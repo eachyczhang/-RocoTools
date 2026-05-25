@@ -277,6 +277,16 @@ erDiagram
         text pet_uid
         text locke_male
         text locke_female
+        text fate_nature
+    }
+
+    fate_flower_skills {
+        int id PK
+        int monthly_pet_id FK
+        text skill_ref_uid
+        text skill_name
+        text skill_source
+        int sort_order
     }
 
     variants_map {
@@ -305,6 +315,7 @@ erDiagram
     pets ||--o{ variants_map : "pet_uid"
     seasons ||--o{ season_events : "season_id"
     pika_monthlies ||--o{ pika_monthly_pets : "monthly_id"
+    pika_monthly_pets ||--o{ fate_flower_skills : "monthly_pet_id"
 ```
 
 ---
@@ -340,6 +351,7 @@ graph TD
         AdminSeasons["/admin/seasons  赛季管理"]
         AdminEvents["/admin/events  活动管理"]
         AdminPika["/admin/pika  皮卡月刊"]
+        AdminFateFlower["/admin/fate-flower  命定花种配置"]
         AdminAbilities["/admin/abilities  特性管理"]
         AdminMedia["/admin/media  素材管理"]
         AdminNavTabs["/admin/nav-tabs  导航配置"]

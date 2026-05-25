@@ -106,14 +106,18 @@
           常驻课题
         </h2>
         <div class="space-y-3">
-          <div v-for="event in routineEvents" :key="event.id"
-            class="border border-surface-light-border dark:border-surface-dark-border rounded-lg p-3">
+          <component :is="isFateFlower(event) ? 'router-link' : 'div'"
+            v-for="event in routineEvents" :key="event.id"
+            :to="isFateFlower(event) ? '/fate-flower' : undefined"
+            class="block border border-surface-light-border dark:border-surface-dark-border rounded-lg p-3"
+            :class="{ 'cursor-pointer hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5 transition-colors': isFateFlower(event) }">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xs px-2 py-0.5 rounded-full font-medium"
                 :class="routineTagClass(event.sub_type)">
                 {{ subTypeLabel(event.sub_type) }}
               </span>
               <span class="text-sm font-medium">{{ event.name }}</span>
+              <span v-if="isFateFlower(event)" class="text-[10px] text-pink-500 ml-auto">查看详情 →</span>
             </div>
             <!-- 关联精灵 -->
             <div v-if="event.pet_name" class="flex items-center gap-2 mb-2 flex-wrap">
@@ -135,7 +139,7 @@
                 <span v-if="isPeriodActive(p)" class="ml-1 text-green-500">●</span>
               </span>
             </div>
-          </div>
+          </component>
         </div>
       </div>
 
@@ -174,6 +178,10 @@ const SUB_TYPE_LABELS = {
   starlight: '星光对决', destiny: '命定花种', pika: '皮卡摄影委托',
 }
 function subTypeLabel(st) { return SUB_TYPE_LABELS[st] || st || '其他' }
+
+function isFateFlower(event) {
+  return event.sub_type === 'fate_flower' || event.sub_type === 'destiny'
+}
 
 function parsePetIcons(petIcon) {
   if (!petIcon || !petIcon.startsWith('[')) return []

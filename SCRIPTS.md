@@ -124,6 +124,37 @@ cd app/server && npm install
 | `gen_webp.js` | `app/server/gen_webp.js` | 批量将所有图片转换为 WebP 格式 |
 | `gen_library_thumbs.js` | `app/server/gen_library_thumbs.js` | 为素材库已有图片补生成缩略图（200px WebP） |
 
+---
+
+### 图标提取工具
+
+| 脚本 | 路径 | 用途 |
+|------|------|------|
+| `process.js` | `scripts/ability-icon-tool/process.js` | 从截图中提取特性图标（128x128 透明底圆形 PNG） |
+| `process.js` | `scripts/skill-icon-tool/process.js` | 从截图中提取技能图标（128x128 圆角方形透明底 PNG） |
+
+**用法**：
+
+```bash
+# 特性图标：将截图放入 input/ 目录后执行
+cd scripts/ability-icon-tool
+node process.js
+
+# 技能图标：将截图放入 input/ 目录后执行
+cd scripts/skill-icon-tool
+node process.js
+
+# 同时执行两个工具
+cd scripts && node ability-icon-tool/process.js && node skill-icon-tool/process.js
+```
+
+**智能模式**：
+- 近似正方形图片 → 直接模式（缩放 + 蒙版）
+- 竖屏截图 → 提取模式（自动检测图标区域 → 裁切 → 缩放 + 蒙版）
+- 直接模式自动去除背景色（采样四角 + 透明化处理）
+
+> 详细说明见 `scripts/ability-icon-tool/README.md` 和 `scripts/skill-icon-tool/README.md`
+
 **用法**：
 
 ```bash
@@ -337,3 +368,4 @@ npm run dev
 3. **manual_edit 保护**：`sync_db.js` 导入数据时会跳过 `manual_edit=1` 的记录，手动配置不会被覆盖
 4. **进化链自动同步**：`sync_db.js` 末尾自动执行进化链合并，无需额外手动操作
 5. **发布流程**：只需 `git push`，服务器自动拉取代码并部署，禁止手动执行部署命令
+6. **图标工具**：`scripts/ability-icon-tool/` 和 `scripts/skill-icon-tool/` 的 input/output 目录中的图片文件不跟随 git（已配置 .gitignore），但目录本身保留

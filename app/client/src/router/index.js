@@ -15,6 +15,7 @@ const routes = [
   { path: '/natures', name: 'Natures', component: () => import('@/views/user/Natures.vue') },
   { path: '/elements', name: 'Elements', component: () => import('@/views/user/Elements.vue') },
   { path: '/pika', name: 'PikaMonthlies', component: () => import('@/views/user/PikaMonthlies.vue') },
+  { path: '/fate-flower', name: 'FateFlower', component: () => import('@/views/user/FateFlower.vue') },
 
   // 管理端
   { path: '/admin', name: 'Admin', component: () => import('@/views/admin/Admin.vue'), meta: { hidden: true } },
@@ -28,6 +29,7 @@ const routes = [
   { path: '/admin/seasons', name: 'AdminSeasons', component: () => import('@/views/admin/AdminSeasons.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/events', name: 'AdminEvents', component: () => import('@/views/admin/AdminEvents.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/pika', name: 'AdminPikaMonthlies', component: () => import('@/views/admin/AdminPikaMonthlies.vue'), meta: { hidden: true, requiresAdmin: true } },
+  { path: '/admin/fate-flower', name: 'AdminFateFlower', component: () => import('@/views/admin/AdminFateFlower.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/conflicts', name: 'AdminConflicts', component: () => import('@/views/admin/AdminConflicts.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/nav-tabs', name: 'AdminNavTabs', component: () => import('@/views/admin/AdminNavTabs.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/abilities', name: 'AdminAbilities', component: () => import('@/views/admin/AdminAbilities.vue'), meta: { hidden: true, requiresAdmin: true } },

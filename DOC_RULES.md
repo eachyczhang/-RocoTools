@@ -7,7 +7,7 @@
 
 ## 上次整理时间
 
-**2026-05-25 21:12 CST**
+**2026-05-26 00:09 CST**
 
 ---
 
@@ -26,6 +26,8 @@
 | 文件 | 用途 | 整理规则 |
 |------|------|----------|
 | [scripts/README.md](./scripts/README.md) | 脚本命令行手册（详细命令/参数/示例） | 新增脚本时补充命令和示例；与 SCRIPTS.md 保持一致但更详细 |
+| [scripts/ability-icon-tool/README.md](./scripts/ability-icon-tool/README.md) | 特性图标提取工具说明 | 工具逻辑变更时更新 |
+| [scripts/skill-icon-tool/README.md](./scripts/skill-icon-tool/README.md) | 技能图标提取工具说明 | 工具逻辑变更时更新 |
 
 ### app/
 

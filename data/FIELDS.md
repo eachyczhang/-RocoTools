@@ -244,3 +244,28 @@
 - 共 30 种性格 = 6 种属性增加 × 5 种属性减少（排除增减相同）
 - 每种性格有 5 个等概率子性格描述（纯文本，不影响数值）
 - 增加属性和减少属性不会相同
+
+---
+
+## 命定花种技能配置（数据库 fate_flower_skills 表）
+
+| 字段 | 中文名 | 类型 | 说明 |
+|------|--------|------|------|
+| id | 主键 | INTEGER | 自增 |
+| monthly_pet_id | 关联精灵 | INTEGER | 关联 pika_monthly_pets.id |
+| skill_ref_uid | 技能UID | TEXT | 关联 skills 表或 pet_skills 的 skill_ref_uid |
+| skill_name | 技能名称 | TEXT | 冗余存储 |
+| skill_source | 技能来源 | TEXT | `'skills'`(升级) / `'bloodline_skills'`(血脉) / `'learnable_stones'`(技能石) |
+| sort_order | 排序 | INTEGER | 默认 0 |
+
+### 关联字段（pika_monthly_pets 表扩展）
+
+| 字段 | 中文名 | 类型 | 说明 |
+|------|--------|------|------|
+| fate_nature | 命定花种固定性格 | TEXT | 性格名称，如"固执"、"保守" |
+
+### 规则
+
+- 每只命定花种精灵最多配置 3 个技能（愿力冲击为固定技能，无需配置）
+- 技能来源分三类：升级技能、血脉技能、技能石技能
+- 固定性格通过 `pika_monthly_pets.fate_nature` 字段存储

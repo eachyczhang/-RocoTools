@@ -563,6 +563,18 @@ router.use((req, res, next) => {
 | PetCard | `components/shared/PetCard.vue` | 精灵卡片 |
 | StatsRadar | `components/shared/StatsRadar.vue` | 种族值雷达图 |
 
+#### 种族值展示顺序规范
+
+所有展示精灵六维种族值的地方，**必须严格按照以下固定顺序**：
+
+```
+生命 → 物攻 → 魔攻 → 物防 → 魔防 → 速度
+```
+
+- 适用于：列表标签、条形图、筛选按钮、数据定义数组等所有场景
+- 不可遗漏任何一项，不可调换顺序
+- 对应字段：`hp → atk → matk → def → mdef → speed`
+
 #### PetPicker 组件 Props
 
 | Prop | 类型 | 默认值 | 说明 |
@@ -1068,3 +1080,45 @@ node app/server/sync_db.js
 | `migrate-show-shiny.js` | 添加 show_shiny 列到 pets 表 | 已集成到 sync_db 流程 |
 | `sync-final-forms.js --dry-run` | 预览最终形态检测结果 | 调试 |
 | `sync-default-achievements.js --dry-run` | 预览课题同步结果 | 调试 |
+
+---
+
+## 命定花种配置（/admin/fate-flower）
+
+### 页面功能
+
+独立管理端页面，用于配置命定花种精灵的**固定性格**和**携带技能**。
+
+### 入口
+
+- 皮卡月刊管理页面 → 月刊卡片 → 🌸 配置技能 链接
+- 直接访问 `/admin/fate-flower`
+
+### 数据来源
+
+- 精灵列表来自 `season_events` 表中 `sub_type = 'fate_flower'` 的活动关联精灵
+- 技能数据来自精灵详情的 `skills`（升级技能）、`bloodline_skills`（血脉技能）、`learnable_stones`（技能石技能）
+- 性格列表来自 `natures` 表
+
+### 配置规则
+
+| 配置项 | 规则 |
+|--------|------|
+| 固定性格 | 从30种性格中选择一个，存储在 `pika_monthly_pets.fate_nature` |
+| 愿力冲击 | 固定技能，无需配置，用户端自动展示 |
+| 技能槽 1-3 | 从精灵可学技能中选择，需指定来源（升级/血脉/技能石） |
+
+### API 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/fate-flower-skills/:monthlyId` | 获取某期月刊所有精灵的技能+性格配置 |
+| PUT | `/api/admin/fate-flower-skills/:monthlyPetId` | 保存某只精灵的技能配置（最多3个） |
+| PUT | `/api/admin/fate-flower-nature/:monthlyPetId` | 保存某只精灵的固定性格 |
+| GET | `/api/pika-monthlies/fate-flower-skills/:petUid` | 公开接口：获取精灵的命定花种技能+性格 |
+
+### 用户端展示
+
+- 属性行显示绿色「性格：{性格名}」标签
+- 命定技能模块：愿力冲击（固定）+ 配置的技能（按来源分组：升级/血脉/技能石）
+- 如果没有管理端配置，回退到自动筛选血脉属性匹配的技能

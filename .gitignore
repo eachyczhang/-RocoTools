@@ -83,6 +83,14 @@ app/server/root-static/*
 # ============================================================
 temp/
 scripts/.last_image_sync
+scripts/ability-icon-tool/input/*
+!scripts/ability-icon-tool/input/.gitkeep
+scripts/ability-icon-tool/output/*
+!scripts/ability-icon-tool/output/.gitkeep
+scripts/skill-icon-tool/input/*
+!scripts/skill-icon-tool/input/.gitkeep
+scripts/skill-icon-tool/output/*
+!scripts/skill-icon-tool/output/.gitkeep
 
 # ============================================================
 # CodeBuddy

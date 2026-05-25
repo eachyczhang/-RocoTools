@@ -12,6 +12,7 @@
 - [四、独立迁移/维护脚本](#四独立迁移维护脚本)
 - [五、图片处理脚本](#五图片处理脚本)
 - [六、赛季公告生成脚本](#六赛季公告生成脚本)
+- [七、图标提取工具](#七图标提取工具)
 
 ---
 
@@ -462,3 +463,53 @@ python crawler/run.py --update
 bash scripts/sync_from_server.sh --db
 bash scripts/sync_from_server.sh --images
 ```
+
+---
+
+## 七、图标提取工具
+
+从游戏截图中自动提取特性/技能图标，处理为项目标准格式。
+
+### 特性图标工具
+
+**脚本**：`scripts/ability-icon-tool/process.js`
+
+```bash
+cd scripts/ability-icon-tool
+node process.js
+```
+
+- **输入**：`input/` 目录（PNG/JPG/WebP）
+- **输出**：`output/` 目录（128x128 透明底圆形 PNG）
+- **模式**：近似正方形 → 直接缩放 + 圆形蒙版；竖屏截图 → 自动提取图标区域
+
+### 技能图标工具
+
+**脚本**：`scripts/skill-icon-tool/process.js`
+
+```bash
+cd scripts/skill-icon-tool
+node process.js
+```
+
+- **输入**：`input/` 目录（PNG/JPG/WebP）
+- **输出**：`output/` 目录（128x128 圆角方形透明底 PNG，radius=20px）
+- **模式**：同上
+
+### 同时执行
+
+```bash
+cd scripts
+node ability-icon-tool/process.js && node skill-icon-tool/process.js
+```
+
+### 处理逻辑
+
+1. 直接模式：采样四角像素确定背景色 → 从四边向内扫描找到内容边界 → 裁切 → 背景透明化 → 缩放 + 蒙版
+2. 提取模式：分析截图上方 45% 区域亮度分布 → 定位图标边界 → 裁切 → 缩放 + 蒙版
+
+### 依赖
+
+使用项目已有的 `sharp` 库（位于 `app/server/node_modules`），无需额外安装。
+
+> ℹ️ input/output 目录中的图片文件不跟随 git（已配置 .gitignore），目录本身通过 .gitkeep 保留。

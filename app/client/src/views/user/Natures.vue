@@ -85,7 +85,7 @@ import { statColor } from '@/constants/categoryColors'
 
 const natures = ref([])
 const filter = ref('')
-const stats = ['物攻', '物防', '魔攻', '魔防', '速度', '生命']
+const stats = ['生命', '物攻', '魔攻', '物防', '魔防', '速度']
 
 const filteredNatures = computed(() => {
   if (!filter.value) return natures.value

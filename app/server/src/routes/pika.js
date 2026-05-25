@@ -33,4 +33,61 @@ router.get('/', (req, res) => {
   res.json({ monthlies });
 });
 
+// GET /api/pika-monthlies/fate-flower-skills/:petUid — get fate flower skills for a pet (by pet_uid, returns latest monthly's config)
+router.get('/fate-flower-skills/:petUid', (req, res) => {
+  const { petUid } = req.params;
+  const db = getDb();
+
+  // Find the latest monthly_pet entry for this pet_uid
+  const monthlyPet = db.prepare(`
+    SELECT pmp.id, pmp.monthly_id, pmp.pet_uid, pmp.fate_nature
+    FROM pika_monthly_pets pmp
+    JOIN pika_monthlies pm ON pmp.monthly_id = pm.id
+    WHERE pmp.pet_uid = ?
+    ORDER BY pm.start_date DESC
+    LIMIT 1
+  `).get(petUid);
+
+  if (!monthlyPet) {
+    return res.json({ skills: [], fate_nature: '' });
+  }
+
+  const skills = db.prepare(`
+    SELECT ffs.skill_ref_uid, ffs.skill_name, ffs.skill_source, ffs.sort_order,
+           sk.name as full_name, sk.icon_url as skill_icon, sk.cost, sk.power, sk.description, sk.category as type,
+           e.name as element, e.icon as element_icon, e.color as element_color
+    FROM fate_flower_skills ffs
+    LEFT JOIN skills sk ON ffs.skill_ref_uid = sk.uid
+    LEFT JOIN elements e ON sk.element_id = e.id
+    WHERE ffs.monthly_pet_id = ?
+    ORDER BY ffs.sort_order
+  `).all(monthlyPet.id);
+
+  // Also try to get skill info from pet_skills if not found in skills table
+  for (const s of skills) {
+    if (!s.full_name) {
+      const ps = db.prepare(`
+        SELECT name, element, type, cost, power, description, skill_ref_uid
+        FROM pet_skills WHERE pet_uid = ? AND skill_ref_uid = ?
+        LIMIT 1
+      `).get(petUid, s.skill_ref_uid);
+      if (ps) {
+        s.full_name = ps.name;
+        s.element = ps.element;
+        s.type = ps.type;
+        s.cost = ps.cost;
+        s.power = ps.power;
+        s.description = ps.description;
+      }
+    }
+    // Use full_name from skills table if available
+    if (s.full_name) s.skill_name = s.full_name;
+    delete s.full_name;
+    // Add 'name' field for SkillTable component compatibility
+    s.name = s.skill_name;
+  }
+
+  res.json({ skills, fate_nature: monthlyPet.fate_nature || '' });
+});
+
 module.exports = router;
