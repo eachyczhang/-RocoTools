@@ -257,6 +257,7 @@ function inline(text) {
     // Custom inline icons: ![pet:uid], ![skill:uid], ![img:path]
     .replace(/!\[pet:([^\]]+)\]/g, '<img class="inline-icon pet-icon" src="/public/pets/thumbs/$1_default.webp" alt="" loading="lazy" />')
     .replace(/!\[skill:([^\]]+)\]/g, '<img class="inline-icon skill-icon" src="/public/skills/icons/$1.png" alt="" loading="lazy" />')
+    .replace(/!\[ability:([^\]]+)\]/g, '<img class="inline-icon ability-icon" src="$1" alt="" loading="lazy" />')
     .replace(/!\[img:([^\]]+)\]/g, '<img class="inline-img" src="$1" alt="" loading="lazy" />')
     .replace(/!\[shiny:([^\]]+)\]/g, '<span class="shiny-wrap">异色：<img class="inline-img" src="/public/pets/shiny/$1_shiny.webp" alt="" loading="lazy" onerror="this.closest(&#39;.shiny-wrap&#39;).style.display=&#39;none&#39;"/></span>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -614,6 +615,14 @@ onMounted(async () => {
 :deep(.prose-announcement .skill-icon) {
   width: 20px;
   height: 20px;
+}
+/* Ability icon: ![ability:path] — inline, line-height size */
+:deep(.prose-announcement .ability-icon) {
+  width: 2em;
+  height: 2em;
+  vertical-align: -0.5em;
+  object-fit: contain;
+  margin: 0 2px;
 }
 /* Inline full images: ![img:path] */
 :deep(.prose-announcement .inline-img) {

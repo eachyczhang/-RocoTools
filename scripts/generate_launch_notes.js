@@ -79,6 +79,13 @@ const allAbilities = db.prepare(
   "SELECT DISTINCT ability_name FROM pets WHERE ability_name IS NOT NULL AND ability_name != ''"
 ).all().map(r => r.ability_name);
 
+// Ability icon lookup from pet_details
+const abilityIcons = {};
+try {
+  db.prepare('SELECT pet_uid, ability_icon FROM pet_details WHERE ability_icon IS NOT NULL').all()
+    .forEach(r => { abilityIcons[r.pet_uid] = r.ability_icon; });
+} catch {}
+
 // One representative per pet_id (first uid in sorted order = _1 or main form)
 const repPets = [];
 const seenPetIds = new Set();
@@ -158,7 +165,8 @@ if (legendPets.length) {
     w(`### ![pet:${legendPet.uid}] **${legendPet.name}**（${elemName}${subElemName}系）`);
     w();
     if (legendPet.ability_name) {
-      w(`**特性「${legendPet.ability_name}」**：${legendPet.ability_desc || ''}`);
+      const abilityIconStr = abilityIcons[legendPet.uid] ? `![ability:${abilityIcons[legendPet.uid]}] ` : '';
+      w(`**特性${abilityIconStr}「${legendPet.ability_name}」**：${legendPet.ability_desc || ''}`);
       w();
     }
     w(`**基础数值**：HP ${legendPet.hp} / 速度 ${legendPet.speed} / 物攻 ${legendPet.atk} / 魔攻 ${legendPet.matk} / 物防 ${legendPet.def} / 魔防 ${legendPet.mdef}　总计 **${legendPet.total}**`);
@@ -182,7 +190,8 @@ if (passPets.length > 0) {
     w();
     const finalForm = group.reduce((a, b) => (b.total > a.total ? b : a), group[0]);
     if (finalForm.ability_name) {
-      w(`**特性「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
+      const abilityIconStr = abilityIcons[finalForm.uid] ? `![ability:${abilityIcons[finalForm.uid]}] ` : '';
+      w(`**特性${abilityIconStr}「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
       w();
     }
     w(`**基础数值**：HP ${finalForm.hp} / 速度 ${finalForm.speed} / 物攻 ${finalForm.atk} / 魔攻 ${finalForm.matk} / 物防 ${finalForm.def} / 魔防 ${finalForm.mdef}　总计 **${finalForm.total}**`);
@@ -206,7 +215,8 @@ if (seasonPets.length > 0) {
     w();
     const finalForm = group.reduce((a, b) => (b.total > a.total ? b : a), group[0]);
     if (finalForm.ability_name) {
-      w(`**特性「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
+      const abilityIconStr = abilityIcons[finalForm.uid] ? `![ability:${abilityIcons[finalForm.uid]}] ` : '';
+      w(`**特性${abilityIconStr}「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
       w();
     }
     w(`**基础数值**：HP ${finalForm.hp} / 速度 ${finalForm.speed} / 物攻 ${finalForm.atk} / 魔攻 ${finalForm.matk} / 物防 ${finalForm.def} / 魔防 ${finalForm.mdef}　总计 **${finalForm.total}**`);

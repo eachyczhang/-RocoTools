@@ -258,6 +258,7 @@ function inlineFormat(text) {
   return text
     .replace(/!\[pet:([^\]]+)\]/g, '<img class="inline-icon pet-icon" src="/public/pets/thumbs/$1_default.webp" alt="" loading="lazy" />')
     .replace(/!\[skill:([^\]]+)\]/g, '<img class="inline-icon skill-icon" src="/public/skills/icons/$1.png" alt="" loading="lazy" />')
+    .replace(/!\[ability:([^\]]+)\]/g, '<img class="inline-icon ability-icon" src="$1" alt="" loading="lazy" />')
     .replace(/!\[img:([^\]]+)\]/g, '<img class="inline-img" src="$1" alt="" loading="lazy" />')
     .replace(/!\[shiny:([^\]]+)\]/g, '<span class="shiny-wrap">异色：<img class="inline-img" src="/public/pets/shiny/$1_shiny.webp" alt="" loading="lazy" onerror="this.closest(&#39;.shiny-wrap&#39;).style.display=&#39;none&#39;"/></span>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -389,5 +390,6 @@ onMounted(async () => {
 :deep(.prose-light .pet-icon) { background: rgba(214,159,35,0.08); border: 1px solid rgba(214,159,35,0.2); }
 :deep(.prose-dark .pet-icon) { background: rgba(255,202,40,0.08); border: 1px solid rgba(255,202,40,0.2); }
 :deep(.prose-announcement .skill-icon) { width: 20px; height: 20px; }
+:deep(.prose-announcement .ability-icon) { width: 2em; height: 2em; vertical-align: -0.5em; object-fit: contain; margin: 0 2px; }
 :deep(.prose-announcement .inline-img) { display: inline-block; vertical-align: middle; width: 56px; height: 56px; object-fit: contain; border-radius: 6px; margin: 0 3px; }
 </style>

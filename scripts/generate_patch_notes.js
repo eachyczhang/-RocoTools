@@ -102,6 +102,13 @@ db2.prepare('SELECT id, name FROM elements').all().forEach(r => { elementNames[r
 const skillIcons = {};
 db2.prepare('SELECT uid, icon_url FROM skills WHERE icon_url IS NOT NULL').all().forEach(r => { skillIcons[r.uid] = r.icon_url; });
 
+// Ability icon lookup from pet_details
+const abilityIcons = {};
+try {
+  db2.prepare('SELECT pet_uid, ability_icon FROM pet_details WHERE ability_icon IS NOT NULL').all()
+    .forEach(r => { abilityIcons[r.pet_uid] = r.ability_icon; });
+} catch {}
+
 // Pet thumb lookup
 const petThumbs = {};
 db2.prepare('SELECT uid, thumb_url FROM pets WHERE thumb_url IS NOT NULL').all().forEach(r => { petThumbs[r.uid] = r.thumb_url; });
@@ -290,7 +297,8 @@ function renderNewPetGroup(group, tag) {
 
   // 特性
   if (finalForm.ability_name) {
-    w(`**特性「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
+    const abilityIconStr = abilityIcons[finalForm.uid] ? `![ability:${abilityIcons[finalForm.uid]}] ` : '';
+    w(`**特性${abilityIconStr}「${finalForm.ability_name}」**：${finalForm.ability_desc || ''}`);
     w();
   }
 
@@ -358,7 +366,8 @@ if (newShinyOnlyIds.length > 0) {
     w(`### ![pet:${pet.uid}] **${pet.name}**（${elemName}${subElemName}系）`);
     w();
     if (pet.ability_name) {
-      w(`**特性「${pet.ability_name}」**：${pet.ability_desc || ''}`);
+      const abilityIconStr = abilityIcons[pet.uid] ? `![ability:${abilityIcons[pet.uid]}] ` : '';
+      w(`**特性${abilityIconStr}「${pet.ability_name}」**：${pet.ability_desc || ''}`);
       w();
     }
     w(`**基础数值**：HP ${pet.hp} / 速度 ${pet.speed} / 物攻 ${pet.atk} / 魔攻 ${pet.matk} / 物防 ${pet.def} / 魔防 ${pet.mdef}　总计 **${pet.total}**`);
