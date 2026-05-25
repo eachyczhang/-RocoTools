@@ -1575,20 +1575,18 @@ async function pasteSkills() {
     const currentTab = activeSkillTab.value
     const sourceLabel = payload.tab === 'skills' ? '精灵技能' : payload.tab === 'bloodline_skills' ? '血脉技能' : '技能石技能'
     const targetLabel = currentTab === 'skills' ? '精灵技能' : currentTab === 'bloodline_skills' ? '血脉技能' : '技能石技能'
-    // Import skills into current tab
-    for (const s of payload.skills) {
-      skillForms[currentTab].push({
-        level: s.level || '',
-        name: s.name || '',
-        element: s.element || '',
-        type: s.type || '',
-        cost: s.cost || 0,
-        power: s.power || 0,
-        description: s.description || '',
-        skill_ref_uid: s.skill_ref_uid || '',
-        skill_icon: s.skill_icon || '',
-      })
-    }
+    // Replace current tab skills (not append, to avoid duplicates)
+    skillForms[currentTab] = payload.skills.map(s => ({
+      level: s.level || '',
+      name: s.name || '',
+      element: s.element || '',
+      type: s.type || '',
+      cost: s.cost || 0,
+      power: s.power || 0,
+      description: s.description || '',
+      skill_ref_uid: s.skill_ref_uid || '',
+      skill_icon: s.skill_icon || '',
+    }))
     const hint = payload.tab !== currentTab ? `（来源：${sourceLabel} → 目标：${targetLabel}）` : ''
     skillsMsg.value = `已粘贴 ${payload.skills.length} 个技能${hint}`
     skillsOk.value = true
