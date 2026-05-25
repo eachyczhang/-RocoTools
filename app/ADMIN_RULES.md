@@ -925,7 +925,7 @@ FROM pet_skills ps LEFT JOIN skills sk ON ps.skill_ref_uid = sk.uid
 |------|----------|------|
 | `![pet:uid]` | 精灵头像图标（24px圆形） | — |
 | `![skill:uid]` | 技能图标（20px） | — |
-| `![ability:path]` | 特性图标（1em，与行高齐平） | 路径需完整 |
+| `![ability:path]` | 特性图标（2em，与行高齐平） | 路径需完整 |
 | `![img:path]` | 内联图片（56px固定尺寸） | 路径需完整 |
 | `![shiny:uid]` | 异色立绘（56px） | 图片加载失败时自动隐藏整个"异色：图片"区域 |
 
