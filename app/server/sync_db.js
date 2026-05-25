@@ -3,12 +3,13 @@
  * 数据同步脚本 - 生成缩略图 + 导入 JSON 到 SQLite
  *
  * 用法：
- *   cd app/server && node sync_db.js
+ *   node sync_db.js           # 默认：只建表/补列，不导入数据（安全，不覆盖手动改动）
+ *   node sync_db.js --full    # 完整流程：建表 + 导入数据 + 所有后处理步骤
  *
  * 流程：
  *   1. 生成缩略图（WebP）+ 更新 pet_list.json
- *   2. 初始化数据库（建表）
- *   3. 导入数据（JSON → SQLite）
+ *   2. 初始化数据库（建表/补列）
+ *   3. 导入数据（JSON → SQLite）  ← 仅 --full 时执行
  *
  * 前置条件：
  *   npm install
@@ -29,8 +30,13 @@ const DEFAULT_ACHIEVEMENTS_SCRIPT = path.join(SERVER_DIR, 'scripts', 'sync-defau
 const MIGRATE_HEIGHT_WEIGHT_SCRIPT = path.join(SERVER_DIR, 'scripts', 'migrate-height-weight.js');
 const MIGRATE_SHOW_SHINY_SCRIPT = path.join(SERVER_DIR, 'scripts', 'migrate-show-shiny.js');
 
+// CLI flags
+// 默认跳过导入，只有显式传 --full 才执行完整流程
+const WITH_IMPORT = process.argv.includes('--full');
+
 console.log('============================================================');
 console.log('[SYNC] 数据同步（缩略图 + SQLite）');
+console.log(`[SYNC] 模式: ${WITH_IMPORT ? '--full（完整导入）' : '默认（只建表/补列，不导入数据）'}`);
 console.log('============================================================');
 console.log();
 
@@ -55,16 +61,20 @@ if (hasSharp) {
 
 steps.push(
   { label: '初始化数据库（建表）', script: INIT_SCRIPT },
-  { label: '导入数据', script: IMPORT_SCRIPT },
-  { label: '迁移 show_shiny 列', script: MIGRATE_SHOW_SHINY_SCRIPT },
-  { label: '规范化身高体重数据', script: MIGRATE_HEIGHT_WEIGHT_SCRIPT },
-  { label: '清洗技能等级字段', script: NORMALIZE_LEVELS_SCRIPT },
-  { label: '同步进化链（多路线合并）', script: EVOLUTION_SCRIPT },
-  { label: '同步最终形态标记', script: FINAL_FORMS_SCRIPT },
-  { label: '同步默认图鉴课题', script: DEFAULT_ACHIEVEMENTS_SCRIPT },
+  { label: '导入数据', script: IMPORT_SCRIPT, skipOnNoImport: true },
+  { label: '迁移 show_shiny 列', script: MIGRATE_SHOW_SHINY_SCRIPT, skipOnNoImport: true },
+  { label: '规范化身高体重数据', script: MIGRATE_HEIGHT_WEIGHT_SCRIPT, skipOnNoImport: true },
+  { label: '清洗技能等级字段', script: NORMALIZE_LEVELS_SCRIPT, skipOnNoImport: true },
+  { label: '同步进化链（多路线合并）', script: EVOLUTION_SCRIPT, skipOnNoImport: true },
+  { label: '同步最终形态标记', script: FINAL_FORMS_SCRIPT, skipOnNoImport: true },
+  { label: '同步默认图鉴课题', script: DEFAULT_ACHIEVEMENTS_SCRIPT, skipOnNoImport: true },
 );
 
-for (const { label, script } of steps) {
+for (const { label, script, skipOnNoImport } of steps) {
+  if (!WITH_IMPORT && skipOnNoImport) {
+    console.log(`[SKIP] ${label}`);
+    continue;
+  }
   console.log(`[SYNC] ${label}...`);
   try {
     execSync(`node "${script}"`, { cwd: SERVER_DIR, stdio: 'inherit' });
