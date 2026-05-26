@@ -452,7 +452,6 @@ function getCounterPicks(petUid, natureOverride) {
   const counterStatusPets = new Map(); // pet_uid -> best counter-status skill info
   const counterDefensePets = new Set(); // pet_uid set
   const counterAttackPets = new Set(); // pet_uid set (has defense skills that counter attacks)
-  const superEffectiveSkills = new Map(); // pet_uid -> { maxPower, hasCounter }
 
   // Batch query: counter-status attack skills (type=物攻/魔攻 with "应对状态")
   if (hasStatusSkills) {
@@ -491,28 +490,23 @@ function getCounterPicks(petUid, natureOverride) {
   }
 
   // Batch query: super-effective attack skills with counter-ability detection
-  // For each final-form pet, find their best SE attack skill and whether it has counter effects
+  // For each final-form pet, find their best SE attack skill considering stat-type synergy
+  // We store ALL SE skills per pet, then pick the best one during scoring (needs pet's atk/matk)
+  const superEffectiveSkillsByPet = new Map(); // pet_uid -> [{ power, type, hasCounter }]
   if (targetWeakTo.size > 0) {
     const placeholders = Array.from(targetWeakTo).map(() => '?').join(',');
     const seRows = db.prepare(`
-      SELECT pet_uid, power, description FROM pet_skills
+      SELECT pet_uid, power, type, description FROM pet_skills
       WHERE element IN (${placeholders}) AND power > 0 AND (type = '物攻' OR type = '魔攻')
         AND pet_uid IN (SELECT uid FROM pets WHERE is_final_form = 1)
       ORDER BY power DESC
     `).all(...Array.from(targetWeakTo));
     for (const row of seRows) {
-      const existing = superEffectiveSkills.get(row.pet_uid);
       const hasCounter = row.description && (row.description.includes('应对状态') || row.description.includes('应对防御'));
-      if (!existing) {
-        superEffectiveSkills.set(row.pet_uid, { maxPower: row.power, hasCounter });
-      } else {
-        // Prefer skill with counter effect, then higher power
-        if (hasCounter && !existing.hasCounter) {
-          superEffectiveSkills.set(row.pet_uid, { maxPower: row.power, hasCounter: true });
-        } else if (hasCounter === existing.hasCounter && row.power > existing.maxPower) {
-          superEffectiveSkills.set(row.pet_uid, { maxPower: row.power, hasCounter });
-        }
+      if (!superEffectiveSkillsByPet.has(row.pet_uid)) {
+        superEffectiveSkillsByPet.set(row.pet_uid, []);
       }
+      superEffectiveSkillsByPet.get(row.pet_uid).push({ power: row.power, type: row.type, hasCounter });
     }
   }
 
@@ -535,13 +529,38 @@ function getCounterPicks(petUid, natureOverride) {
     if (p.sub_element_id) defElemIds.push(p.sub_element_id);
 
     // Dimension 1 (Core): Super-effective attack + counter synergy
+    // Consider stat-type synergy: effective_power = power × stat_ratio
+    // stat_ratio = relevant_stat / max(atk, matk), so a physical skill on a high-atk pet scores better
     let seAttackScore = 0;
-    const seInfo = superEffectiveSkills.get(p.uid);
-    if (seInfo) {
-      const { maxPower, hasCounter } = seInfo;
-      if (maxPower >= 120) seAttackScore = hasCounter ? 3 : 2;
-      else if (maxPower >= 80) seAttackScore = hasCounter ? 2.5 : 1.5;
-      else if (maxPower >= 40) seAttackScore = hasCounter ? 2 : 1;
+    const seSkills = superEffectiveSkillsByPet.get(p.uid);
+    if (seSkills && seSkills.length > 0) {
+      const petAtk = p.atk;
+      const petMatk = p.matk;
+      const maxStat = Math.max(petAtk, petMatk, 1);
+
+      // Calculate effective power for each SE skill and pick the best
+      let bestEffPower = 0;
+      let bestHasCounter = false;
+      for (const sk of seSkills) {
+        const statRatio = sk.type === '物攻' ? (petAtk / maxStat) : (petMatk / maxStat);
+        const effPower = sk.power * statRatio;
+        // Prefer: higher effective power, or same effective power but has counter
+        if (effPower > bestEffPower || (effPower === bestEffPower && sk.hasCounter && !bestHasCounter)) {
+          bestEffPower = effPower;
+          bestHasCounter = sk.hasCounter;
+        }
+        // Also consider: lower effective power but has counter (if close enough, within 80%)
+        if (sk.hasCounter && !bestHasCounter && effPower >= bestEffPower * 0.8) {
+          bestEffPower = effPower;
+          bestHasCounter = true;
+        }
+      }
+
+      // Score based on effective power thresholds
+      if (bestEffPower >= 120) seAttackScore = bestHasCounter ? 3 : 2;
+      else if (bestEffPower >= 80) seAttackScore = bestHasCounter ? 2.5 : 1.5;
+      else if (bestEffPower >= 40) seAttackScore = bestHasCounter ? 2 : 1;
+      else if (bestEffPower > 0) seAttackScore = bestHasCounter ? 1 : 0.5;
     }
 
     // Dimension 2: Counter-status bonus

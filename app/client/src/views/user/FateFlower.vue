@@ -428,6 +428,11 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                 核心维度：克制属性攻击 + 应对联动
               </h4>
+              <p class="text-xs text-muted mb-2 pl-3">
+                ※ 使用<strong>有效威力</strong>而非原始威力：有效威力 = 技能power × 种族值适配系数。
+                物攻技能适配系数 = 精灵物攻 / max(物攻,魔攻)；魔攻技能同理。
+                <br/>例：精灵物攻130/魔攻60，物攻技能P100有效威力=100，魔攻技能P150有效威力=150×(60/130)≈69。
+              </p>
               <div class="overflow-x-auto">
                 <table class="w-full text-xs border-collapse">
                   <thead>
@@ -438,33 +443,33 @@
                   </thead>
                   <tbody class="text-muted">
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥120 + 带应对效果</td>
+                      <td class="py-1.5 px-2">有效威力≥120 + 带应对效果</td>
                       <td class="py-1.5 px-2 text-center font-medium text-red-500">+3</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥120，无应对</td>
+                      <td class="py-1.5 px-2">有效威力≥120，无应对</td>
                       <td class="py-1.5 px-2 text-center">+2</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥80 + 带应对效果</td>
+                      <td class="py-1.5 px-2">有效威力≥80 + 带应对效果</td>
                       <td class="py-1.5 px-2 text-center">+2.5</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥80，无应对</td>
+                      <td class="py-1.5 px-2">有效威力≥80，无应对</td>
                       <td class="py-1.5 px-2 text-center">+1.5</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥40 + 带应对效果</td>
+                      <td class="py-1.5 px-2">有效威力≥40 + 带应对效果</td>
                       <td class="py-1.5 px-2 text-center">+2</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2">克制属性 power≥40，无应对</td>
+                      <td class="py-1.5 px-2">有效威力≥40，无应对</td>
                       <td class="py-1.5 px-2 text-center">+1</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p class="text-[10px] text-muted mt-1.5 pl-3">※ 应对效果指该攻击技能描述中含「应对状态」或「应对防御」</p>
+              <p class="text-[10px] text-muted mt-1.5 pl-3">※ 应对效果指该攻击技能描述中含「应对状态」或「应对防御」；若有效威力接近（≥80%）且带应对效果，优先选择带应对的技能</p>
             </div>
 
             <!-- Tags legend -->
