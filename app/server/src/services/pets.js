@@ -537,6 +537,27 @@ function getCounterPicks(petUid, natureOverride) {
     return resisted;
   }
 
+  // Determine which attack elements the candidate pet is WEAK to (takes super-effective damage)
+  function getWeakElements(defElemIds) {
+    const weak = [];
+    for (const atkElemName of attackElementList) {
+      const atkElem = elemByName[atkElemName];
+      if (!atkElem) continue;
+      let mult = 1;
+      for (const defId of defElemIds) {
+        const defElem = elemById[defId];
+        if (!defElem) continue;
+        if (atkElem.strong_against?.some(e => e.id === defId || e.name === defElem.name)) {
+          mult *= 2;
+        } else if (defElem.resistant_to?.some(e => e.id === atkElem.id || e.name === atkElem.name)) {
+          mult *= 0.5;
+        }
+      }
+      if (mult > 1) weak.push(atkElemName); // Takes super-effective damage
+    }
+    return weak;
+  }
+
   // Analyze boss's own weaknesses to determine attacker preference
   // If boss has low physical def, prefer physical attackers; if low magic def, prefer magic attackers
   const bossDefStat = pet.def;
@@ -552,6 +573,7 @@ function getCounterPicks(petUid, natureOverride) {
   const W_COUNTER_ATTACK = 1.5;  // Counter-attack defense skills (survivability)
   const W_DEF_STAT = 1;        // Defense stat
   const W_BOSS_WEAK = 0.5;     // Bonus for matching boss's weaker defense
+  const W_WEAK_PENALTY = 2;    // Penalty for being weak to boss's other attack elements
 
   // Find max defense stat for normalization
   let maxDef = 1;
@@ -569,6 +591,12 @@ function getCounterPicks(petUid, natureOverride) {
 
     // Skip pets that don't resist any attack element
     if (resistedElements.length === 0) return null;
+
+    // Determine which attack elements this pet is WEAK to (penalty)
+    const weakElements = getWeakElements(defElemIds);
+    // Penalty: resists some but weak to others = less reliable
+    // Each weak element costs points (scaled by how many attack elements exist)
+    const weakPenalty = weakElements.length;
 
     // Dimension 1 (Core): Super-effective attack + counter synergy
     let seAttackScore = 0;
@@ -635,17 +663,20 @@ function getCounterPicks(petUid, natureOverride) {
       + counterDefenseBonus * W_COUNTER_DEFENSE
       + counterAttackBonus * W_COUNTER_ATTACK
       + defNormalized * W_DEF_STAT
-      + bossWeakBonus * W_BOSS_WEAK;
+      + bossWeakBonus * W_BOSS_WEAK
+      - weakPenalty * W_WEAK_PENALTY;
 
     return {
       ...p,
       resisted_elements: resistedElements,
+      weak_elements: weakElements,
       resist_count: resistedElements.length,
       se_attack_score: seAttackScore,
       counter_status_bonus: counterStatusBonus,
       counter_defense_bonus: counterDefenseBonus,
       counter_attack_bonus: counterAttackBonus,
       boss_weak_bonus: bossWeakBonus,
+      weak_penalty: weakPenalty,
       def_value: defValue,
       total_score: totalScore,
     };
@@ -694,6 +725,7 @@ function getCounterPicks(petUid, natureOverride) {
       counter_defense_bonus: p.counter_defense_bonus,
       counter_attack_bonus: p.counter_attack_bonus,
       boss_weak_bonus: p.boss_weak_bonus,
+      weak_penalty: p.weak_penalty,
       def_value: p.def_value,
       total_score: Math.round(p.total_score * 100) / 100,
     }));

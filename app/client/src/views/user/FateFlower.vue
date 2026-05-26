@@ -302,6 +302,9 @@
                     <span v-if="cp.boss_weak_bonus" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
                       💢
                     </span>
+                    <span v-if="cp.weak_penalty" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400" :title="'被花种其他攻击属性克制，-' + (cp.weak_penalty * 2) + '分'">
+                      ⚠️{{ cp.weak_penalty > 1 ? '×' + cp.weak_penalty : '' }}
+                    </span>
                   </div>
                   <!-- Defense stat & score -->
                   <div class="text-[10px] sm:text-xs text-muted mt-1 text-center">
