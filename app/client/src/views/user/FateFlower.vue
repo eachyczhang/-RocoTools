@@ -422,8 +422,8 @@
                       <span v-if="skill.description && skill.description.includes('应对防御')" class="text-[10px] px-1 py-0.5 rounded bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 font-medium">
                         🛡️ 应对防御
                       </span>
-                      <span v-if="skill.description && (skill.description.includes('吸血') || skill.description.includes('吸取') || skill.description.includes('汲取'))" class="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 font-medium">
-                        💚 吸血
+                      <span v-if="['蝙蝠', '暗突袭', '撕裂', '等价交换', '抽枝', '气沉丹田'].includes(skill.name)" class="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 font-medium">
+                        💚 续航
                       </span>
                       <span v-if="skill.type === '状态' && !skill.description?.includes('应对攻击') && !skill.description?.includes('应对状态') && !skill.description?.includes('应对防御')" class="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400 font-medium">
                         📋 状态

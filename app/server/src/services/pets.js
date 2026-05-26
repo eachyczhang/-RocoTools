@@ -529,12 +529,12 @@ function getCounterPicks(petUid, natureOverride) {
     counterAttackPets.add(row.pet_uid);
   }
 
-  // Batch query: lifesteal/drain skills (high sustain - "吸血"/"吸取"/"汲取" in description)
-  // Only count status skills OR super-effective attack skills (not random attacks)
+  // Batch query: lifesteal/sustain skills (high sustain)
+  // Only these specific skills count: 蝙蝠, 暗突袭, 撕裂, 等价交换, 抽枝, 气沉丹田
   const lifestealPets = new Set(); // pet_uid
   const lifestealRows = db.prepare(`
     SELECT DISTINCT pet_uid FROM pet_skills
-    WHERE (description LIKE '%吸血%' OR description LIKE '%吸取%' OR description LIKE '%汲取%')
+    WHERE name IN ('蝙蝠', '暗突袭', '撕裂', '等价交换', '抽枝', '气沉丹田')
       AND pet_uid IN (SELECT uid FROM pets WHERE is_final_form = 1)
   `).all();
   for (const row of lifestealRows) {
