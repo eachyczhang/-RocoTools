@@ -606,6 +606,29 @@ function getCounterPicks(petUid, natureOverride) {
   // This gives a bonus to candidates whose attack type matches the boss's weaker defense
   const bossWeakerDef = bossDefStat <= bossMdefStat ? 'physical' : 'magical';
 
+  // --- Determine which status effects the boss is immune to ---
+  // If the boss's element(s) resist poison(10) or ice(7), it's immune to those status effects.
+  // Candidates whose sub-element relies on those statuses should be excluded.
+  const bossElemIds = [pet.element_id];
+  if (pet.sub_element_id) bossElemIds.push(pet.sub_element_id);
+
+  const POISON_ID = 10;
+  const ICE_ID = 7;
+  const statusImmunities = new Set(); // element IDs that the boss is immune to (status-wise)
+
+  for (const bossElemId of bossElemIds) {
+    const bossElem = elemById[bossElemId];
+    if (!bossElem) continue;
+    // If boss's element resists poison → immune to poison status
+    if (bossElem.resistant_to?.some(e => e.id === POISON_ID)) {
+      statusImmunities.add(POISON_ID);
+    }
+    // If boss's element resists ice → immune to freeze status
+    if (bossElem.resistant_to?.some(e => e.id === ICE_ID)) {
+      statusImmunities.add(ICE_ID);
+    }
+  }
+
   // Weight constants
   const W_SE_ATTACK = 4;       // Core: super-effective attack + counter synergy
   const W_COUNTER_STATUS = 2;  // Counter-status attack skills
@@ -613,7 +636,6 @@ function getCounterPicks(petUid, natureOverride) {
   const W_COUNTER_ATTACK = 1.5;  // Counter-attack defense skills (survivability)
   const W_DEF_STAT = 1;        // Defense stat
   const W_BOSS_WEAK = 0.5;     // Bonus for matching boss's weaker defense
-  const W_WEAK_PENALTY = 3;    // Penalty for being weak to boss's other attack elements
 
   // Find max defense stat for normalization
   let maxDef = 1;
@@ -632,11 +654,13 @@ function getCounterPicks(petUid, natureOverride) {
     // Skip pets that don't resist any attack element
     if (resistedElements.length === 0) return null;
 
-    // Determine which attack elements this pet is WEAK to (penalty)
+    // Determine which attack elements this pet is WEAK to → EXCLUDE entirely
     const weakElements = getWeakElements(defElemIds);
-    // Penalty: resists some but weak to others = less reliable
-    // Each weak element costs points (scaled by how many attack elements exist)
-    const weakPenalty = weakElements.length;
+    if (weakElements.length > 0) return null; // Being weak to ANY boss attack = not recommended
+
+    // Exclude pets whose sub-element relies on status effects the boss is immune to
+    // e.g. sub-element is Poison but boss is immune to poison; sub-element is Ice but boss is immune to freeze
+    if (p.sub_element_id && statusImmunities.has(p.sub_element_id)) return null;
 
     // Dimension 1 (Core): Super-effective attack + counter synergy
     // Pick the best TWO SE skills (practical: 1 defense + 1 status + 2 attack slots)
@@ -721,20 +745,17 @@ function getCounterPicks(petUid, natureOverride) {
       + counterDefenseBonus * W_COUNTER_DEFENSE
       + counterAttackBonus * W_COUNTER_ATTACK
       + defNormalized * W_DEF_STAT
-      + bossWeakBonus * W_BOSS_WEAK
-      - weakPenalty * W_WEAK_PENALTY;
+      + bossWeakBonus * W_BOSS_WEAK;
 
     return {
       ...p,
       resisted_elements: resistedElements,
-      weak_elements: weakElements,
       resist_count: resistedElements.length,
       se_attack_score: seAttackScore,
       counter_status_bonus: counterStatusBonus,
       counter_defense_bonus: counterDefenseBonus,
       counter_attack_bonus: counterAttackBonus,
       boss_weak_bonus: bossWeakBonus,
-      weak_penalty: weakPenalty,
       def_value: defValue,
       total_score: totalScore,
     };
@@ -783,7 +804,6 @@ function getCounterPicks(petUid, natureOverride) {
       counter_defense_bonus: p.counter_defense_bonus,
       counter_attack_bonus: p.counter_attack_bonus,
       boss_weak_bonus: p.boss_weak_bonus,
-      weak_penalty: p.weak_penalty,
       def_value: p.def_value,
       total_score: Math.round(p.total_score * 100) / 100,
     }));
