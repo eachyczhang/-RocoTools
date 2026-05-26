@@ -672,10 +672,31 @@ function getCounterPicks(petUid, natureOverride) {
     { keywords: ['冰冻', '冻结'], elementId: 7 }, // Ice → freeze
   ];
 
-  // Gather all text to search: boss skill descriptions + ability description
-  const bossSkillDescs = db.prepare(
-    `SELECT description FROM pet_skills WHERE pet_uid = ? AND description IS NOT NULL`
-  ).all(petUid).map(r => r.description);
+  // Gather all text to search: boss's ACTUAL battle skills + ability description
+  // If fate flower skills are configured, only use those (they represent what the boss actually uses)
+  // Otherwise fallback to all skills
+  let bossSkillDescs;
+  if (fateSkills.length > 0) {
+    // Only query descriptions for the configured fate flower skills
+    const fateSkillUids = fateSkills.map(fs => fs.skill_ref_uid).filter(Boolean);
+    if (fateSkillUids.length > 0) {
+      const ph = fateSkillUids.map(() => '?').join(',');
+      bossSkillDescs = db.prepare(
+        `SELECT COALESCE(sk.description, ps.description) as description
+         FROM pet_skills ps LEFT JOIN skills sk ON ps.skill_ref_uid = sk.uid
+         WHERE ps.pet_uid = ? AND ps.skill_ref_uid IN (${ph}) AND ps.description IS NOT NULL`
+      ).all(petUid, ...fateSkillUids).map(r => r.description);
+    } else {
+      bossSkillDescs = [];
+    }
+  } else {
+    // Fallback: use all skills
+    bossSkillDescs = db.prepare(
+      `SELECT COALESCE(sk.description, ps.description) as description
+       FROM pet_skills ps LEFT JOIN skills sk ON ps.skill_ref_uid = sk.uid
+       WHERE ps.pet_uid = ? AND ps.description IS NOT NULL`
+    ).all(petUid).map(r => r.description);
+  }
   const bossAbilityDesc = pet.ability_desc || '';
   const allBossText = [...bossSkillDescs, bossAbilityDesc].join('\n');
 
