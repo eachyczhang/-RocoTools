@@ -234,6 +234,7 @@
             <div class="flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-blue-200/50 dark:border-blue-500/20 flex-wrap">
               <span class="text-[10px] text-muted mr-0.5">图例：</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️💥</span> 高威力克制+应对</span>
+              <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400 text-[9px] font-bold">🌟</span> 贪婪</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️</span> 克制技能</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡</span> 应对状态</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[9px]">🛡️</span> 应对防御</span>
@@ -288,6 +289,9 @@
                   </div>
                   <!-- Bonus tags -->
                   <div class="flex items-center gap-0.5 mt-1.5 flex-wrap justify-center">
+                    <span v-if="cp.greedy_bonus" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400 font-bold" title="可学习贪婪(100%吸血)，最高优先级">
+                      🌟贪
+                    </span>
                     <span v-if="cp.se_attack_score" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                       {{ cp.se_attack_score >= 2.5 ? '⚔️💥' : cp.se_attack_score >= 1.5 ? '⚔️' : '🗡️' }}
                     </span>
