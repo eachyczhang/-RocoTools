@@ -510,27 +510,67 @@ function getCounterPicks(petUid, natureOverride) {
     }
   }
 
-  // --- Step 5: Score and rank ---
-  // Weight constants (core: SE attack with counter > counter-status > counter-defense = counter-attack > resist+def)
+  // --- Step 5: Score and rank by resistance groups ---
+  // Core idea: group candidates by how many of the boss's attack elements they resist
+  // Group 1: Resists ALL attack elements (best)
+  // Group 2..N: Resists some subset (sorted by count desc, then by specific combos)
+  // Pets that resist NONE of the attack elements are excluded entirely
+
+  // Determine which attack elements each candidate pet resists
+  function getResistElements(defElemIds) {
+    const resisted = [];
+    for (const atkElemName of attackElementList) {
+      const atkElem = elemByName[atkElemName];
+      if (!atkElem) continue;
+      let mult = 1;
+      for (const defId of defElemIds) {
+        const defElem = elemById[defId];
+        if (!defElem) continue;
+        if (atkElem.strong_against?.some(e => e.id === defId || e.name === defElem.name)) {
+          mult *= 2; // Weak to this attack
+        } else if (defElem.resistant_to?.some(e => e.id === atkElem.id || e.name === atkElem.name)) {
+          mult *= 0.5; // Resists this attack
+        }
+      }
+      if (mult < 1) resisted.push(atkElemName); // Any reduction counts as resistance
+    }
+    return resisted;
+  }
+
+  // Analyze boss's own weaknesses to determine attacker preference
+  // If boss has low physical def, prefer physical attackers; if low magic def, prefer magic attackers
+  const bossDefStat = pet.def;
+  const bossMdefStat = pet.mdef;
+  // Attacker preference: which type of attacker is more effective against the boss
+  // This gives a bonus to candidates whose attack type matches the boss's weaker defense
+  const bossWeakerDef = bossDefStat <= bossMdefStat ? 'physical' : 'magical';
+
+  // Weight constants
   const W_SE_ATTACK = 4;       // Core: super-effective attack + counter synergy
   const W_COUNTER_STATUS = 2;  // Counter-status attack skills
   const W_COUNTER_DEFENSE = 1.5; // Counter-defense skills
   const W_COUNTER_ATTACK = 1.5;  // Counter-attack defense skills (survivability)
-  const W_RESIST_DEF = 1;      // Resistance + defense stat
+  const W_DEF_STAT = 1;        // Defense stat
+  const W_BOSS_WEAK = 0.5;     // Bonus for matching boss's weaker defense
 
-  // Find max defense stat and max resist for normalization
+  // Find max defense stat for normalization
   let maxDef = 1;
   for (const p of finalPets) {
     if (p[defenseStat] > maxDef) maxDef = p[defenseStat];
   }
 
+  // Score each pet
   const scored = finalPets.map(p => {
     const defElemIds = [p.element_id];
     if (p.sub_element_id) defElemIds.push(p.sub_element_id);
 
+    // Determine which attack elements this pet resists
+    const resistedElements = getResistElements(defElemIds);
+
+    // Skip pets that don't resist any attack element
+    if (resistedElements.length === 0) return null;
+
     // Dimension 1 (Core): Super-effective attack + counter synergy
-    // Consider stat-type synergy: effective_power = power × stat_ratio
-    // stat_ratio = relevant_stat / max(atk, matk), so a physical skill on a high-atk pet scores better
     let seAttackScore = 0;
     const seSkills = superEffectiveSkillsByPet.get(p.uid);
     if (seSkills && seSkills.length > 0) {
@@ -538,25 +578,21 @@ function getCounterPicks(petUid, natureOverride) {
       const petMatk = p.matk;
       const maxStat = Math.max(petAtk, petMatk, 1);
 
-      // Calculate effective power for each SE skill and pick the best
       let bestEffPower = 0;
       let bestHasCounter = false;
       for (const sk of seSkills) {
         const statRatio = sk.type === '物攻' ? (petAtk / maxStat) : (petMatk / maxStat);
         const effPower = sk.power * statRatio;
-        // Prefer: higher effective power, or same effective power but has counter
         if (effPower > bestEffPower || (effPower === bestEffPower && sk.hasCounter && !bestHasCounter)) {
           bestEffPower = effPower;
           bestHasCounter = sk.hasCounter;
         }
-        // Also consider: lower effective power but has counter (if close enough, within 80%)
         if (sk.hasCounter && !bestHasCounter && effPower >= bestEffPower * 0.8) {
           bestEffPower = effPower;
           bestHasCounter = true;
         }
       }
 
-      // Score based on effective power thresholds
       if (bestEffPower >= 120) seAttackScore = bestHasCounter ? 3 : 2;
       else if (bestEffPower >= 80) seAttackScore = bestHasCounter ? 2.5 : 1.5;
       else if (bestEffPower >= 40) seAttackScore = bestHasCounter ? 2 : 1;
@@ -566,7 +602,7 @@ function getCounterPicks(petUid, natureOverride) {
     // Dimension 2: Counter-status bonus
     let counterStatusBonus = 0;
     if (hasStatusSkills && counterStatusPets.has(p.uid)) {
-      counterStatusBonus = counterStatusPets.get(p.uid).score; // 1 or 2 (SE bonus)
+      counterStatusBonus = counterStatusPets.get(p.uid).score;
     }
 
     // Dimension 3: Counter-defense bonus
@@ -581,59 +617,93 @@ function getCounterPicks(petUid, natureOverride) {
       counterAttackBonus = 1;
     }
 
-    // Dimension 5: Resistance + Defense stat (both normalized 0~1, combined)
-    const resistScore = calcResistanceScore(defElemIds);
+    // Dimension 5: Defense stat (normalized 0~1)
     const defValue = p[defenseStat];
     const defNormalized = defValue / maxDef;
-    // Normalize resist: typical range is -2 to +2, map to 0~1
-    const resistNormalized = Math.max(0, Math.min(1, (resistScore + 2) / 4));
-    const resistDefCombined = (resistNormalized + defNormalized) / 2;
 
-    // Total score
+    // Dimension 6: Boss weakness exploitation bonus
+    // If boss has lower physical def, physical attackers get bonus; vice versa
+    let bossWeakBonus = 0;
+    const petMainAttackType = p.atk >= p.matk ? 'physical' : 'magical';
+    if (petMainAttackType === bossWeakerDef) {
+      bossWeakBonus = 1;
+    }
+
+    // Total score (within group)
     const totalScore = seAttackScore * W_SE_ATTACK
       + counterStatusBonus * W_COUNTER_STATUS
       + counterDefenseBonus * W_COUNTER_DEFENSE
       + counterAttackBonus * W_COUNTER_ATTACK
-      + resistDefCombined * W_RESIST_DEF;
+      + defNormalized * W_DEF_STAT
+      + bossWeakBonus * W_BOSS_WEAK;
 
     return {
       ...p,
+      resisted_elements: resistedElements,
+      resist_count: resistedElements.length,
       se_attack_score: seAttackScore,
       counter_status_bonus: counterStatusBonus,
       counter_defense_bonus: counterDefenseBonus,
       counter_attack_bonus: counterAttackBonus,
-      resist_score: resistScore,
+      boss_weak_bonus: bossWeakBonus,
       def_value: defValue,
       total_score: totalScore,
     };
+  }).filter(Boolean); // Remove nulls (pets that resist nothing)
+
+  // Group by resistance pattern
+  // Sort key for groups: resist_count desc, then alphabetical element combo
+  const groupMap = new Map(); // "水,毒" -> [pets]
+  for (const p of scored) {
+    const key = p.resisted_elements.sort().join(',');
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key).push(p);
+  }
+
+  // Sort groups: more elements resisted first, then alphabetical
+  const sortedGroups = Array.from(groupMap.entries())
+    .sort((a, b) => {
+      const countA = a[0].split(',').length;
+      const countB = b[0].split(',').length;
+      if (countB !== countA) return countB - countA;
+      return a[0].localeCompare(b[0]);
+    });
+
+  // Within each group, sort by total_score desc
+  const groups = sortedGroups.map(([key, pets]) => {
+    pets.sort((a, b) => b.total_score - a.total_score);
+    const topPets = pets.slice(0, 10).map(p => ({
+      uid: p.uid,
+      name: p.name,
+      image_url: p.image_url,
+      element_name: p.element_name,
+      element_icon: p.element_icon,
+      element_color: p.element_color,
+      sub_element_name: p.sub_element_name,
+      sub_element_icon: p.sub_element_icon,
+      sub_element_color: p.sub_element_color,
+      hp: p.hp,
+      atk: p.atk,
+      matk: p.matk,
+      def: p.def,
+      mdef: p.mdef,
+      speed: p.speed,
+      total: p.total,
+      se_attack_score: p.se_attack_score,
+      counter_status_bonus: p.counter_status_bonus,
+      counter_defense_bonus: p.counter_defense_bonus,
+      counter_attack_bonus: p.counter_attack_bonus,
+      boss_weak_bonus: p.boss_weak_bonus,
+      def_value: p.def_value,
+      total_score: Math.round(p.total_score * 100) / 100,
+    }));
+    return {
+      resisted_elements: key.split(','),
+      label: `抵抗 ${key.split(',').join('+')}`,
+      count: pets.length,
+      pets: topPets,
+    };
   });
-
-  scored.sort((a, b) => b.total_score - a.total_score);
-
-  // Return top 20
-  const top = scored.slice(0, 20).map(p => ({
-    uid: p.uid,
-    name: p.name,
-    image_url: p.image_url,
-    element_name: p.element_name,
-    element_icon: p.element_icon,
-    element_color: p.element_color,
-    sub_element_name: p.sub_element_name,
-    sub_element_icon: p.sub_element_icon,
-    sub_element_color: p.sub_element_color,
-    hp: p.hp,
-    def: p.def,
-    mdef: p.mdef,
-    speed: p.speed,
-    total: p.total,
-    se_attack_score: p.se_attack_score,
-    counter_status_bonus: p.counter_status_bonus,
-    counter_defense_bonus: p.counter_defense_bonus,
-    counter_attack_bonus: p.counter_attack_bonus,
-    resist_score: p.resist_score,
-    def_value: p.def_value,
-    total_score: Math.round(p.total_score * 100) / 100,
-  }));
 
   return {
     attack_profile: {
@@ -643,10 +713,13 @@ function getCounterPicks(petUid, natureOverride) {
       defense_stat_used: defenseStat,
       has_status_skills: hasStatusSkills,
       has_defense_skills: hasDefenseSkills,
-      has_attack_skills: true, // Fate flower pets always have attack skills
+      has_attack_skills: true,
       target_weak_to: Array.from(targetWeakTo),
+      boss_weaker_def: bossWeakerDef,
+      boss_def: bossDefStat,
+      boss_mdef: bossMdefStat,
     },
-    recommended_pets: top,
+    groups,
   };
 }
 

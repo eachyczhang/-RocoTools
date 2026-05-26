@@ -229,11 +229,12 @@
               <span v-if="counterPicks.attack_profile.has_defense_skills" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
                 🛡️ 有防御技能
               </span>
-              <span v-if="counterPicks.attack_profile.has_attack_skills" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-                ⚔️ 有攻击技能
+              <span v-if="counterPicks.attack_profile.boss_weaker_def" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+                💢 {{ counterPicks.attack_profile.boss_weaker_def === 'physical' ? '物防较低' : '魔防较低' }}
+                ({{ counterPicks.attack_profile.boss_def }}/{{ counterPicks.attack_profile.boss_mdef }})
               </span>
               <span class="text-[10px] sm:text-xs text-muted">
-                排序：克制攻击×4 + 应对状态×2 + 应对防御×1.5 + 应对攻击×1.5 + 抗性×1
+                分组：按抵抗属性数量排列 | 组内：克制×4 + 应对状态×2 + 应对防御×1.5 + 应对攻击×1.5 + 防御×1 + 弱防×0.5
               </span>
             </div>
           </div>
@@ -243,56 +244,82 @@
             分析中...
           </div>
 
-          <!-- Recommended pets grid -->
-          <div v-else-if="counterPicks && counterPicks.recommended_pets.length" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-            <router-link
-              v-for="(cp, idx) in counterPicks.recommended_pets"
-              :key="cp.uid"
-              :to="'/pets/' + cp.uid"
-              class="counter-pick-card group"
-            >
-              <!-- Rank badge -->
-              <div class="absolute top-1 left-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center z-10"
-                :class="idx < 3 ? 'bg-amber-400 text-white' : 'bg-gray-200 dark:bg-gray-600 text-muted'">
-                {{ idx + 1 }}
-              </div>
-              <!-- Pet image -->
-              <img :src="cp.image_url" class="w-14 h-14 sm:w-16 sm:h-16 object-contain mx-auto" :alt="cp.name" />
-              <!-- Pet name -->
-              <div class="text-xs font-medium text-center mt-1 truncate w-full">{{ cp.name }}</div>
-              <!-- Element badges -->
-              <div class="flex items-center justify-center gap-0.5 mt-0.5">
-                <img v-if="cp.element_icon" :src="cp.element_icon" class="w-3.5 h-3.5" :title="cp.element_name" />
-                <img v-if="cp.sub_element_icon" :src="cp.sub_element_icon" class="w-3.5 h-3.5" :title="cp.sub_element_name" />
-              </div>
-              <!-- Bonus tags -->
-              <div class="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
-                <span v-if="cp.se_attack_score" class="px-1 py-0 rounded text-[9px] leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400" title="克制属性攻击技能">
-                  {{ cp.se_attack_score >= 2.5 ? '⚔️💥' : cp.se_attack_score >= 1.5 ? '⚔️' : '🗡️' }}
+          <!-- Grouped recommended pets by resistance -->
+          <template v-else-if="counterPicks && counterPicks.groups && counterPicks.groups.length">
+            <div v-for="(group, gIdx) in counterPicks.groups" :key="gIdx" class="mb-5 last:mb-0">
+              <!-- Group header -->
+              <div class="flex items-center gap-2 mb-2">
+                <div class="flex items-center gap-1">
+                  <template v-for="elemName in group.resisted_elements" :key="elemName">
+                    <span v-if="elemMap[elemName]" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs"
+                      :style="{ background: elemMap[elemName].color + '15', color: elemMap[elemName].color }">
+                      <img :src="elemMap[elemName].icon" class="w-3.5 h-3.5" />
+                      <span>{{ elemName }}</span>
+                    </span>
+                  </template>
+                </div>
+                <span class="text-xs font-medium">
+                  {{ group.resisted_elements.length === counterPicks.attack_profile.elements.length ? '全抗' : '抵抗' }}
                 </span>
-                <span v-if="cp.counter_status_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400" title="拥有应对状态技能">
-                  {{ cp.counter_status_bonus >= 2 ? '⚡克' : '⚡' }}
-                </span>
-                <span v-if="cp.counter_defense_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400" title="拥有应对防御技能">
-                  🛡️
-                </span>
-                <span v-if="cp.counter_attack_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400" title="拥有应对攻击的防御技能">
-                  🔰
-                </span>
+                <span class="text-[10px] text-muted">({{ group.count }}只符合)</span>
+                <div class="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
               </div>
-              <!-- Defense stat -->
-              <div class="text-[10px] text-muted mt-0.5 text-center">
-                {{ counterPicks.attack_profile.defense_stat_used === 'def' ? '物防' : '魔防' }}
-                <span class="font-medium text-foreground">{{ cp.def_value }}</span>
-                <span class="ml-1 text-blue-500">{{ cp.total_score }}</span>
+
+              <!-- Pets grid -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                <router-link
+                  v-for="(cp, idx) in group.pets"
+                  :key="cp.uid"
+                  :to="'/pets/' + cp.uid"
+                  class="counter-pick-card group"
+                >
+                  <!-- Rank badge -->
+                  <div class="absolute top-1 left-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center z-10"
+                    :class="idx < 3 ? 'bg-amber-400 text-white' : 'bg-gray-200 dark:bg-gray-600 text-muted'">
+                    {{ idx + 1 }}
+                  </div>
+                  <!-- Pet image -->
+                  <img :src="cp.image_url" class="w-14 h-14 sm:w-16 sm:h-16 object-contain mx-auto" :alt="cp.name" />
+                  <!-- Pet name -->
+                  <div class="text-xs font-medium text-center mt-1 truncate w-full">{{ cp.name }}</div>
+                  <!-- Element badges -->
+                  <div class="flex items-center justify-center gap-0.5 mt-0.5">
+                    <img v-if="cp.element_icon" :src="cp.element_icon" class="w-3.5 h-3.5" :title="cp.element_name" />
+                    <img v-if="cp.sub_element_icon" :src="cp.sub_element_icon" class="w-3.5 h-3.5" :title="cp.sub_element_name" />
+                  </div>
+                  <!-- Bonus tags -->
+                  <div class="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
+                    <span v-if="cp.se_attack_score" class="px-1 py-0 rounded text-[9px] leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400" title="克制属性攻击技能">
+                      {{ cp.se_attack_score >= 2.5 ? '⚔️💥' : cp.se_attack_score >= 1.5 ? '⚔️' : '🗡️' }}
+                    </span>
+                    <span v-if="cp.counter_status_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400" title="拥有应对状态技能">
+                      {{ cp.counter_status_bonus >= 2 ? '⚡克' : '⚡' }}
+                    </span>
+                    <span v-if="cp.counter_defense_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400" title="拥有应对防御技能">
+                      🛡️
+                    </span>
+                    <span v-if="cp.counter_attack_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400" title="拥有应对攻击的防御技能">
+                      🔰
+                    </span>
+                    <span v-if="cp.boss_weak_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400" title="攻击类型克制boss弱防">
+                      💢
+                    </span>
+                  </div>
+                  <!-- Defense stat -->
+                  <div class="text-[10px] text-muted mt-0.5 text-center">
+                    {{ counterPicks.attack_profile.defense_stat_used === 'def' ? '物防' : '魔防' }}
+                    <span class="font-medium text-foreground">{{ cp.def_value }}</span>
+                    <span class="ml-1 text-blue-500">{{ cp.total_score }}</span>
+                  </div>
+                  <!-- Total score indicator -->
+                  <div class="w-full mt-1 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
+                      :style="{ width: Math.max(10, Math.min(100, cp.total_score / (group.pets[0]?.total_score || 1) * 100)) + '%' }"></div>
+                  </div>
+                </router-link>
               </div>
-              <!-- Total score indicator -->
-              <div class="w-full mt-1 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
-                  :style="{ width: Math.max(10, Math.min(100, cp.total_score / (counterPicks.recommended_pets[0]?.total_score || 1) * 100)) + '%' }"></div>
-              </div>
-            </router-link>
-          </div>
+            </div>
+          </template>
 
           <!-- Empty state -->
           <div v-else-if="!counterLoading" class="text-center py-6 text-muted text-sm">
@@ -376,11 +403,25 @@
               </div>
             </div>
 
+            <!-- Grouping logic -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                分组逻辑（前置筛选）
+              </h4>
+              <div class="text-xs text-muted space-y-1 pl-3">
+                <p>• 按候选精灵<strong>抵抗花种攻击属性的数量</strong>分组展示</p>
+                <p>• 例：花种攻击属性为[水,毒]，则分为「全抗(水+毒)」→「抵抗毒」→「抵抗水」</p>
+                <p>• <strong>不抵抗任何攻击属性的精灵完全排除</strong></p>
+                <p>• 每组内再按评分排序，展示前10名</p>
+              </div>
+            </div>
+
             <!-- Scoring system -->
             <div class="mb-4">
               <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                五维评分体系
+                组内六维评分体系
               </h4>
               <div class="overflow-x-auto">
                 <table class="w-full text-xs border-collapse">
@@ -413,9 +454,14 @@
                       <td class="py-1.5 px-2">拥有应对攻击的防御技能，生存能力</td>
                     </tr>
                     <tr class="border-t border-gray-100 dark:border-white/5">
-                      <td class="py-1.5 px-2 font-medium text-blue-500">抗性+防御值</td>
+                      <td class="py-1.5 px-2 font-medium text-blue-500">防御值</td>
                       <td class="py-1.5 px-2 text-center">×1</td>
-                      <td class="py-1.5 px-2">属性抵抗 + 对应防御种族值</td>
+                      <td class="py-1.5 px-2">对应防御种族值（物防/魔防）</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-purple-500">弱防克制 💢</td>
+                      <td class="py-1.5 px-2 text-center">×0.5</td>
+                      <td class="py-1.5 px-2">攻击类型匹配花种精灵较低的防御</td>
                     </tr>
                   </tbody>
                 </table>
@@ -480,6 +526,14 @@
               </h4>
               <div class="grid grid-cols-2 gap-1.5 text-xs text-muted">
                 <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️💥</span>
+                  <span>克制属性 有效威力≥120+应对</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️</span>
+                  <span>克制属性 有效威力≥80</span>
+                </div>
+                <div class="flex items-center gap-1.5">
                   <span class="px-1 py-0 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡</span>
                   <span>应对状态</span>
                 </div>
@@ -496,12 +550,8 @@
                   <span>应对攻击</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️⚔️</span>
-                  <span>克制属性 power≥120</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️</span>
-                  <span>克制属性 power≥80</span>
+                  <span class="px-1 py-0 rounded bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 text-[9px]">💢</span>
+                  <span>攻击类型克制boss弱防</span>
                 </div>
               </div>
             </div>
@@ -577,10 +627,7 @@ const bloodlineElementSkills = computed(() => {
   return petDetail.value.bloodline_skills.filter(s => s.element === mainElement)
 })
 
-// Attack element list from counter-picks (for progress bar width calculation)
-const attackElementList = computed(() => {
-  return counterPicks.value?.attack_profile?.elements || []
-})
+
 
 function parsePetIcons(petIcon) {
   if (!petIcon || !petIcon.startsWith('[')) return []
