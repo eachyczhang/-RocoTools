@@ -711,12 +711,13 @@ const skillModalData = ref(null) // { skills, bloodline_skills, learnable_stones
 const skillModalActiveTab = ref('skills')
 
 // Filter skills to only show those that contributed to the counter-pick score
-function filterRelevantSkills(allSkills) {
+// For attack skills: show ALL super-effective ones, sorted by effective power
+function filterRelevantSkills(allSkills, petDetail, isBloodline = false) {
   if (!counterPicks.value?.attack_profile) return allSkills
   const profile = counterPicks.value.attack_profile
   const weakTo = new Set(profile.target_weak_to || [])
 
-  return allSkills.filter(skill => {
+  const relevant = allSkills.filter(skill => {
     const desc = skill.description || ''
     // 1. Super-effective attack: attack skill with element in boss's weakness list
     if ((skill.type === '物攻' || skill.type === '魔攻') && skill.power > 0 && weakTo.has(skill.element)) {
@@ -730,6 +731,50 @@ function filterRelevantSkills(allSkills) {
     if (desc.includes('应对防御')) return true
     return false
   })
+
+  // For bloodline tab, don't sort (keep original order)
+  if (isBloodline) return relevant
+
+  // Sort attack skills by effective power (considering pet's atk/matk tendency)
+  const petAtk = petDetail?.atk || 100
+  const petMatk = petDetail?.matk || 100
+  const maxStat = Math.max(petAtk, petMatk)
+
+  relevant.sort((a, b) => {
+    const epA = calcEffectivePower(a, petAtk, petMatk, maxStat)
+    const epB = calcEffectivePower(b, petAtk, petMatk, maxStat)
+    return epB - epA
+  })
+
+  return relevant
+}
+
+// Calculate effective power for sorting: considers pet's atk/matk and multi-turn penalty
+function calcEffectivePower(skill, petAtk, petMatk, maxStat) {
+  if (!skill.power || skill.power <= 0) return 0
+  const desc = skill.description || ''
+
+  // Base power
+  let ep = skill.power
+
+  // Stat alignment: physical skill uses atk, magical uses matk
+  if (skill.type === '物攻') {
+    ep = ep * (petAtk / maxStat)
+  } else if (skill.type === '魔攻') {
+    ep = ep * (petMatk / maxStat)
+  }
+
+  // Multi-turn penalty: 蓄力 skills take 2 turns, halve effective power
+  if (desc.includes('蓄力')) {
+    ep = ep * 0.5
+  }
+
+  // Bonus for having 应对 effect (counter synergy)
+  if (desc.includes('应对攻击') || desc.includes('应对状态') || desc.includes('应对防御')) {
+    ep = ep * 1.2
+  }
+
+  return ep
 }
 
 // Check if a skill is super-effective against the boss
@@ -766,9 +811,10 @@ async function openSkillModal(pet) {
   try {
     const detail = await petsApi.get(pet.uid)
     // Filter to only show skills that contributed to the counter-pick score
-    const filteredSkills = filterRelevantSkills(detail.skills || [])
-    const filteredBloodline = filterRelevantSkills(detail.bloodline_skills || [])
-    const filteredStones = filterRelevantSkills(detail.learnable_stones || [])
+    // Sort attack skills by effective power (pet's atk/matk tendency + multi-turn penalty)
+    const filteredSkills = filterRelevantSkills(detail.skills || [], detail)
+    const filteredBloodline = filterRelevantSkills(detail.bloodline_skills || [], detail, true)
+    const filteredStones = filterRelevantSkills(detail.learnable_stones || [], detail)
 
     skillModalData.value = {
       skills: filteredSkills,
