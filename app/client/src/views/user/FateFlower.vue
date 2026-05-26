@@ -303,6 +303,17 @@
                       💢
                     </span>
                   </div>
+                  <!-- Defense stat & score -->
+                  <div class="text-[10px] sm:text-xs text-muted mt-1 text-center">
+                    {{ counterPicks.attack_profile.defense_stat_used === 'def' ? '物防' : '魔防' }}
+                    <span class="font-medium text-foreground">{{ cp.def_value }}</span>
+                    <span class="ml-1 text-blue-500 font-medium">{{ cp.total_score.toFixed(1) }}</span>
+                  </div>
+                  <!-- Score progress bar -->
+                  <div class="w-full mt-1 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
+                      :style="{ width: Math.max(10, Math.min(100, cp.total_score / (group.pets[0]?.total_score || 1) * 100)) + '%' }"></div>
+                  </div>
                 </div>
               </div>
             </div>
