@@ -104,6 +104,13 @@ db2.prepare('SELECT id, name, icon FROM elements').all().forEach(r => { elementN
 const skillIcons = {};
 db2.prepare('SELECT uid, icon_url FROM skills WHERE icon_url IS NOT NULL').all().forEach(r => { skillIcons[r.uid] = r.icon_url; });
 
+// Helper: render skill icon, fallback to element icon if skill icon missing
+function skillIconMd(uid, elementId) {
+  if (skillIcons[uid]) return `![skill:${uid}]`;
+  if (elementId && elementIcons[elementId]) return `![element:${elementIcons[elementId]}]`;
+  return `![skill:${uid}]`; // keep original syntax as last resort
+}
+
 // Ability icon lookup from pet_details
 const abilityIcons = {};
 try {
@@ -151,6 +158,8 @@ const PET_ABILITY_FIELDS = ['ability_name', 'ability_desc'];
 const statChangedPets = [];
 const abilityChangedPets = [];
 
+const statSupplementedPets = []; // pets where all stat changes are from 0 (data fill-in)
+
 for (const [key, p2] of pets2) {
   if (!pets1.has(key)) {
     newPets.push(p2);
@@ -160,7 +169,13 @@ for (const [key, p2] of pets2) {
       const statFields = Object.keys(diff).filter(k => PET_STAT_FIELDS.includes(k));
       const abilityFields = Object.keys(diff).filter(k => PET_ABILITY_FIELDS.includes(k));
       if (statFields.length > 0) {
-        statChangedPets.push({ pet: p2, changes: diff, fields: statFields });
+        // Check if ALL changed stat fields were previously 0 (data fill-in, not balance change)
+        const allFromZero = statFields.every(f => (pets1.get(key)[f] === 0 || pets1.get(key)[f] === null));
+        if (allFromZero) {
+          statSupplementedPets.push({ pet: p2, changes: diff, fields: statFields });
+        } else {
+          statChangedPets.push({ pet: p2, changes: diff, fields: statFields });
+        }
       }
       if (abilityFields.length > 0) {
         abilityChangedPets.push({ pet: p2, changes: diff, fields: abilityFields });
@@ -273,6 +288,7 @@ if (newShinyOnlyIds.length > 0) w(`| 　赛季奇遇异色精灵 | ${newShinyOnl
 if (newSkills.length > 0) w(`| 新增技能 | ${newSkills.length} 个 |`);
 w(`| 技能调整 | ${modifiedSkills.length} 个 |`);
 w(`| 精灵数值调整 | ${statChangedPets.length} 只 |`);
+if (statSupplementedPets.length > 0) w(`| 精灵个体值补充 | ${statSupplementedPets.length} 只 |`);
 w(`| 精灵特性调整 | ${abilityChangedPets.length} 只 |`);
 if (skillLearningAffectedUids.size > 0) {
   const addedUids = new Set(skillsAdded.map(r => r.pet_uid));
@@ -426,12 +442,14 @@ if (newSkills.length > 0) {
   });
   w(`## 🆕 新增技能（${newSkills.length} 个）`);
   w();
+  w(`> 以下内容可能包含前赛季遗漏数据的补充，已与游戏实际情况比对，如有出入以官方为准。`);
+  w();
   w(`| 技能名 | 属性 | 类型 | 能耗 | 威力 | 描述 |`);
   w(`|--------|------|------|------|------|------|`);
   for (const s of newSkills) {
     const elemIcon = s.element_id && elementIcons[s.element_id] ? `![element:${elementIcons[s.element_id]}]` : '-';
     const catName = s.category || '-';
-    w(`| ![skill:${s.uid}] ${s.name} | ${elemIcon} | ${catName} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
+    w(`| ${skillIconMd(s.uid, s.element_id)} ${s.name} | ${elemIcon} | ${catName} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
   }
   w();
 }
@@ -441,6 +459,8 @@ if (statChangedPets.length > 0) {
   // Sort by pet_id (numeric)
   statChangedPets.sort((a, b) => (a.pet.pet_id || 0) - (b.pet.pet_id || 0));
   w(`## 📈 精灵数值调整（${statChangedPets.length} 只）`);
+  w();
+  w(`> 以下调整可能包含前赛季遗漏的数值修正，已与游戏实际情况比对，如有出入以官方为准。`);
   w();
   w(`| 精灵 | HP | 速度 | 物攻 | 魔攻 | 物防 | 魔防 | 总计 |`);
   w(`|------|----|----|----|----|----|----|------|`);
@@ -456,9 +476,30 @@ if (statChangedPets.length > 0) {
   w();
 }
 
+// --- Stat Supplemented Pets ---
+if (statSupplementedPets.length > 0) {
+  statSupplementedPets.sort((a, b) => (a.pet.pet_id || 0) - (b.pet.pet_id || 0));
+  w(`## 📋 精灵个体值补充（${statSupplementedPets.length} 只）`);
+  w();
+  w(`> 以下精灵为本次补充录入个体值，数据来源于游戏实际情况，如有出入以官方为准。`);
+  w();
+  w(`| 精灵 | HP | 速度 | 物攻 | 魔攻 | 物防 | 魔防 | 总计 |`);
+  w(`|------|----|----|----|----|----|----|------|`);
+  for (const { pet, changes } of statSupplementedPets) {
+    const fmt = (field) => {
+      if (!changes[field]) return String(pet[field] ?? '-');
+      return String(changes[field].new ?? '-');
+    };
+    w(`| ![pet:${pet.uid}] ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
+  }
+  w();
+}
+
 // --- Skill Learning Changes ---
 if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
   w(`## 📚 技能学习面变动`);
+  w();
+  w(`> 以下变动可能包含前赛季遗漏的技能学习面补充，已与游戏实际情况比对，如有出入以官方为准。`);
   w();
   
   if (skillsAdded.length > 0) {
@@ -537,8 +578,10 @@ modifiedSkills.sort((a, b) => {
 });
 w(`## ⚔️ 技能调整（${modifiedSkills.length} 个）`);
 w();
+w(`> 以下调整可能包含前赛季遗漏的技能修正，已与游戏实际情况比对，如有出入以官方为准。`);
+w();
 for (const { skill, changes, relevantFields } of modifiedSkills) {
-  w(`### ![skill:${skill.uid}] ${skill.name}`);
+  w(`### ${skillIconMd(skill.uid, skill.element_id)} ${skill.name}`);
   w();
   for (const field of relevantFields) {
     const { old: oldVal, new: newVal } = changes[field];
@@ -572,6 +615,8 @@ if (abilityChangedPets.length > 0) {
   // Sort by pet_id (numeric)
   abilityChangedPets.sort((a, b) => (a.pet.pet_id || 0) - (b.pet.pet_id || 0));
   w(`## 🔮 精灵特性调整（${abilityChangedPets.length} 只）`);
+  w();
+  w(`> 以下调整可能包含前赛季遗漏的特性修正，已与游戏实际情况比对，如有出入以官方为准。`);
   w();
   // Group by ability_desc to merge evolution lines
   const abilityGroups = {};
