@@ -542,29 +542,42 @@ function getCounterPicks(petUid, natureOverride) {
   }
 
   // Batch query: pets that can learn "贪婪" (100% lifesteal - highest priority sustain)
-  const greedyPets = new Set(); // pet_uid
+  // Track whether each pet can learn it via non-bloodline (skills/stones) or only bloodline
+  const greedyPets = new Map(); // pet_uid -> { hasNonBloodline: boolean }
   const greedyRows = db.prepare(`
-    SELECT DISTINCT pet_uid FROM pet_skills
+    SELECT pet_uid, skill_type FROM pet_skills
     WHERE name = '贪婪'
       AND pet_uid IN (SELECT uid FROM pets WHERE is_final_form = 1)
   `).all();
   for (const row of greedyRows) {
-    greedyPets.add(row.pet_uid);
+    const existing = greedyPets.get(row.pet_uid);
+    const isNonBloodline = row.skill_type !== 'bloodline_skills';
+    if (!existing) {
+      greedyPets.set(row.pet_uid, { hasNonBloodline: isNonBloodline });
+    } else if (isNonBloodline) {
+      existing.hasNonBloodline = true;
+    }
   }
 
   // Batch query: pets that can learn self-debuff cleanse skills (驱散自己减益)
-  // Only active when boss has burn/poison; excludes bloodline skills
+  // Only active when boss has burn/poison
+  // Track whether each pet can learn it via non-bloodline or only bloodline
   // Skills: 除厄, 洗礼, 生日蛋糕, 清洗
-  const cleansePets = new Set(); // pet_uid
+  const cleansePets = new Map(); // pet_uid -> { hasNonBloodline: boolean }
   if (bossHasBurnOrPoison) {
     const cleanseRows = db.prepare(`
-      SELECT DISTINCT pet_uid FROM pet_skills
+      SELECT pet_uid, skill_type FROM pet_skills
       WHERE name IN ('除厄', '洗礼', '生日蛋糕', '清洗')
-        AND skill_type != 'bloodline_skills'
         AND pet_uid IN (SELECT uid FROM pets WHERE is_final_form = 1)
     `).all();
     for (const row of cleanseRows) {
-      cleansePets.add(row.pet_uid);
+      const existing = cleansePets.get(row.pet_uid);
+      const isNonBloodline = row.skill_type !== 'bloodline_skills';
+      if (!existing) {
+        cleansePets.set(row.pet_uid, { hasNonBloodline: isNonBloodline });
+      } else if (isNonBloodline) {
+        existing.hasNonBloodline = true;
+      }
     }
   }
 
@@ -797,15 +810,30 @@ function getCounterPicks(petUid, natureOverride) {
     }
 
     // Dimension 8: "贪婪" skill bonus (100% lifesteal - highest priority)
-    let greedyBonus = 0;
-    if (greedyPets.has(p.uid)) {
-      greedyBonus = 1;
-    }
-
     // Dimension 9: Self-debuff cleanse bonus (only when boss has burn/poison)
+    // Rule: greedy and cleanse CANNOT both be bloodline-only skills for the same pet
+    // (because you can only activate one bloodline line at a time)
+    let greedyBonus = 0;
     let cleanseBonus = 0;
-    if (bossHasBurnOrPoison && cleansePets.has(p.uid)) {
-      cleanseBonus = 1;
+    const hasGreedy = greedyPets.has(p.uid);
+    const hasCleanse = bossHasBurnOrPoison && cleansePets.has(p.uid);
+
+    if (hasGreedy && hasCleanse) {
+      const greedyInfo = greedyPets.get(p.uid);
+      const cleanseInfo = cleansePets.get(p.uid);
+      // If both are bloodline-only, can only count one (pick greedy as it's always useful)
+      if (!greedyInfo.hasNonBloodline && !cleanseInfo.hasNonBloodline) {
+        // Both bloodline-only: only count one (greedy takes priority)
+        greedyBonus = 1;
+        cleanseBonus = 0;
+      } else {
+        // At least one has non-bloodline path, both can be used
+        greedyBonus = 1;
+        cleanseBonus = 1;
+      }
+    } else {
+      if (hasGreedy) greedyBonus = 1;
+      if (hasCleanse) cleanseBonus = 1;
     }
 
     // Total score (within group)
