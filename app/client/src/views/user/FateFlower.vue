@@ -172,8 +172,8 @@
           </div>
         </div>
 
-        <!-- Counter-picks recommendation -->
-        <div class="card">
+        <!-- Counter-picks recommendation (controlled by admin setting) -->
+        <div v-if="counterPicksEnabled" class="card">
           <h3 class="font-roco text-sm sm:text-base mb-3 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
             反制推荐
@@ -465,7 +465,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { eventsApi, petsApi, elementsApi, pikaApi } from '@/api'
+import { eventsApi, petsApi, elementsApi, pikaApi, settingsApi } from '@/api'
 import SkillTable from '@/components/user/SkillTable.vue'
 import SkillDescription from '@/components/user/SkillDescription.vue'
 import { categoryColor } from '@/constants/categoryColors'
@@ -482,6 +482,7 @@ const fateFlowerSkills = ref([])
 const fateNature = ref('')
 const counterPicks = ref(null)
 const counterLoading = ref(false)
+const counterPicksEnabled = ref(false) // Controlled by admin setting
 
 // Max score among non-meteor-rabbit pets (for progress bar normalization)
 const counterPicksMaxNormalScore = computed(() => {
@@ -720,12 +721,14 @@ async function selectPet(pet) {
     fateFlowerSkills.value = skillRes.skills || []
     fateNature.value = skillRes.fate_nature || ''
 
-    // Load counter-picks after we know the nature
-    try {
-      const cpRes = await petsApi.counterPicks(pet.uid, skillRes.fate_nature || '')
-      counterPicks.value = cpRes
-    } catch (cpErr) {
-      console.error('[FateFlower] Load counter-picks failed:', cpErr)
+    // Load counter-picks after we know the nature (only if enabled)
+    if (counterPicksEnabled.value) {
+      try {
+        const cpRes = await petsApi.counterPicks(pet.uid, skillRes.fate_nature || '')
+        counterPicks.value = cpRes
+      } catch (cpErr) {
+        console.error('[FateFlower] Load counter-picks failed:', cpErr)
+      }
     }
   } catch (err) {
     console.error('[FateFlower] Load pet failed:', err)
@@ -742,6 +745,14 @@ function goBack() {
 }
 
 onMounted(async () => {
+  try {
+    // Load site settings (check if counter-picks feature is enabled)
+    const settings = await settingsApi.getPublic()
+    counterPicksEnabled.value = settings.counter_picks_enabled === '1'
+  } catch (e) {
+    // Settings load failure is non-critical
+  }
+
   try {
     // Load elements for SkillTable
     const elemRes = await elementsApi.list()

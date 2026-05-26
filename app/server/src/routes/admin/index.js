@@ -51,6 +51,23 @@ router.get('/nav-tabs/public', (req, res) => {
   }
 });
 
+// 站点设置（公开，前端用于读取开关状态）
+router.get('/settings/public', (req, res) => {
+  const db = getDb();
+  try {
+    // Ensure table exists
+    db.prepare(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '0', description TEXT)`).run();
+    const rows = db.prepare('SELECT key, value FROM site_settings').all();
+    const settings = {};
+    for (const row of rows) {
+      settings[row.key] = row.value;
+    }
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // 登录（不需要鉴权）
 // ============================================================
@@ -97,6 +114,35 @@ router.use(exportRouter);
 
 // 精灵技能 / 蛋组 / 特性管理
 router.use(petSkillsRouter);
+
+// ============================================================
+// 站点设置管理
+// ============================================================
+router.get('/settings', (req, res) => {
+  const db = getDb();
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '0', description TEXT)`).run();
+    const rows = db.prepare('SELECT key, value, description FROM site_settings').all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/settings/:key', (req, res) => {
+  const { key } = req.params;
+  const { value, description } = req.body;
+  const db = require('../../db/connection').getWriteDb();
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '0', description TEXT)`).run();
+    db.prepare(
+      `INSERT INTO site_settings (key, value, description) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, description = COALESCE(excluded.description, description)`
+    ).run(key, String(value), description || null);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================================
 // 数据清理工具

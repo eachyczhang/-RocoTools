@@ -327,4 +327,11 @@ export const adminApi = {
     method: 'POST',
     body: JSON.stringify({ pet_uid }),
   }),
+
+  // 站点设置
+  getSettings: () => adminRequest('/settings'),
+  updateSetting: (key, value, description) => adminRequest(`/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value, description }),
+  }),
 }

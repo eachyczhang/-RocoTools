@@ -253,3 +253,10 @@ CREATE TABLE IF NOT EXISTS nav_tabs (
   created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
   updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
 );
+
+-- 站点配置（key-value 开关/设置）
+CREATE TABLE IF NOT EXISTS site_settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL DEFAULT '0',
+  description TEXT
+);

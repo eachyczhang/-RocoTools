@@ -4,6 +4,15 @@
     <router-link to="/admin/pika" class="text-sm text-muted hover:text-primary-500 mb-3 inline-block">← 返回皮卡月刊</router-link>
     <h1 class="font-roco text-xl sm:text-2xl text-pink-500 mb-4">🌸 命定花种技能配置</h1>
 
+    <!-- Counter-picks toggle -->
+    <div class="flex items-center gap-3 mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" v-model="counterPicksEnabled" @change="toggleCounterPicks" class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 cursor-pointer" />
+        <span class="text-sm font-medium">启用反制推荐模块</span>
+      </label>
+      <span class="text-xs text-muted">（开启后用户端命定花种页面将显示反制推荐）</span>
+    </div>
+
     <!-- Loading -->
     <div v-if="!loaded" class="text-muted text-center mt-20">
       <div class="animate-pulse">加载中...</div>
@@ -274,6 +283,7 @@ const currentMonthlyPetId = ref(null)
 const naturesList = ref([])
 const selectedNature = ref('')
 const savingNature = ref(false)
+const counterPicksEnabled = ref(false)
 
 const skillSlots = ref([
   { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
@@ -491,6 +501,15 @@ async function saveSkillConfig() {
 
 onMounted(async () => {
   try {
+    // Load counter-picks setting
+    const settings = await adminApi.getSettings()
+    const cpSetting = settings.find(s => s.key === 'counter_picks_enabled')
+    counterPicksEnabled.value = cpSetting?.value === '1'
+  } catch (e) {
+    // Non-critical
+  }
+
+  try {
     // Load elements
     const elemRes = await elementsApi.list()
     const map = {}
@@ -518,4 +537,13 @@ onMounted(async () => {
     selectPet(allPets.value[0])
   }
 })
+
+async function toggleCounterPicks() {
+  try {
+    await adminApi.updateSetting('counter_picks_enabled', counterPicksEnabled.value ? '1' : '0', '反制推荐模块开关')
+  } catch (e) {
+    await modal.alert('失败', '保存设置失败: ' + e.message)
+    counterPicksEnabled.value = !counterPicksEnabled.value // Revert
+  }
+}
 </script>

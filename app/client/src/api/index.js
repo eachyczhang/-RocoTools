@@ -85,3 +85,7 @@ export const pikaApi = {
   list: () => request(`${BASE}/pika-monthlies`),
   getFateFlowerSkills: (petUid) => request(`${BASE}/pika-monthlies/fate-flower-skills/${petUid}`),
 }
+
+export const settingsApi = {
+  getPublic: () => request(`${BASE}/admin/settings/public`),
+}
