@@ -573,7 +573,7 @@ function getCounterPicks(petUid, natureOverride) {
   const W_COUNTER_ATTACK = 1.5;  // Counter-attack defense skills (survivability)
   const W_DEF_STAT = 1;        // Defense stat
   const W_BOSS_WEAK = 0.5;     // Bonus for matching boss's weaker defense
-  const W_WEAK_PENALTY = 2;    // Penalty for being weak to boss's other attack elements
+  const W_WEAK_PENALTY = 3;    // Penalty for being weak to boss's other attack elements
 
   // Find max defense stat for normalization
   let maxDef = 1;
@@ -599,6 +599,8 @@ function getCounterPicks(petUid, natureOverride) {
     const weakPenalty = weakElements.length;
 
     // Dimension 1 (Core): Super-effective attack + counter synergy
+    // Pick the best TWO SE skills (practical: 1 defense + 1 status + 2 attack slots)
+    // Second skill scores at 50% to avoid over-stacking
     let seAttackScore = 0;
     const seSkills = superEffectiveSkillsByPet.get(p.uid);
     if (seSkills && seSkills.length > 0) {
@@ -606,25 +608,41 @@ function getCounterPicks(petUid, natureOverride) {
       const petMatk = p.matk;
       const maxStat = Math.max(petAtk, petMatk, 1);
 
-      let bestEffPower = 0;
-      let bestHasCounter = false;
+      // Calculate effective power for each SE skill
+      const skillScores = [];
       for (const sk of seSkills) {
         const statRatio = sk.type === '物攻' ? (petAtk / maxStat) : (petMatk / maxStat);
         const effPower = sk.power * statRatio;
-        if (effPower > bestEffPower || (effPower === bestEffPower && sk.hasCounter && !bestHasCounter)) {
-          bestEffPower = effPower;
-          bestHasCounter = sk.hasCounter;
-        }
-        if (sk.hasCounter && !bestHasCounter && effPower >= bestEffPower * 0.8) {
-          bestEffPower = effPower;
-          bestHasCounter = true;
-        }
+        skillScores.push({ effPower, hasCounter: sk.hasCounter });
       }
 
-      if (bestEffPower >= 120) seAttackScore = bestHasCounter ? 3 : 2;
-      else if (bestEffPower >= 80) seAttackScore = bestHasCounter ? 2.5 : 1.5;
-      else if (bestEffPower >= 40) seAttackScore = bestHasCounter ? 2 : 1;
-      else if (bestEffPower > 0) seAttackScore = bestHasCounter ? 1 : 0.5;
+      // Sort by: prefer counter skills first (if close in power), then by effective power
+      skillScores.sort((a, b) => {
+        // If both have similar effective power (within 80%), prefer the one with counter
+        if (a.hasCounter !== b.hasCounter && Math.min(a.effPower, b.effPower) >= Math.max(a.effPower, b.effPower) * 0.8) {
+          return a.hasCounter ? -1 : 1;
+        }
+        return b.effPower - a.effPower;
+      });
+
+      // Score function for a single skill
+      function calcSkillScore(effPower, hasCounter) {
+        if (effPower >= 120) return hasCounter ? 3 : 2;
+        if (effPower >= 80) return hasCounter ? 2.5 : 1.5;
+        if (effPower >= 40) return hasCounter ? 2 : 1;
+        if (effPower > 0) return hasCounter ? 1 : 0.5;
+        return 0;
+      }
+
+      // Best skill: full score
+      const best = skillScores[0];
+      seAttackScore = calcSkillScore(best.effPower, best.hasCounter);
+
+      // Second best skill: 50% score (max 2 skills counted)
+      if (skillScores.length >= 2) {
+        const second = skillScores[1];
+        seAttackScore += calcSkillScore(second.effPower, second.hasCounter) * 0.5;
+      }
     }
 
     // Dimension 2: Counter-status bonus
