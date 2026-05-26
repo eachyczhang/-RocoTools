@@ -374,14 +374,30 @@ function getCounterPicks(petUid, natureOverride) {
 
   const attackElementList = Array.from(attackElements);
 
-  // --- Step 2b: Detect target pet's skill types ---
-  const hasStatusSkills = db.prepare(`
-    SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND type = '状态'
-  `).get(petUid).c > 0;
-
-  const hasDefenseSkills = db.prepare(`
-    SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND type = '防御'
-  `).get(petUid).c > 0;
+  // --- Step 2b: Detect target pet's skill types (based on fate flower skills if configured) ---
+  let hasStatusSkills = false;
+  let hasDefenseSkills = false;
+  if (fateSkills.length > 0) {
+    // Only check the configured fate flower skills
+    const fateSkillUidsForType = fateSkills.map(fs => fs.skill_ref_uid).filter(Boolean);
+    if (fateSkillUidsForType.length > 0) {
+      const ph = fateSkillUidsForType.map(() => '?').join(',');
+      hasStatusSkills = db.prepare(
+        `SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND skill_ref_uid IN (${ph}) AND type = '状态'`
+      ).get(petUid, ...fateSkillUidsForType).c > 0;
+      hasDefenseSkills = db.prepare(
+        `SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND skill_ref_uid IN (${ph}) AND type = '防御'`
+      ).get(petUid, ...fateSkillUidsForType).c > 0;
+    }
+  } else {
+    // Fallback: check all skills
+    hasStatusSkills = db.prepare(
+      `SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND type = '状态'`
+    ).get(petUid).c > 0;
+    hasDefenseSkills = db.prepare(
+      `SELECT COUNT(*) as c FROM pet_skills WHERE pet_uid = ? AND type = '防御'`
+    ).get(petUid).c > 0;
+  }
 
   // --- Step 3: Load element matchup data ---
   const elements = db.prepare('SELECT * FROM elements').all().map(row => ({
@@ -589,11 +605,11 @@ function getCounterPicks(petUid, natureOverride) {
   // Batch query: super-effective attack skills with counter-ability detection
   // For each final-form pet, find their best SE attack skill considering stat-type synergy
   // We store ALL SE skills per pet, then pick the best one during scoring (needs pet's atk/matk)
-  const superEffectiveSkillsByPet = new Map(); // pet_uid -> [{ power, type, hasCounter }]
+  const superEffectiveSkillsByPet = new Map(); // pet_uid -> [{ power, type, hasCounter, cost }]
   if (targetWeakTo.size > 0) {
     const placeholders = Array.from(targetWeakTo).map(() => '?').join(',');
     const seRows = db.prepare(`
-      SELECT pet_uid, power, type, description FROM pet_skills
+      SELECT pet_uid, power, type, cost, description FROM pet_skills
       WHERE element IN (${placeholders}) AND power > 0 AND (type = '物攻' OR type = '魔攻')
         AND skill_type != 'bloodline_skills'
         AND pet_uid IN (SELECT uid FROM pets WHERE is_final_form = 1)
@@ -604,7 +620,7 @@ function getCounterPicks(petUid, natureOverride) {
       if (!superEffectiveSkillsByPet.has(row.pet_uid)) {
         superEffectiveSkillsByPet.set(row.pet_uid, []);
       }
-      superEffectiveSkillsByPet.get(row.pet_uid).push({ power: row.power, type: row.type, hasCounter });
+      superEffectiveSkillsByPet.get(row.pet_uid).push({ power: row.power, type: row.type, hasCounter, cost: row.cost || 0 });
     }
   }
 
@@ -778,11 +794,15 @@ function getCounterPicks(petUid, natureOverride) {
 
       const skillScores = [];
       for (const sk of seSkills) {
+        // Cost > 5: skip entirely (not counted for scoring)
+        if (sk.cost > 5) continue;
         const statRatio = sk.type === '物攻' ? (petAtk / maxStat) : (petMatk / maxStat);
         const effPower = sk.power * statRatio;
         // hasCounter only matters when boss has status skills
         const counterBonus = (sk.hasCounter && hasStatusSkills) ? true : false;
-        skillScores.push({ effPower, hasCounter: counterBonus });
+        // Cost > 4: downgrade (only for high-power skills with power > 80)
+        const costPenalty = (sk.cost > 4 && sk.power > 80) ? true : false;
+        skillScores.push({ effPower, hasCounter: counterBonus, costPenalty });
       }
 
       skillScores.sort((a, b) => {
@@ -792,21 +812,30 @@ function getCounterPicks(petUid, natureOverride) {
         return b.effPower - a.effPower;
       });
 
-      function calcSkillScore(effPower, hasCounter) {
+      function calcSkillScore(effPower, hasCounter, costPenalty) {
         // High power (>=120): big bonus; hasCounter adds extra when boss has status
-        if (effPower >= 120) return hasCounter ? 3 : 2;
-        if (effPower >= 80) return hasCounter ? 2.5 : 1.5;
-        if (effPower >= 40) return hasCounter ? 2 : 1;
-        if (effPower > 0) return hasCounter ? 1 : 0.5;
-        return 0;
+        // costPenalty: cost > 4 for high-power skills → downgrade one tier
+        let score;
+        if (effPower >= 120) score = hasCounter ? 3 : 2;
+        else if (effPower >= 80) score = hasCounter ? 2.5 : 1.5;
+        else if (effPower >= 40) score = hasCounter ? 2 : 1;
+        else if (effPower > 0) score = hasCounter ? 1 : 0.5;
+        else return 0;
+        // Downgrade by 0.5 if cost > 4 (only affects high-power skills power > 80)
+        if (costPenalty) score = Math.max(0.5, score - 0.5);
+        return score;
       }
 
-      const best = skillScores[0];
-      seAttackScore = calcSkillScore(best.effPower, best.hasCounter);
+      if (skillScores.length === 0) {
+        seAttackScore = 0;
+      } else {
+        const best = skillScores[0];
+        seAttackScore = calcSkillScore(best.effPower, best.hasCounter, best.costPenalty);
 
-      if (skillScores.length >= 2) {
-        const second = skillScores[1];
-        seAttackScore += calcSkillScore(second.effPower, second.hasCounter) * 0.5;
+        if (skillScores.length >= 2) {
+          const second = skillScores[1];
+          seAttackScore += calcSkillScore(second.effPower, second.hasCounter, second.costPenalty) * 0.5;
+        }
       }
     }
 

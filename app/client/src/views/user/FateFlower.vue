@@ -237,9 +237,7 @@
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400 text-[9px] font-bold">🌟</span> 贪婪</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 text-[9px] font-bold">🌟</span> 驱散减益</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️</span> 克制技能</span>
-              <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡</span> 应对状态</span>
-              <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[9px]">🛡️</span> 应对防御</span>
-              <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-[9px]">🔰</span> 应对攻击</span>
+              <span v-if="counterPicks.attack_profile.has_status_skills" class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡</span> 应对状态</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 text-[9px]">💚⚔️</span> 克制续航</span>
               <span class="inline-flex items-center gap-0.5 text-[10px] sm:text-xs"><span class="px-0.5 rounded bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[9px]">💚</span> 续航</span>
             </div>
@@ -290,14 +288,8 @@
                   <span v-if="cp.se_attack_score" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                     {{ cp.se_attack_score >= 2.5 ? '⚔️💥' : cp.se_attack_score >= 1.5 ? '⚔️' : '🗡️' }}
                   </span>
-                  <span v-if="cp.counter_status_bonus" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
+                  <span v-if="cp.counter_status_bonus && counterPicks.attack_profile.has_status_skills" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
                     {{ cp.counter_status_bonus >= 2 ? '⚡克' : '⚡' }}
-                  </span>
-                  <span v-if="cp.counter_defense_bonus" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
-                    🛡️
-                  </span>
-                  <span v-if="cp.counter_attack_bonus" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-                    🔰
                   </span>
                   <span v-if="cp.lifesteal_bonus && cp.lifesteal_category === 'se'" class="px-1 py-0.5 rounded text-[10px] sm:text-xs leading-tight bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold" title="克制boss的吸血续航技能">
                     💚⚔️
