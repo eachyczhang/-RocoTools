@@ -407,13 +407,13 @@
                       <span v-if="skill.description && skill.description.includes('应对攻击')" class="text-[10px] px-1 py-0.5 rounded bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400 font-medium">
                         🔰 应对攻击
                       </span>
-                      <span v-if="skill.description && skill.description.includes('应对状态')" class="text-[10px] px-1 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 font-medium">
+                      <span v-if="skill.description && skill.description.includes('应对状态') && counterPicks?.attack_profile?.has_status_skills" class="text-[10px] px-1 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 font-medium">
                         ⚡ 应对状态
                       </span>
                       <span v-if="skill.description && skill.description.includes('应对防御')" class="text-[10px] px-1 py-0.5 rounded bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 font-medium">
                         🛡️ 应对防御
                       </span>
-                      <span v-if="['蝙蝠', '暗突袭', '撕裂', '等价交换', '抽枝', '气沉丹田'].includes(skill.name)" class="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 font-medium">
+                      <span v-if="isLifestealSkillVisible(skill.name)" class="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 font-medium">
                         💚 续航
                       </span>
                       <span v-if="skill.description && skill.description.includes('驱散自己') && skill.description.includes('减益')" class="text-[10px] px-1 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-medium">
@@ -539,6 +539,19 @@ function filterRelevantSkills(allSkills, petDetail, isBloodline = false) {
   })
 
   return relevant
+}
+
+// Determine if a lifesteal skill should show the 续航 badge in skill modal
+// 撕裂/抽枝/暗突袭 only show badge when boss has status skills
+const COUNTER_STATUS_LIFESTEAL_NAMES = new Set(['撕裂', '抽枝', '暗突袭'])
+const ALL_LIFESTEAL_NAMES = new Set(['蝙蝠', '暗突袭', '撕裂', '等价交换', '抽枝', '气沉丹田'])
+function isLifestealSkillVisible(skillName) {
+  if (!ALL_LIFESTEAL_NAMES.has(skillName)) return false
+  // If it's a counter-status type, only show when boss has status skills
+  if (COUNTER_STATUS_LIFESTEAL_NAMES.has(skillName)) {
+    return counterPicks.value?.attack_profile?.has_status_skills
+  }
+  return true
 }
 
 // Calculate effective power for sorting: considers pet's atk/matk and multi-turn penalty

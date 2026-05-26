@@ -552,7 +552,7 @@ function getCounterPicks(petUid, natureOverride) {
   // Only these specific skills count: 蝙蝠, 暗突袭, 撕裂, 等价交换, 抽枝, 气沉丹田
   // 撕裂/抽枝/暗突袭 are "应对状态" type - only count as sustain when boss has status skills
   // Store element info to determine if the skill counters boss or is resisted by boss
-  const COUNTER_STATUS_LIFESTEAL = new Set(['撕裂', '抽枝', '暗突袭', '气沉丹田']); // Only effective when boss has status skills
+  const COUNTER_STATUS_LIFESTEAL = new Set(['撕裂', '抽枝', '暗突袭']); // Only effective when boss has status skills
   const lifestealPetSkills = new Map(); // pet_uid -> [{ element, name, needsStatus }]
   const lifestealRows = db.prepare(`
     SELECT pet_uid, element, name FROM pet_skills
