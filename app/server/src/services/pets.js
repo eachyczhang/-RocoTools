@@ -550,8 +550,10 @@ function getCounterPicks(petUid, natureOverride) {
 
   // Batch query: lifesteal/sustain skills (high sustain)
   // Only these specific skills count: 蝙蝠, 暗突袭, 撕裂, 等价交换, 抽枝, 气沉丹田
+  // 撕裂/抽枝/暗突袭 are "应对状态" type - only count as sustain when boss has status skills
   // Store element info to determine if the skill counters boss or is resisted by boss
-  const lifestealPetSkills = new Map(); // pet_uid -> [{ element, name }]
+  const COUNTER_STATUS_LIFESTEAL = new Set(['撕裂', '抽枝', '暗突袭']); // Only effective when boss has status skills
+  const lifestealPetSkills = new Map(); // pet_uid -> [{ element, name, needsStatus }]
   const lifestealRows = db.prepare(`
     SELECT pet_uid, element, name FROM pet_skills
     WHERE name IN ('蝙蝠', '暗突袭', '撕裂', '等价交换', '抽枝', '气沉丹田')
@@ -561,7 +563,11 @@ function getCounterPicks(petUid, natureOverride) {
     if (!lifestealPetSkills.has(row.pet_uid)) {
       lifestealPetSkills.set(row.pet_uid, []);
     }
-    lifestealPetSkills.get(row.pet_uid).push({ element: row.element, name: row.name });
+    lifestealPetSkills.get(row.pet_uid).push({
+      element: row.element,
+      name: row.name,
+      needsStatus: COUNTER_STATUS_LIFESTEAL.has(row.name),
+    });
   }
 
   // Batch query: pets that can learn "贪婪" (100% lifesteal - highest priority sustain)
@@ -801,7 +807,7 @@ function getCounterPicks(petUid, natureOverride) {
         // hasCounter only matters when boss has status skills
         const counterBonus = (sk.hasCounter && hasStatusSkills) ? true : false;
         // Cost > 4: downgrade (only for high-power skills with power > 80)
-        const costPenalty = (sk.cost > 4 && sk.power > 80) ? true : false;
+        const costPenalty = (sk.cost > 4 && sk.power >= 70) ? true : false;
         skillScores.push({ effPower, hasCounter: counterBonus, costPenalty });
       }
 
@@ -813,15 +819,15 @@ function getCounterPicks(petUid, natureOverride) {
       });
 
       function calcSkillScore(effPower, hasCounter, costPenalty) {
-        // High power (>=120): big bonus; hasCounter adds extra when boss has status
+        // High power (>=70): big bonus; hasCounter adds extra when boss has status
         // costPenalty: cost > 4 for high-power skills → downgrade one tier
         let score;
         if (effPower >= 120) score = hasCounter ? 3 : 2;
-        else if (effPower >= 80) score = hasCounter ? 2.5 : 1.5;
+        else if (effPower >= 70) score = hasCounter ? 2.5 : 1.5;
         else if (effPower >= 40) score = hasCounter ? 2 : 1;
         else if (effPower > 0) score = hasCounter ? 1 : 0.5;
         else return 0;
-        // Downgrade by 0.5 if cost > 4 (only affects high-power skills power > 80)
+        // Downgrade by 0.5 if cost > 4 (only affects high-power skills power >= 70)
         if (costPenalty) score = Math.max(0.5, score - 0.5);
         return score;
       }
@@ -865,28 +871,33 @@ function getCounterPicks(petUid, natureOverride) {
     const defNormalized = defValue / maxDef;
 
     // --- Lifesteal evaluation: categorize as SE / neutral / resisted ---
+    // 撕裂/抽枝/暗突袭 are "应对状态" type - only count when boss has status skills
     let lifestealBonus = 0; // Will hold the weighted score
     let lifestealCategory = ''; // 'se', 'neutral', 'resisted', or ''
     const petLifestealSkills = lifestealPetSkills.get(p.uid);
     if (petLifestealSkills && petLifestealSkills.length > 0) {
-      // Find the best category among all lifesteal skills this pet has
-      let bestCat = 'resisted'; // worst case
-      for (const ls of petLifestealSkills) {
-        if (!ls.element) {
-          // No element (e.g. 等价交换 is 防御 type) → treat as neutral
-          if (bestCat === 'resisted') bestCat = 'neutral';
-        } else if (targetWeakTo.has(ls.element)) {
-          bestCat = 'se'; // Counters boss
-          break; // Can't get better than this
-        } else if (!bossResists.has(ls.element)) {
-          if (bestCat !== 'se') bestCat = 'neutral';
+      // Filter out counter-status lifesteal skills when boss has no status skills
+      const effectiveSkills = petLifestealSkills.filter(ls => !ls.needsStatus || hasStatusSkills);
+      if (effectiveSkills.length > 0) {
+        // Find the best category among all effective lifesteal skills
+        let bestCat = 'resisted'; // worst case
+        for (const ls of effectiveSkills) {
+          if (!ls.element) {
+            // No element (e.g. 等价交换 is 防御 type) → treat as neutral
+            if (bestCat === 'resisted') bestCat = 'neutral';
+          } else if (targetWeakTo.has(ls.element)) {
+            bestCat = 'se'; // Counters boss
+            break; // Can't get better than this
+          } else if (!bossResists.has(ls.element)) {
+            if (bestCat !== 'se') bestCat = 'neutral';
+          }
+          // else: resisted, keep current bestCat
         }
-        // else: resisted, keep current bestCat
+        lifestealCategory = bestCat;
+        if (bestCat === 'se') lifestealBonus = 1;
+        else if (bestCat === 'neutral') lifestealBonus = 1;
+        else lifestealBonus = 1; // resisted: will use negative weight
       }
-      lifestealCategory = bestCat;
-      if (bestCat === 'se') lifestealBonus = 1;
-      else if (bestCat === 'neutral') lifestealBonus = 1;
-      else lifestealBonus = 1; // resisted: will use negative weight
     }
 
     // --- Greedy & Cleanse (highest priority, same level) ---
