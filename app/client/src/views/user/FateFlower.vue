@@ -178,6 +178,10 @@
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
             反制推荐
             <span class="text-xs font-normal text-muted">（最适合应对该花种精灵的精灵）</span>
+            <button @click="showRulesModal = true" class="ml-auto text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer flex items-center gap-0.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              评分规则
+            </button>
           </h3>
 
           <!-- Attack profile summary -->
@@ -225,8 +229,11 @@
               <span v-if="counterPicks.attack_profile.has_defense_skills" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
                 🛡️ 有防御技能
               </span>
+              <span v-if="counterPicks.attack_profile.has_attack_skills" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                ⚔️ 有攻击技能
+              </span>
               <span class="text-[10px] sm:text-xs text-muted">
-                排序：抗性×3 + 应对状态×2 + 应对防御×2 + 克制高威力×1.5 + {{ counterPicks.attack_profile.defense_stat_used === 'def' ? '物防' : '魔防' }}×1
+                排序：克制攻击×4 + 应对状态×2 + 应对防御×1.5 + 应对攻击×1.5 + 抗性×1
               </span>
             </div>
           </div>
@@ -260,14 +267,17 @@
               </div>
               <!-- Bonus tags -->
               <div class="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
+                <span v-if="cp.se_attack_score" class="px-1 py-0 rounded text-[9px] leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400" title="克制属性攻击技能">
+                  {{ cp.se_attack_score >= 2.5 ? '⚔️💥' : cp.se_attack_score >= 1.5 ? '⚔️' : '🗡️' }}
+                </span>
                 <span v-if="cp.counter_status_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400" title="拥有应对状态技能">
                   {{ cp.counter_status_bonus >= 2 ? '⚡克' : '⚡' }}
                 </span>
                 <span v-if="cp.counter_defense_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400" title="拥有应对防御技能">
                   🛡️
                 </span>
-                <span v-if="cp.super_effective_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400" title="拥有克制属性高威力技能">
-                  {{ cp.super_effective_bonus >= 2 ? '⚔️⚔️' : cp.super_effective_bonus >= 1 ? '⚔️' : '🗡️' }}
+                <span v-if="cp.counter_attack_bonus" class="px-1 py-0 rounded text-[9px] leading-tight bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400" title="拥有应对攻击的防御技能">
+                  🔰
                 </span>
               </div>
               <!-- Defense stat -->
@@ -296,6 +306,204 @@
         <div class="animate-pulse">加载精灵信息...</div>
       </div>
     </template>
+
+    <!-- Rules Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showRulesModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showRulesModal = false">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+          <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-5 sm:p-6">
+            <!-- Close button -->
+            <button @click="showRulesModal = false" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-muted hover:text-foreground cursor-pointer">
+              ✕
+            </button>
+
+            <h3 class="font-roco text-lg text-primary-500 mb-4">反制推荐评分规则</h3>
+
+            <!-- Core concept -->
+            <div class="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+              <p class="text-sm font-medium text-amber-700 dark:text-amber-400">💡 核心思路：克制 = 击杀</p>
+              <p class="text-xs text-amber-600 dark:text-amber-400/80 mt-1">评分以「能否有效输出伤害」为核心，防御能力为辅助。拥有克制属性的攻击技能且带应对效果的精灵，加分最高。</p>
+            </div>
+
+            <!-- Target analysis -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                花种精灵画像分析
+              </h4>
+              <div class="text-xs text-muted space-y-1 pl-3">
+                <p>• <strong>攻击倾向</strong>：种族值物攻 vs 魔攻（+性格修正），平局选物攻</p>
+                <p>• <strong>攻击属性</strong>：愿力冲击(血脉属性) + 命定技能中的攻击属性</p>
+                <p>• <strong>技能类型</strong>：检测是否有攻击/防御/状态技能</p>
+                <p>• <strong>弱点属性</strong>：哪些属性能克制该花种精灵</p>
+              </div>
+            </div>
+
+            <!-- Three counters -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                三大应对维度
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 dark:bg-white/5">
+                      <th class="text-left py-1.5 px-2 font-medium">花种精灵的技能</th>
+                      <th class="text-left py-1.5 px-2 font-medium">候选精灵需要</th>
+                      <th class="text-left py-1.5 px-2 font-medium">判定方式</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-muted">
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">攻击技能</td>
+                      <td class="py-1.5 px-2">应对攻击的防御技能</td>
+                      <td class="py-1.5 px-2">描述含「应对攻击」</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">防御技能</td>
+                      <td class="py-1.5 px-2">应对防御的技能</td>
+                      <td class="py-1.5 px-2">描述含「应对防御」</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">状态技能</td>
+                      <td class="py-1.5 px-2">应对状态的攻击技能</td>
+                      <td class="py-1.5 px-2">描述含「应对状态」</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Scoring system -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                五维评分体系
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 dark:bg-white/5">
+                      <th class="text-left py-1.5 px-2 font-medium">维度</th>
+                      <th class="text-center py-1.5 px-2 font-medium">权重</th>
+                      <th class="text-left py-1.5 px-2 font-medium">说明</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-muted">
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-red-500">克制属性攻击</td>
+                      <td class="py-1.5 px-2 text-center">×4</td>
+                      <td class="py-1.5 px-2">克制花种属性的攻击技能 + 应对效果联动</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-orange-500">应对状态 ⚡</td>
+                      <td class="py-1.5 px-2 text-center">×2</td>
+                      <td class="py-1.5 px-2">攻击技能能应对状态，打伤害+打断</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-cyan-500">应对防御 🛡️</td>
+                      <td class="py-1.5 px-2 text-center">×1.5</td>
+                      <td class="py-1.5 px-2">拥有应对防御的技能，破防能力</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-green-500">应对攻击 🔰</td>
+                      <td class="py-1.5 px-2 text-center">×1.5</td>
+                      <td class="py-1.5 px-2">拥有应对攻击的防御技能，生存能力</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2 font-medium text-blue-500">抗性+防御值</td>
+                      <td class="py-1.5 px-2 text-center">×1</td>
+                      <td class="py-1.5 px-2">属性抵抗 + 对应防御种族值</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Key dimension detail -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                核心维度：克制属性攻击 + 应对联动
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 dark:bg-white/5">
+                      <th class="text-left py-1.5 px-2 font-medium">条件</th>
+                      <th class="text-center py-1.5 px-2 font-medium">加分</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-muted">
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥120 + 带应对效果</td>
+                      <td class="py-1.5 px-2 text-center font-medium text-red-500">+3</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥120，无应对</td>
+                      <td class="py-1.5 px-2 text-center">+2</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥80 + 带应对效果</td>
+                      <td class="py-1.5 px-2 text-center">+2.5</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥80，无应对</td>
+                      <td class="py-1.5 px-2 text-center">+1.5</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥40 + 带应对效果</td>
+                      <td class="py-1.5 px-2 text-center">+2</td>
+                    </tr>
+                    <tr class="border-t border-gray-100 dark:border-white/5">
+                      <td class="py-1.5 px-2">克制属性 power≥40，无应对</td>
+                      <td class="py-1.5 px-2 text-center">+1</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-[10px] text-muted mt-1.5 pl-3">※ 应对效果指该攻击技能描述中含「应对状态」或「应对防御」</p>
+            </div>
+
+            <!-- Tags legend -->
+            <div>
+              <h4 class="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                标签图例
+              </h4>
+              <div class="grid grid-cols-2 gap-1.5 text-xs text-muted">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡</span>
+                  <span>应对状态</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[9px]">⚡克</span>
+                  <span>应对状态 + 克制属性</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[9px]">🛡️</span>
+                  <span>应对防御</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-[9px]">🔰</span>
+                  <span>应对攻击</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️⚔️</span>
+                  <span>克制属性 power≥120</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1 py-0 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400 text-[9px]">⚔️</span>
+                  <span>克制属性 power≥80</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -317,6 +525,7 @@ const fateFlowerSkills = ref([])
 const fateNature = ref('')
 const counterPicks = ref(null)
 const counterLoading = ref(false)
+const showRulesModal = ref(false)
 
 // Extract all unique pets from fate_flower events
 const allPets = computed(() => {
@@ -476,5 +685,14 @@ onMounted(async () => {
          hover:bg-blue-50 dark:hover:bg-blue-500/10
          border border-transparent hover:border-blue-200 dark:hover:border-blue-500/30
          transition-all cursor-pointer;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
