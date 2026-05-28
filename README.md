@@ -23,6 +23,7 @@
 | 性格 | `/rocotools/natures` | 30 种性格属性增减查询 |
 | 属性克制 | `/rocotools/elements` | 克制表(18×18)、双属性表、详细查询 |
 | 皮卡月刊 | `/rocotools/pika` | 角色时装期刊展示（全屏翻页、精灵切换） |
+| 命定花种 | `/rocotools/fate-flower` | 反制推荐（Boss克制精灵+技能搭配） |
 
 ---
 
@@ -54,10 +55,9 @@
 │   └── public/             # 图片静态资源
 ├── app/
 │   ├── server/             # Express 后台（SQLite + RESTful API）
-│   │   ├── src/
-│   │   │   ├── routes/     # API 路由
-│   │   │   │   └── admin/  # 管理端（模块化：12 个子文件）
-│   │   │   ├── services/   # 数据查询层
+│   ├── src/
+│   │   ├── routes/     # API 路由
+│   │   │   └── admin/  # 管理端（模块化：14 个子文件）│   │   │   ├── services/   # 数据查询层
 │   │   │   └── db/         # 数据库管理
 │   │   ├── scripts/        # 工具脚本（进化链同步等）
 │   │   ├── gen_thumbnails.js  # 缩略图生成
@@ -177,6 +177,7 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 |------|------|
 | [DOC_RULES.md](./DOC_RULES.md) | 文档整理规则（所有 md 文件清单、维护规则、整理记录） |
 | [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（爬虫/同步/图片/构建的用途、参数和顺序） |
+| [DEPLOY.md](./DEPLOY.md) | 服务器部署指南（环境安装/构建/Nginx/自动部署/排查） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 工程架构设计图（12张 Mermaid 图：系统架构/数据流/ER图/路由/部署等） |
 | [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（18属性色号+关键词映射表） |
 | [app/ADMIN_RULES.md](./app/ADMIN_RULES.md) | 管理端业务规则（缓存/命名/校验/图片/进化条件/Nginx等） |

@@ -10,7 +10,7 @@
 - 路径：`/var/www/roco`
 - 域名：已备案，base: `/rocotools/`
 - 进程守护：PM2
-- 反向代理：Nginx（HTTP/2 + SSL）
+- 反向代理：Nginx（HTTP/2 + Brotli + SSL）
 
 ---
 
@@ -28,7 +28,17 @@ PORT=3000
 
 ---
 
-## 一键部署（本地执行）
+## 自动部署机制
+
+服务器通过 crontab 定时任务自动拉取代码并部署：
+
+```cron
+0 0 * * * cd /var/www/roco && ./deploy.sh 2 >> /var/log/roco-deploy.log 2>&1
+```
+
+> 每天 00:00 自动执行。日常只需 `git push`，禁止手动在服务器执行部署命令。
+
+### deploy.sh 选项
 
 ```bash
 bash deploy.sh
@@ -36,6 +46,13 @@ bash deploy.sh
 # 1) 仅上传数据（rsync 增量同步 data/）
 # 2) 仅更新代码（git pull + build + restart）
 # 3) 全量部署（数据 + 代码）
+```
+
+### 手动触发部署（紧急情况）
+
+```bash
+ssh <用户名>@<服务器IP>
+cd /var/www/roco && ./deploy.sh 2
 ```
 
 ---
@@ -52,7 +69,7 @@ cd ../server && npm install && node sync_db.js
 pm2 restart roco-server
 ```
 
-### sync_db.js 流程
+### sync_db.js 完整流程（10步）
 
 ```bash
 cd /var/www/roco/app/server
@@ -61,8 +78,17 @@ node sync_db.js
 
 执行顺序：
 1. 生成缩略图（128px WebP q60，需 sharp）→ 更新 pet_list.json
-2. 初始化数据库（建表）
-3. 导入数据（JSON → SQLite）
+2. 生成 WebP 副本（全部图片，需 sharp）
+3. 初始化数据库（建表）
+4. 导入数据（JSON → SQLite）
+5. 迁移 show_shiny 列（默认值1）
+6. 规范化身高体重数据
+7. 清洗技能等级字段
+8. 同步进化链（多路线合并）
+9. 同步最终形态标记
+10. 同步默认图鉴课题
+
+> 如果未安装 `sharp`，步骤 1-2 会自动跳过。
 
 ### 首次安装 sharp
 
@@ -70,6 +96,17 @@ node sync_db.js
 cd /var/www/roco/app/server
 npm install sharp
 ```
+
+---
+
+## 后端依赖
+
+关键依赖（`app/server/package.json`）：
+- `better-sqlite3` — SQLite3 数据库驱动
+- `cheerio` — BWIKI HTML 解析（爬取预览功能）
+- `sharp` — 图片处理（缩略图/WebP 生成）
+- `jsonwebtoken` — JWT 鉴权
+- `multer` — 文件上传
 
 ---
 
@@ -99,6 +136,12 @@ pip install -r crawler/requirements.txt
 - 部署脚本 `setup-nginx.sh`（不入 git）自动替换占位符并应用
 - 用法：`sudo bash setup-nginx.sh`
 
+特性：
+- HTTP/2 多路复用
+- Brotli 压缩（优先）+ Gzip 备用
+- 静态资源 365 天 immutable 缓存
+- WebP 自动返回（检测浏览器 Accept 头）
+
 ---
 
 ## 重要注意
@@ -107,6 +150,7 @@ pip install -r crawler/requirements.txt
 - `sync_db.js` 导入时跳过 `manual_edit=1` 的记录
 - 赛季数据只通过管理端配置，sync 不会覆盖
 - `data/uploads/` 存放手动上传图片，爬虫不碰
+- 后端依赖 `cheerio`（BWIKI 爬取），确保 `npm install` 完整执行
 
 ---
 
@@ -142,11 +186,22 @@ sudo certbot renew --dry-run
 
 ---
 
-## 定时任务
+## 排查自动部署问题
 
-crontab 每天 00:00 自动执行 deploy.sh：
-```cron
-0 0 * * * cd /var/www/roco && ./deploy.sh 2 >> /var/log/roco-deploy.log 2>&1
+```bash
+# 查看部署日志
+tail -50 /var/log/roco-deploy.log
+
+# 检查 git 状态
+cd /var/www/roco && git status
+
+# 如有冲突，强制重置
+git fetch origin && git reset --hard origin/main
+
+# 手动重新构建
+cd app/client && npm install && npm run build
+cd ../server && npm install
+pm2 restart roco-server
 ```
 
 ---
@@ -159,6 +214,7 @@ app/server/data/
 └── backups/
     ├── *.db             # 临时备份
     ├── _meta.json       # 备份元数据
+    ├── auto_presync_*.db  # 自动预同步备份（最近5份）
     ├── seasons/         # 赛季备份（受保护）
     │   └── season_S1_20260520.db
     └── snapshots/       # 恢复前快照
