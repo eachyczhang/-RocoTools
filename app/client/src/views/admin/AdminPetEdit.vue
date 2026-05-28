@@ -228,7 +228,14 @@
 
     <!-- 种族值 -->
     <div class="card mb-4">
-      <h2 class="font-roco text-base text-primary-500 mb-3">种族值 <span class="text-xs text-red-500">*</span></h2>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-roco text-base text-primary-500">种族值 <span class="text-xs text-red-500">*</span></h2>
+        <button @click="pasteStats" class="px-2 py-1 text-[10px] rounded border transition-colors"
+          :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+          title="从剪贴板粘贴种族值">
+          📥 粘贴
+        </button>
+      </div>
       <div class="grid grid-cols-3 md:grid-cols-7 gap-3">
         <div v-for="s in statFields" :key="s.key">
           <label class="text-xs text-muted">{{ s.label }} <span v-if="s.key !== 'total'" class="text-red-500">*</span></label>
@@ -241,7 +248,14 @@
 
     <!-- 详情字段 -->
     <div class="card mb-4">
-      <h2 class="font-roco text-base text-primary-500 mb-3">详情信息</h2>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-roco text-base text-primary-500">详情信息</h2>
+        <button @click="pasteDetail" class="px-2 py-1 text-[10px] rounded border transition-colors"
+          :class="isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
+          title="从剪贴板粘贴身高体重">
+          📥 粘贴
+        </button>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div>
           <label class="text-xs text-muted mb-1 block">身高 (m)</label>
@@ -807,6 +821,12 @@
           </div>
         </div>
 
+        <!-- Crawl toast notification -->
+        <div v-if="crawlToast" class="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium pointer-events-none"
+          :class="crawlToastOk ? 'bg-green-500 text-white' : 'bg-red-500 text-white'">
+          {{ crawlToast }}
+        </div>
+
         <!-- Scrollable content area -->
         <div class="flex-1 overflow-y-auto">
 
@@ -848,6 +868,11 @@
               </label>
               <span v-if="activeCurrent.total && activeCrawled.total && activeCurrent.total !== activeCrawled.total"
                 class="text-xs text-muted line-through ml-1">{{ activeCurrent.total }}</span>
+              <button @click="copyCrawlStats"
+                class="ml-auto text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 transition-colors"
+                title="复制种族值到剪贴板">
+                📋 复制
+              </button>
             </div>
             <div class="space-y-2">
               <div v-for="s in ['hp','atk','matk','def','mdef','speed']" :key="s" class="flex items-center gap-2">
@@ -904,6 +929,11 @@
                 v-model="crawlSelections[crawlActiveVariant].detail"
                 class="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500" />
               <label :for="'crawl-detail-' + crawlActiveVariant" class="font-medium text-sm">身高体重</label>
+              <button @click="copyCrawlDetail"
+                class="ml-auto text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 transition-colors"
+                title="复制身高体重到剪贴板">
+                📋 复制
+              </button>
             </div>
             <div class="grid grid-cols-2 gap-4 text-xs">
               <div v-if="activeCrawled.height">
@@ -2130,6 +2160,15 @@ const {
 
 const crawling = ref(false)
 const crawlApplying = ref(false)
+const crawlToast = ref('')
+const crawlToastOk = ref(true)
+let crawlToastTimer = null
+function showCrawlToast(text, isOk = true) {
+  crawlToast.value = text
+  crawlToastOk.value = isOk
+  if (crawlToastTimer) clearTimeout(crawlToastTimer)
+  crawlToastTimer = setTimeout(() => { crawlToast.value = '' }, 2500)
+}
 
 const STAT_LABELS = { hp: '生命', atk: '物攻', matk: '魔攻', def: '物防', mdef: '魔防', speed: '速度', total: '总计' }
 function statLabel(key) { return STAT_LABELS[key] || key }
@@ -2188,6 +2227,90 @@ function crawlCategoryColor(type) {
   return colors[type] || '#6B7280'
 }
 
+async function copyCrawlStats() {
+  if (!crawlPreview.value) return
+  const crawled = crawlPreview.value.crawled[crawlActiveVariant.value]
+  if (!crawled) return
+
+  const exportData = {
+    type: 'stats',
+    hp: crawled.hp || 0,
+    atk: crawled.atk || 0,
+    matk: crawled.matk || 0,
+    def: crawled.def || 0,
+    mdef: crawled.mdef || 0,
+    speed: crawled.speed || 0,
+  }
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
+    showCrawlToast('✅ 已复制种族值到剪贴板')
+  } catch (e) {
+    showCrawlToast('❌ 复制失败: ' + e.message, false)
+  }
+}
+
+async function copyCrawlDetail() {
+  if (!crawlPreview.value) return
+  const crawled = crawlPreview.value.crawled[crawlActiveVariant.value]
+  if (!crawled) return
+
+  const hParts = parseRange(crawled.height)
+  const wParts = parseRange(crawled.weight)
+  const exportData = {
+    type: 'detail',
+    heightMin: hParts[0] || '',
+    heightMax: hParts[1] || '',
+    weightMin: wParts[0] || '',
+    weightMax: wParts[1] || '',
+  }
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
+    showCrawlToast('✅ 已复制身高体重到剪贴板')
+  } catch (e) {
+    showCrawlToast('❌ 复制失败: ' + e.message, false)
+  }
+}
+
+async function pasteStats() {
+  try {
+    const text = await navigator.clipboard.readText()
+    const payload = JSON.parse(text)
+    if (!payload || payload.type !== 'stats') {
+      msg.value = '剪贴板中不是有效的种族值数据'; ok.value = false
+      return
+    }
+    form.value.hp = payload.hp || 0
+    form.value.atk = payload.atk || 0
+    form.value.matk = payload.matk || 0
+    form.value.def = payload.def || 0
+    form.value.mdef = payload.mdef || 0
+    form.value.speed = payload.speed || 0
+    msg.value = '✅ 已粘贴种族值'; ok.value = true
+  } catch (err) {
+    msg.value = '粘贴失败：' + err.message; ok.value = false
+  }
+}
+
+async function pasteDetail() {
+  try {
+    const text = await navigator.clipboard.readText()
+    const payload = JSON.parse(text)
+    if (!payload || payload.type !== 'detail') {
+      msg.value = '剪贴板中不是有效的身高体重数据'; ok.value = false
+      return
+    }
+    detailForm.value.heightMin = payload.heightMin || ''
+    detailForm.value.heightMax = payload.heightMax || ''
+    detailForm.value.weightMin = payload.weightMin || ''
+    detailForm.value.weightMax = payload.weightMax || ''
+    msg.value = '✅ 已粘贴身高体重'; ok.value = true
+  } catch (err) {
+    msg.value = '粘贴失败：' + err.message; ok.value = false
+  }
+}
+
 async function copySkillsToClipboard(skillType) {
   if (!crawlPreview.value) return
   const crawled = crawlPreview.value.crawled[crawlActiveVariant.value]
@@ -2196,7 +2319,7 @@ async function copySkillsToClipboard(skillType) {
   // Only include matched skills (exclude red-background unmatched ones)
   const matchedSkills = crawled[skillType].filter(s => s._matched)
   if (!matchedSkills.length) {
-    msg.value = '没有已匹配的技能可复制'; ok.value = false
+    showCrawlToast('没有已匹配的技能可复制', false)
     return
   }
 
@@ -2219,10 +2342,9 @@ async function copySkillsToClipboard(skillType) {
 
   try {
     await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
-    msg.value = `已复制 ${matchedSkills.length} 个${skillType === 'skills' ? '精灵技能' : skillType === 'bloodline_skills' ? '血脉技能' : '技能石'}到剪贴板`
-    ok.value = true
+    showCrawlToast(`✅ 已复制 ${matchedSkills.length} 个${skillType === 'skills' ? '精灵技能' : skillType === 'bloodline_skills' ? '血脉技能' : '技能石'}到剪贴板`)
   } catch (e) {
-    msg.value = '复制失败: ' + e.message; ok.value = false
+    showCrawlToast('❌ 复制失败: ' + e.message, false)
   }
 }
 

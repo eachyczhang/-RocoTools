@@ -36,7 +36,8 @@ app/
 │   │   │   │   ├── library.js  # 素材库（上传/目录/重命名）
 │   │   │   │   ├── media.js    # 统一素材管理（全局浏览/删除）
 │   │   │   │   ├── export.js   # Excel 导出
-│   │   │   │   └── petSkills.js # 精灵技能/蛋组/特性管理
+│   │   │   │   ├── petSkills.js # 精灵技能/蛋组/特性管理
+│   │   │   │   └── crawl.js    # BWIKI爬取（预览+应用，cheerio解析）
 │   │   │   ├── pets.js         # 精灵 API
 │   │   │   ├── skills.js       # 技能 API
 │   │   │   ├── elements.js     # 属性 API
@@ -67,11 +68,12 @@ app/
         │   ├── useModal.js     # 全局弹窗状态
         │   ├── useAdmin.js     # 管理端请求封装（30s 超时）
         │   ├── useImagePreview.js  # 图片预览
+        │   ├── useCrawlPreview.js  # BWIKI爬取预览全局状态（最小化/恢复/跨页面持久化）
         │   └── usePageVisibility.js # 页面可见性恢复（5分钟后台切回刷新）
         ├── styles/main.scss    # Tailwind + 全局组件类
         ├── views/
         │   ├── user/           # 用户端 12 个页面
-│   └── admin/          # 管理端 15 个页面
+│   └── admin/          # 管理端 16 个页面
         └── components/
             └── shared/         # 可复用组件
                 ├── DatePicker.vue      # 日期选择器
