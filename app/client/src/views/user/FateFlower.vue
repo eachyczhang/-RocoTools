@@ -182,17 +182,47 @@
 
           <!-- Attack profile summary -->
           <div v-if="counterPicks" class="mb-4 p-2.5 sm:p-3 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-0 text-xs sm:text-sm">
+            <!-- Boss base stats + nature + tendency -->
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm mb-2 pb-2 border-b border-blue-200/50 dark:border-blue-500/20">
               <div class="flex items-center gap-1.5">
-                <span class="text-muted">攻击倾向：</span>
-                <span class="font-medium" :class="counterPicks.attack_profile.tendency === '物攻' ? 'text-red-500' : 'text-purple-500'">
-                  {{ counterPicks.attack_profile.tendency }}
+                <span class="text-muted">种族值：</span>
+                <span class="font-medium">物攻 <strong>{{ counterPicks.attack_profile.base_values.atk }}</strong></span>
+                <span class="text-muted">/</span>
+                <span class="font-medium">魔攻 <strong>{{ counterPicks.attack_profile.base_values.matk }}</strong></span>
+                <span class="text-muted">/</span>
+                <span class="font-medium">物防 <strong>{{ counterPicks.attack_profile.boss_def }}</strong></span>
+                <span class="text-muted">/</span>
+                <span class="font-medium">魔防 <strong>{{ counterPicks.attack_profile.boss_mdef }}</strong></span>
+              </div>
+              <div v-if="counterPicks.attack_profile.nature_up" class="flex items-center gap-1">
+                <span class="text-muted">性格加成：</span>
+                <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400">
+                  ▲{{ counterPicks.attack_profile.nature_up }}
                 </span>
-                <span class="text-muted text-xs">
-                  ({{ counterPicks.attack_profile.tendency_values.atk }}/{{ counterPicks.attack_profile.tendency_values.matk }})
+                <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400">
+                  ▼{{ counterPicks.attack_profile.nature_down }}
                 </span>
               </div>
-              <span class="hidden sm:inline text-muted mx-2">|</span>
+            </div>
+            <!-- Tendency + defense hint -->
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm mb-2">
+              <div class="flex items-center gap-1.5">
+                <span class="text-muted">攻击倾向：</span>
+                <span class="font-bold px-1.5 py-0.5 rounded" :class="counterPicks.attack_profile.tendency === '物攻' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400'">
+                  {{ counterPicks.attack_profile.tendency }}型
+                </span>
+                <span class="text-muted text-[10px]">
+                  (修正后 {{ counterPicks.attack_profile.tendency_values.atk }}/{{ counterPicks.attack_profile.tendency_values.matk }})
+                </span>
+              </div>
+              <span v-if="counterPicks.attack_profile.boss_weaker_def" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+                💢 {{ counterPicks.attack_profile.boss_weaker_def === 'physical' ? '物防较低 → 建议用物攻打' : '魔防较低 → 建议用魔攻打' }}
+              </span>
+              <span v-else-if="counterPicks.attack_profile.boss_def != null" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400">
+                ⚖️ 双防均衡
+              </span>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-0 text-xs sm:text-sm">
               <div class="flex items-center gap-1.5">
                 <span class="text-muted">攻击属性：</span>
                 <div class="flex items-center gap-1">
@@ -226,13 +256,6 @@
               </span>
               <span v-if="counterPicks.attack_profile.has_defense_skills" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
                 🛡️ 有防御技能
-              </span>
-              <span v-if="counterPicks.attack_profile.boss_weaker_def" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                💢 {{ counterPicks.attack_profile.boss_weaker_def === 'physical' ? '物防较低' : '魔防较低' }}
-                ({{ counterPicks.attack_profile.boss_def }}/{{ counterPicks.attack_profile.boss_mdef }})
-              </span>
-              <span v-else-if="counterPicks.attack_profile.boss_def != null" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400">
-                ⚖️ 双防均衡 ({{ counterPicks.attack_profile.boss_def }}/{{ counterPicks.attack_profile.boss_mdef }})
               </span>
             </div>
             <!-- Tag legend (hidden on mobile, shown on sm+) -->

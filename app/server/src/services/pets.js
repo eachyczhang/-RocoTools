@@ -325,12 +325,18 @@ function getCounterPicks(petUid, natureOverride) {
   if (!pet) return null;
 
   // --- Step 1: Determine attack tendency ---
+  const baseAtk = pet.atk;
+  const baseMatk = pet.matk;
   let atk = pet.atk;
   let matk = pet.matk;
+  let natureUp = null;
+  let natureDown = null;
 
   if (natureOverride) {
     const nature = db.prepare('SELECT stat_up, stat_down FROM natures WHERE name = ?').get(natureOverride);
     if (nature) {
+      natureUp = nature.stat_up;
+      natureDown = nature.stat_down;
       const applyBonus = (stat, field) => {
         if (nature.stat_up === field) return Math.floor(stat * 1.1);
         if (nature.stat_down === field) return Math.floor(stat * 0.9);
@@ -1017,6 +1023,9 @@ function getCounterPicks(petUid, natureOverride) {
     attack_profile: {
       tendency: attackTendency,
       tendency_values: { atk, matk },
+      base_values: { atk: baseAtk, matk: baseMatk },
+      nature_up: natureUp,
+      nature_down: natureDown,
       elements: attackElementList,
       defense_stat_used: defenseStat,
       has_status_skills: hasStatusSkills,
