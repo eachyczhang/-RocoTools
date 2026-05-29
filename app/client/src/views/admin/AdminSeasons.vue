@@ -647,7 +647,7 @@ onMounted(loadList)
 :deep(.prose-announcement table.cols-2 td:first-child .shiny-wrap) { font-size: 0; gap: 0; }
 :deep(.prose-announcement table.cols-2 td:first-child .shiny-wrap .inline-img) { font-size: 0.78rem; }
 
-/* Mobile optimization for cols-2 tables (pet dex) */
+/* Mobile optimization for announcement tables */
 @media (max-width: 639px) {
   :deep(.prose-announcement table.cols-2 td:first-child),
   :deep(.prose-announcement table.cols-2 th:first-child) { width: 90px; min-width: 90px; }
@@ -655,5 +655,12 @@ onMounted(loadList)
   :deep(.prose-announcement table.cols-2 th:nth-child(2)) { padding-left: 0.5rem; }
   :deep(.prose-announcement .inline-img) { width: 40px; height: 40px; }
   :deep(.prose-announcement .ability-icon) { width: 1.4em; height: 1.4em; vertical-align: -0.3em; }
+  /* cols-6/cols-8/cols-3: narrow first column with ellipsis */
+  :deep(.prose-announcement table.cols-6 td:first-child),
+  :deep(.prose-announcement table.cols-6 th:first-child),
+  :deep(.prose-announcement table.cols-8 td:first-child),
+  :deep(.prose-announcement table.cols-8 th:first-child),
+  :deep(.prose-announcement table.cols-3 td:first-child),
+  :deep(.prose-announcement table.cols-3 th:first-child) { max-width: 120px; min-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 </style>

@@ -732,8 +732,9 @@ onMounted(async () => {
   height: 22px;
 }
 
-/* Mobile optimization for cols-2 tables (pet dex) */
+/* Mobile optimization for announcement tables */
 @media (max-width: 639px) {
+  /* cols-2: shrink first column */
   :deep(.prose-announcement table.cols-2 td:first-child),
   :deep(.prose-announcement table.cols-2 th:first-child) {
     width: 90px;
@@ -756,6 +757,19 @@ onMounted(async () => {
   :deep(.prose-announcement td .pet-icon) {
     width: 22px;
     height: 22px;
+  }
+  /* cols-6/cols-8/cols-3: narrow first column with ellipsis */
+  :deep(.prose-announcement table.cols-6 td:first-child),
+  :deep(.prose-announcement table.cols-6 th:first-child),
+  :deep(.prose-announcement table.cols-8 td:first-child),
+  :deep(.prose-announcement table.cols-8 th:first-child),
+  :deep(.prose-announcement table.cols-3 td:first-child),
+  :deep(.prose-announcement table.cols-3 th:first-child) {
+    max-width: 120px;
+    min-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>
