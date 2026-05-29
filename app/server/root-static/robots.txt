@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/admin/
-Disallow: /rocotools/admin/
-
-Sitemap: https://eachz.cn/sitemap.xml

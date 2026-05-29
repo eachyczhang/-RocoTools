@@ -77,8 +77,6 @@ setup-nginx.sh
 # 根路径静态文件（验证文件、证书等，仅服务器使用）
 app/server/root-static/*
 !app/server/root-static/.gitkeep
-!app/server/root-static/robots.txt
-!app/server/root-static/sitemap.xml
 
 # ============================================================
 # 临时数据（本地使用，不入版本控制）
