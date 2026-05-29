@@ -7,30 +7,38 @@ const { getDb, getWriteDb, DATA_DIR } = require('../../db/connection');
 const FEEDBACK_UPLOAD_DIR = path.join(DATA_DIR, 'uploads', 'feedbacks');
 
 // ============================================================
-// Helper: ensure feedbacks table exists
+// Helper: ensure feedbacks table exists (uses write db)
 // ============================================================
-function ensureTable(db) {
-  db.prepare(`
-    CREATE TABLE IF NOT EXISTS feedbacks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL DEFAULT 'other',
-      content TEXT NOT NULL,
-      contact TEXT DEFAULT '',
-      images TEXT DEFAULT '[]',
-      page_url TEXT DEFAULT '',
-      page_title TEXT DEFAULT '',
-      device_type TEXT DEFAULT '',
-      screen_size TEXT DEFAULT '',
-      user_agent TEXT DEFAULT '',
-      ip TEXT DEFAULT '',
-      dark_mode INTEGER DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'pending',
-      admin_note TEXT DEFAULT '',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
+function ensureTable() {
+  const db = getWriteDb();
+  try {
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS feedbacks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL DEFAULT 'other',
+        content TEXT NOT NULL,
+        contact TEXT DEFAULT '',
+        images TEXT DEFAULT '[]',
+        page_url TEXT DEFAULT '',
+        page_title TEXT DEFAULT '',
+        device_type TEXT DEFAULT '',
+        screen_size TEXT DEFAULT '',
+        user_agent TEXT DEFAULT '',
+        ip TEXT DEFAULT '',
+        dark_mode INTEGER DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending',
+        admin_note TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } finally {
+    db.close();
+  }
 }
+
+// Ensure table on module load
+ensureTable();
 
 // ============================================================
 // GET /api/admin/feedbacks - List feedbacks with pagination & filters
@@ -38,7 +46,6 @@ function ensureTable(db) {
 router.get('/feedbacks', (req, res) => {
   const db = getDb();
   try {
-    ensureTable(db);
 
     const { status, type, page = 1, page_size = 10 } = req.query;
     const limit = Math.min(Math.max(parseInt(page_size) || 10, 1), 50);
@@ -86,7 +93,6 @@ router.get('/feedbacks', (req, res) => {
 router.get('/feedbacks/stats', (req, res) => {
   const db = getDb();
   try {
-    ensureTable(db);
 
     const pending = db.prepare("SELECT COUNT(*) as c FROM feedbacks WHERE status = 'pending'").get().c;
 
@@ -110,7 +116,6 @@ router.get('/feedbacks/stats', (req, res) => {
 router.get('/feedbacks/:id', (req, res) => {
   const db = getDb();
   try {
-    ensureTable(db);
     const item = db.prepare('SELECT * FROM feedbacks WHERE id = ?').get(req.params.id);
     if (!item) return res.status(404).json({ error: 'Feedback not found' });
     res.json(item);
@@ -125,7 +130,6 @@ router.get('/feedbacks/:id', (req, res) => {
 router.patch('/feedbacks/:id', (req, res) => {
   const db = getWriteDb();
   try {
-    ensureTable(db);
 
     const { status, admin_note } = req.body;
     const id = req.params.id;
@@ -174,7 +178,6 @@ router.patch('/feedbacks/:id', (req, res) => {
 router.delete('/feedbacks/:id', (req, res) => {
   const db = getWriteDb();
   try {
-    ensureTable(db);
 
     const item = db.prepare('SELECT images FROM feedbacks WHERE id = ?').get(req.params.id);
     if (!item) {
