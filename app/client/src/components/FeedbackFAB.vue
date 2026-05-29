@@ -174,7 +174,7 @@ const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 
 const panelPositionClass = computed(() => {
   if (isDesktop.value) {
-    return 'right-6 bottom-20 w-[360px] max-h-[70vh] overflow-y-auto rounded-2xl shadow-2xl border ' +
+    return 'right-6 bottom-20 w-[420px] max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl border ' +
       (isDark.value ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-gray-200')
   }
   // Tablet
