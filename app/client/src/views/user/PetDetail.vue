@@ -317,13 +317,35 @@
       </div>
     </Teleport>
 
-    <!-- 滑动提示（仅触屏设备首次显示） -->
+    <!-- 滑动引导遮罩（首次进入，完成一次滑动后消失） -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="showSwipeHint" class="xl:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 dark:bg-white/15 backdrop-blur-sm text-white text-xs shadow-lg">
-          <svg class="w-4 h-4 animate-bounce-x-reverse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          <span>左右滑动切换精灵</span>
-          <svg class="w-4 h-4 animate-bounce-x" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <div v-if="showSwipeGuide" class="xl:hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/70 backdrop-blur-[2px]" @click.self="dismissGuide">
+          <!-- 引导内容卡片 -->
+          <div class="flex flex-col items-center gap-6 px-8 py-10 max-w-xs text-center">
+            <!-- 手指滑动动画 -->
+            <div class="relative w-48 h-20 flex items-center justify-center">
+              <!-- 左右箭头轨迹 -->
+              <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/20 rounded-full"></div>
+              <!-- 左箭头 -->
+              <svg class="absolute left-2 w-5 h-5 text-white/50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              <!-- 右箭头 -->
+              <svg class="absolute right-2 w-5 h-5 text-white/50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <!-- 滑动手指图标 -->
+              <div class="swipe-finger-anim">
+                <svg class="w-10 h-10 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9.5 3.5a1.5 1.5 0 0 1 3 0v7.085l3.225-1.612a1.5 1.5 0 0 1 2.007.67l.036.073a1.5 1.5 0 0 1-.462 1.86l-5.87 4.39A5.5 5.5 0 0 1 8.136 17.5H7.5A3.5 3.5 0 0 1 4 14V9.5a1.5 1.5 0 0 1 3 0v1.75a.25.25 0 0 0 .5 0V6.5a1.5 1.5 0 0 1 2 0v-3z"/>
+                </svg>
+              </div>
+            </div>
+            <!-- 文字提示 -->
+            <div class="space-y-2">
+              <p class="text-white text-lg font-medium">左右滑动切换精灵</p>
+              <p class="text-white/60 text-sm">试试向左或向右滑动</p>
+            </div>
+            <!-- 底部提示 -->
+            <p class="text-white/40 text-xs mt-2">完成一次滑动后自动关闭</p>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -347,7 +369,7 @@ const route = useRoute()
 const router = useRouter()
 const pet = ref(null)
 const neighbors = ref({ prev: null, next: null })
-const showSwipeHint = ref(false)
+const showSwipeGuide = ref(false)
 const navVisible = ref(false)
 
 // Format range string "1.50-2.15" to display "1.50~2.15m" or "1.50m" if same
@@ -627,19 +649,18 @@ const statsBarList = computed(() => {
 
 onMounted(() => loadPet(route.params.uid))
 
-// Show swipe hint once for mobile/tablet devices (< lg breakpoint)
+// Show swipe guide mask once for mobile/tablet devices (< xl breakpoint)
 onMounted(() => {
-  const hintKey = 'pet-swipe-hint-shown'
+  const hintKey = 'pet-swipe-guide-done'
   if (!localStorage.getItem(hintKey) && window.innerWidth < 1280) {
-    // Delay slightly so page content loads first
-    setTimeout(() => {
-      showSwipeHint.value = true
-      localStorage.setItem(hintKey, '1')
-      // Auto-hide after 3s
-      setTimeout(() => { showSwipeHint.value = false }, 3000)
-    }, 600)
+    setTimeout(() => { showSwipeGuide.value = true }, 500)
   }
 })
+
+function dismissGuide() {
+  showSwipeGuide.value = false
+  localStorage.setItem('pet-swipe-guide-done', '1')
+}
 
 // Desktop: briefly show nav buttons on page enter, then fade out
 onMounted(() => {
@@ -713,6 +734,11 @@ function onTouchEnd() {
 
   const offset = swipeOffset.value
   if (Math.abs(offset) >= SWIPE_THRESHOLD) {
+    // Dismiss guide on first successful swipe
+    if (showSwipeGuide.value) {
+      showSwipeGuide.value = false
+      localStorage.setItem('pet-swipe-guide-done', '1')
+    }
     // Trigger navigation: animate out
     isAnimating.value = true
     const direction = offset > 0 ? 1 : -1
@@ -752,24 +778,26 @@ onUnmounted(() => {
 <style>
 /* Unscoped: Teleport content needs global styles */
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.6s ease;
+  transition: opacity 0.5s ease;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
 
-@keyframes bounce-x {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(3px); }
+/* Swipe guide finger animation */
+@keyframes swipe-finger {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  15% { transform: translateX(0); opacity: 1; }
+  45% { transform: translateX(50px); opacity: 0.7; }
+  50% { transform: translateX(50px); opacity: 0; }
+  55% { transform: translateX(0); opacity: 0; }
+  60% { transform: translateX(0); opacity: 1; }
+  75% { transform: translateX(-50px); opacity: 0.7; }
+  80% { transform: translateX(-50px); opacity: 0; }
+  85% { transform: translateX(0); opacity: 0; }
+  90% { transform: translateX(0); opacity: 1; }
 }
-@keyframes bounce-x-reverse {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-3px); }
-}
-.animate-bounce-x {
-  animation: bounce-x 1s ease-in-out infinite;
-}
-.animate-bounce-x-reverse {
-  animation: bounce-x-reverse 1s ease-in-out infinite;
+.swipe-finger-anim {
+  animation: swipe-finger 3s ease-in-out infinite;
 }
 </style>
