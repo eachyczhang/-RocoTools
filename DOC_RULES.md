@@ -55,6 +55,7 @@
 | [docs/counter-picks.md](./docs/counter-picks.md) | 反制推荐模块开发规则与算法原理（标签体系/克制倍率/评分权重） | 反制推荐算法或标签规则变更时更新 |
 | [docs/PATCH_NOTES_TABLE_RULES.md](./docs/PATCH_NOTES_TABLE_RULES.md) | 公告表格展示规范（列数/排序/图标/样式/各模块格式） | 公告脚本表格格式变更时更新 |
 | [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（属性色号/关键词映射） | 新增高亮关键词或修改颜色时更新 |
+| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Git 提交规范（commit message 格式/pre-commit 检查项/绕过方式） | Git hooks 规则变更时更新 |
 
 ### docs/game-notes/
 

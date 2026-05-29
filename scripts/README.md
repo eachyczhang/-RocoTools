@@ -13,6 +13,7 @@
 - [五、图片处理脚本](#五图片处理脚本)
 - [六、赛季公告生成脚本](#六赛季公告生成脚本)
 - [七、图标提取工具](#七图标提取工具)
+- [八、Git Hooks（提交守卫）](#八git-hooks提交守卫)
 
 ---
 
@@ -529,3 +530,83 @@ node ability-icon-tool/process.js && node skill-icon-tool/process.js
 使用项目已有的 `sharp` 库（位于 `app/server/node_modules`），无需额外安装。
 
 > ℹ️ input/output 目录中的图片文件不跟随 git（已配置 .gitignore），目录本身通过 .gitkeep 保留。
+
+---
+
+## 八、Git Hooks（提交守卫）
+
+**目录**：`scripts/git-hooks/`
+
+通过 Git 的 `core.hooksPath` 配置，在每次提交前自动执行代码检查和质量保障。
+
+### 首次激活
+
+```bash
+# 方式一：运行安装脚本
+bash scripts/setup-hooks.sh
+
+# 方式二：手动配置
+git config core.hooksPath scripts/git-hooks
+```
+
+> 只需执行一次，配置保存在本地 `.git/config` 中。
+
+### 包含的 Hooks
+
+#### pre-commit — 提交前检查（7项）
+
+| # | 检查项 | 行为 | 严重性 |
+|---|--------|------|--------|
+| 1 | `console.log` 检测 | 扫描暂存的 JS/Vue/TS 文件中新增的 console.log | ⚠️ 警告（不阻止提交） |
+| 2 | `debugger` 检测 | 扫描暂存文件中新增的 debugger 语句 | ❌ 阻止提交 |
+| 3 | `.env` 文件检测 | 阻止 .env 文件被提交 | ❌ 阻止提交 |
+| 4 | `.db` 文件检测 | 阻止数据库文件被提交 | ❌ 阻止提交 |
+| 5 | 大文件检测（>5MB） | 阻止超大文件被提交 | ❌ 阻止提交 |
+| 6 | 尾部空白修复 | 自动清除 JS/Vue/CSS/JSON/MD 文件的行尾空格 | ✅ 自动修复 |
+| 7 | 前端构建检查 | 当 `app/client/` 有改动时自动执行 `npm run build` | ❌ 构建失败阻止提交 |
+
+#### commit-msg — 提交信息格式校验
+
+强制使用 Conventional Commits 格式：
+
+```
+<type>: <description>
+<type>(<scope>): <description>
+```
+
+**有效的 type 前缀**：
+
+| 前缀 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | Bug 修复 |
+| `docs` | 文档变更 |
+| `style` | 代码格式（不影响逻辑） |
+| `refactor` | 代码重构 |
+| `perf` | 性能优化 |
+| `chore` | 构建/工具/杂项 |
+| `release` | 版本发布 |
+| `build` | 构建系统变更 |
+| `ci` | CI/CD 变更 |
+| `test` | 测试变更 |
+| `hotfix` | 紧急修复 |
+
+**示例**：
+```bash
+git commit -m "feat: add pet comparison feature"
+git commit -m "fix(admin): resolve skill editor crash"
+git commit -m "release: V1.1"
+```
+
+### 绕过 Hooks（紧急情况）
+
+```bash
+git commit --no-verify -m "hotfix: emergency fix"
+```
+
+### 检查行为说明
+
+- **console.log**：仅检查暂存内容中**新增**的行（`git diff --cached` 中的 `+` 行），不会误报已有代码
+- **前端构建**：仅在 `app/client/` 目录有文件变动时触发，构建成功后自动暂存产物
+- **尾部空白**：自动修复后重新 `git add`，无需手动操作
+- **大文件**：阈值 5MB，适用于所有文件类型
