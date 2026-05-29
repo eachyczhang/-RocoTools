@@ -1041,6 +1041,22 @@
       <button @click="save" class="btn-primary shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" :disabled="saving">{{ saving ? '保存中...' : (isNew ? '✨ 创建精灵' : '💾 保存修改') }}</button>
       <span v-if="msg" class="text-sm" :class="ok ? 'text-green-600' : 'text-red-500'">{{ msg }}</span>
     </div>
+
+    <!-- 悬浮导航：上一只/下一只 -->
+    <Teleport to="body">
+      <router-link v-if="!isNew && neighbors.prev" :to="'/admin/pets/' + neighbors.prev.uid"
+        class="fixed left-1 sm:left-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        :title="neighbors.prev.name">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.prev.name }}</span>
+      </router-link>
+      <router-link v-if="!isNew && neighbors.next" :to="'/admin/pets/' + neighbors.next.uid"
+        class="fixed right-1 sm:right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        :title="neighbors.next.name">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.next.name }}</span>
+      </router-link>
+    </Teleport>
   </div>
   <div v-else class="text-muted text-center mt-20">加载中...</div>
 </template>
@@ -1080,6 +1096,7 @@ const detail = ref(null)
 const elements = ref([])
 const abilities = ref([])
 const variants = ref([])
+const neighbors = ref({ prev: null, next: null })
 const loaded = ref(false)
 const saving = ref(false)
 const msg = ref('')
@@ -1477,8 +1494,12 @@ async function loadData() {
   abilities.value = abilitiesRes
 
   if (!isNew) {
-    const data = await petsApi.get(uid)
+    const [data, neighborsData] = await Promise.all([
+      petsApi.get(uid),
+      petsApi.neighbors(uid).catch(() => ({ prev: null, next: null })),
+    ])
     pet.value = data
+    neighbors.value = neighborsData
     detail.value = data.detail || null
 
     form.value = {

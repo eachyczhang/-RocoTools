@@ -294,6 +294,22 @@
 
       <SkillTable :title="''" :skills="filteredSkills" :elem-map="elemMap" />
     </div>
+
+    <!-- 悬浮导航：上一只/下一只 -->
+    <Teleport to="body">
+      <router-link v-if="neighbors.prev" :to="'/pets/' + neighbors.prev.uid"
+        class="fixed left-1 sm:left-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        :title="neighbors.prev.name">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.prev.name }}</span>
+      </router-link>
+      <router-link v-if="neighbors.next" :to="'/pets/' + neighbors.next.uid"
+        class="fixed right-1 sm:right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        :title="neighbors.next.name">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.next.name }}</span>
+      </router-link>
+    </Teleport>
   </div>
 </template>
 
@@ -313,6 +329,7 @@ import { categoryColor } from '@/constants/categoryColors'
 const route = useRoute()
 const router = useRouter()
 const pet = ref(null)
+const neighbors = ref({ prev: null, next: null })
 
 // Format range string "1.50-2.15" to display "1.50~2.15m" or "1.50m" if same
 function formatRange(str, unit) {
@@ -549,14 +566,16 @@ const allSkillsWithBloodline = computed(() => {
 })
 
 async function loadPet(uid) {
-  const [petData, elemData, multData] = await Promise.all([
+  const [petData, elemData, multData, neighborsData] = await Promise.all([
     petsApi.get(uid),
     elementsApi.list(),
     elementsApi.multipliers(),
+    petsApi.neighbors(uid).catch(() => ({ prev: null, next: null })),
   ])
   pet.value = petData
   elemList.value = elemData.elements
   multipliers.value = multData
+  neighbors.value = neighborsData
   const map = {}
   for (const e of elemData.elements) {
     map[e.name] = { icon: e.icon, color: e.color }

@@ -49,6 +49,7 @@ export const eggsApi = {
 export const petsApi = {
   list: (params) => request(`${BASE}/pets`, params),
   get: (uid) => request(`${BASE}/pets/${uid}`),
+  neighbors: (uid) => request(`${BASE}/pets/${uid}/neighbors`),
   shiny: () => request(`${BASE}/pets/shiny`),
   coverage: (elements) => request(`${BASE}/pets/coverage`, { elements: elements.join(',') }),
   counterPicks: (uid, nature) => request(`${BASE}/pets/counter-picks/${uid}`, nature ? { nature } : {}),

@@ -1040,4 +1040,29 @@ function getCounterPicks(petUid, natureOverride) {
   };
 }
 
-module.exports = { list, getByUid, getShinyList, findByCoverage, getCounterPicks };
+/**
+ * Get previous and next pet neighbors by pet_id order (first variant only).
+ */
+function getNeighbors(uid) {
+  const current = db.prepare('SELECT pet_id FROM pets WHERE uid = ?').get(uid);
+  if (!current) return null;
+
+  const prev = db.prepare(`
+    SELECT p.uid, p.name, p.pet_id FROM pets p
+    WHERE p.pet_id < ? AND p.uid = (SELECT MIN(p2.uid) FROM pets p2 WHERE p2.pet_id = p.pet_id)
+    ORDER BY p.pet_id DESC LIMIT 1
+  `).get(current.pet_id);
+
+  const next = db.prepare(`
+    SELECT p.uid, p.name, p.pet_id FROM pets p
+    WHERE p.pet_id > ? AND p.uid = (SELECT MIN(p2.uid) FROM pets p2 WHERE p2.pet_id = p.pet_id)
+    ORDER BY p.pet_id ASC LIMIT 1
+  `).get(current.pet_id);
+
+  return {
+    prev: prev ? { uid: prev.uid, name: prev.name } : null,
+    next: next ? { uid: next.uid, name: next.name } : null,
+  };
+}
+
+module.exports = { list, getByUid, getShinyList, findByCoverage, getCounterPicks, getNeighbors };

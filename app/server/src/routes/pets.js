@@ -24,6 +24,12 @@ router.get('/counter-picks/:uid', (req, res) => {
   res.json(result);
 });
 
+router.get('/:uid/neighbors', (req, res) => {
+  const result = petsService.getNeighbors(req.params.uid);
+  if (!result) return res.status(404).json({ error: 'Pet not found' });
+  res.json(result);
+});
+
 router.get('/:uid', (req, res) => {
   const result = petsService.getByUid(req.params.uid);
   if (!result) return res.status(404).json({ error: 'Pet not found' });
