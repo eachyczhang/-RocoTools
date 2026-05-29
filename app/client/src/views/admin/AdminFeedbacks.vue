@@ -3,7 +3,16 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
       <h1 class="font-roco text-xl md:text-2xl text-primary-500">用户反馈</h1>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
+        <!-- Cooldown Config -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-muted">冷却</span>
+          <input v-model.number="cooldownSeconds" type="number" min="0" max="3600" step="10"
+            class="input w-16 text-xs text-center py-1" />
+          <span class="text-xs text-muted">秒</span>
+          <button @click="saveCooldown" class="text-xs text-primary-500 hover:underline"
+            :disabled="cooldownSeconds === savedCooldown">保存</button>
+        </div>
         <!-- Feature Toggle -->
         <label class="flex items-center gap-2 cursor-pointer">
           <span class="text-xs text-muted">{{ feedbackEnabled ? '已开启' : '已关闭' }}</span>
@@ -191,6 +200,8 @@ const currentStatus = ref('all')
 const currentType = ref('all')
 const expandedId = ref(null)
 const feedbackEnabled = ref(true)
+const cooldownSeconds = ref(60)
+const savedCooldown = ref(60)
 const previewVisible = ref(false)
 const previewSrc = ref('')
 
@@ -240,9 +251,23 @@ async function loadList() {
 async function loadSettings() {
   try {
     const settings = await adminApi.getSettings()
-    const setting = settings.find(s => s.key === 'feedback_enabled')
-    feedbackEnabled.value = !setting || setting.value !== '0'
+    const enabledSetting = settings.find(s => s.key === 'feedback_enabled')
+    feedbackEnabled.value = !enabledSetting || enabledSetting.value !== '0'
+    const cooldownSetting = settings.find(s => s.key === 'feedback_cooldown')
+    if (cooldownSetting) {
+      cooldownSeconds.value = parseInt(cooldownSetting.value) || 60
+      savedCooldown.value = cooldownSeconds.value
+    }
   } catch {}
+}
+
+async function saveCooldown() {
+  try {
+    await adminApi.updateSetting('feedback_cooldown', String(cooldownSeconds.value), '用户反馈提交冷却时间（秒）')
+    savedCooldown.value = cooldownSeconds.value
+  } catch (err) {
+    await modal.alert('保存失败', err.message)
+  }
 }
 
 async function toggleEnabled() {

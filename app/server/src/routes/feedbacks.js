@@ -89,10 +89,16 @@ function sanitize(str) {
 }
 
 // ============================================================
-// GET /api/feedbacks/enabled - Check if feedback is enabled
+// GET /api/feedbacks/enabled - Check if feedback is enabled + config
 // ============================================================
 router.get('/enabled', (req, res) => {
-  res.json({ enabled: isFeedbackEnabled() });
+  const db = getDb();
+  let cooldown = 60; // default 60 seconds
+  try {
+    const row = db.prepare("SELECT value FROM site_settings WHERE key = 'feedback_cooldown'").get();
+    if (row) cooldown = Math.max(0, parseInt(row.value) || 60);
+  } catch {}
+  res.json({ enabled: isFeedbackEnabled(), cooldown });
 });
 
 // ============================================================

@@ -148,6 +148,7 @@ const panelOpen = ref(false)
 const submitted = ref(false)
 const submitting = ref(false)
 const cooldownRemaining = ref(0)
+const cooldownMs = ref(60 * 1000) // default, will be overridden by server config
 const panelRef = ref(null)
 const dragStartY = ref(0)
 const dragDelta = ref(0)
@@ -206,6 +207,9 @@ async function checkEnabled() {
     if (res.ok) {
       const data = await res.json()
       showFab.value = data.enabled
+      if (data.cooldown !== undefined) {
+        cooldownMs.value = data.cooldown * 1000
+      }
     }
   } catch {
     showFab.value = false
@@ -259,13 +263,13 @@ function removeImage(idx) {
   form.images.splice(idx, 1)
 }
 
-const COOLDOWN_MS = 60 * 1000 // 1 minute cooldown between submissions
+const COOLDOWN_MS = 60 * 1000 // fallback only, actual value from cooldownMs ref
 
 function updateCooldown() {
   const lastSubmit = localStorage.getItem('feedback_last_submit')
   if (lastSubmit) {
     const elapsed = Date.now() - parseInt(lastSubmit)
-    const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000)
+    const remaining = Math.ceil((cooldownMs.value - elapsed) / 1000)
     cooldownRemaining.value = Math.max(0, remaining)
   }
 }
