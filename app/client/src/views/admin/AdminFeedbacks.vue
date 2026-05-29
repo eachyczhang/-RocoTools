@@ -10,10 +10,9 @@
           <input v-model.number="cooldownSeconds" type="number" min="0" max="3600" step="10"
             class="input w-16 text-xs text-center py-1" />
           <span class="text-xs text-muted">秒</span>
-          <button @click="saveCooldown" class="text-xs transition-colors"
-            :class="cooldownSaveHint === 'saved' ? 'text-green-500' : 'text-primary-500 hover:underline'"
-            :disabled="cooldownSeconds === savedCooldown || cooldownSaveHint === 'saving'">
-            {{ cooldownSaveHint === 'saving' ? '保存中...' : cooldownSaveHint === 'saved' ? '✓ 已保存' : '保存' }}
+          <button @click="saveCooldown" class="text-xs text-primary-500 hover:underline transition-colors"
+            :disabled="cooldownSeconds === savedCooldown || cooldownSaving">
+            {{ cooldownSaving ? '保存中...' : '保存' }}
           </button>
         </div>
         <!-- Feature Toggle -->
@@ -205,7 +204,7 @@ const expandedId = ref(null)
 const feedbackEnabled = ref(true)
 const cooldownSeconds = ref(60)
 const savedCooldown = ref(60)
-const cooldownSaveHint = ref('') // '' | 'saving' | 'saved'
+const cooldownSaving = ref(false)
 const previewVisible = ref(false)
 const previewSrc = ref('')
 
@@ -266,15 +265,15 @@ async function loadSettings() {
 }
 
 async function saveCooldown() {
-  cooldownSaveHint.value = 'saving'
+  cooldownSaving.value = true
   try {
     await adminApi.updateSetting('feedback_cooldown', String(cooldownSeconds.value), '用户反馈提交冷却时间（秒）')
     savedCooldown.value = cooldownSeconds.value
-    cooldownSaveHint.value = 'saved'
-    setTimeout(() => { cooldownSaveHint.value = '' }, 1500)
+    await modal.alert('保存成功', `冷却时间已设置为 ${cooldownSeconds.value} 秒`)
   } catch (err) {
-    cooldownSaveHint.value = ''
     await modal.alert('保存失败', err.message)
+  } finally {
+    cooldownSaving.value = false
   }
 }
 
