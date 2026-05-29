@@ -425,4 +425,14 @@ onMounted(async () => {
 :deep(.prose-announcement .shiny-wrap) { display: inline-flex; align-items: center; vertical-align: middle; gap: 2px; white-space: nowrap; }
 :deep(.prose-announcement table.cols-2 td:first-child .shiny-wrap) { font-size: 0; gap: 0; }
 :deep(.prose-announcement table.cols-2 td:first-child .shiny-wrap .inline-img) { font-size: 0.78rem; }
+
+/* Mobile optimization for cols-2 tables (pet dex) */
+@media (max-width: 639px) {
+  :deep(.prose-announcement table.cols-2 td:first-child),
+  :deep(.prose-announcement table.cols-2 th:first-child) { width: 90px; min-width: 90px; }
+  :deep(.prose-announcement table.cols-2 td:nth-child(2)),
+  :deep(.prose-announcement table.cols-2 th:nth-child(2)) { padding-left: 0.5rem; }
+  :deep(.prose-announcement .inline-img) { width: 40px; height: 40px; }
+  :deep(.prose-announcement .ability-icon) { width: 1.4em; height: 1.4em; vertical-align: -0.3em; }
+}
 </style>
