@@ -118,7 +118,7 @@
             <button @click="submitFeedback"
               class="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="!canSubmit || submitting">
-              {{ submitting ? '提交中...' : cooldownRemaining > 0 ? `请等待 ${cooldownRemaining}s` : '提交反馈' }}
+              {{ submitting ? '提交中...' : cooldownRemaining > 0 ? `请等待 ${cooldownRemaining}s` : form.content.length > 0 && form.content.length < 10 ? `还需输入 ${10 - form.content.length} 字` : '提交反馈' }}
             </button>
 
             <!-- Current page info -->
@@ -259,11 +259,13 @@ function removeImage(idx) {
   form.images.splice(idx, 1)
 }
 
+const COOLDOWN_MS = 60 * 1000 // 1 minute cooldown between submissions
+
 function updateCooldown() {
   const lastSubmit = localStorage.getItem('feedback_last_submit')
   if (lastSubmit) {
     const elapsed = Date.now() - parseInt(lastSubmit)
-    const remaining = Math.ceil((5 * 60 * 1000 - elapsed) / 1000)
+    const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000)
     cooldownRemaining.value = Math.max(0, remaining)
   }
 }
