@@ -191,6 +191,7 @@ grid-cols-4 sm:grid-cols-6 lg:grid-cols-9
 | SkillDetail 技能卡片 | `sm:` (640px) |
 | 导航栏 | `md:` (768px) |
 | 技能列表（表格/卡片） | `lg:` (1024px) |
+| 精灵导航悬浮按钮 | `xl:` (1280px) — 仅桌面显示，手机/平板用滑动手势 |
 
 ---
 
