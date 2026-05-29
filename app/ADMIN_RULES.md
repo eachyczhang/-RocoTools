@@ -1156,3 +1156,66 @@ node app/server/sync_db.js
 - 技能ID排序使用：`CAST(SUBSTR(uid_column, 7) AS INTEGER)`（从 `skill_N` 中提取数字）
 - 学习等级排序使用：`CAST(ps.level AS INTEGER)`（level 字段为字符串类型）
 
+---
+
+## 十九、用户反馈模块
+
+### 用户端（FeedbackFAB 浮动按钮）
+
+全站右下角浮动反馈按钮，用户可随时提交反馈。
+
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| 反馈类型 | bug / suggestion / other | 三选一 |
+| 内容长度 | 10-500字 | 前后端双重校验 |
+| 图片上传 | 最多2张，单张≤3MB | 仅 JPEG/PNG/WebP |
+| 图片压缩 | WebP lossless, max 1920px | sharp 自动处理 |
+| 联系方式 | 选填，最长100字 | — |
+| 提交冷却 | 管理端可配置（默认60秒） | 前端倒计时显示 |
+| IP限流 | 每IP每小时最多10次 | 内存Map + 10分钟清理 |
+| 功能开关 | site_settings.feedback_enabled | 管理端可全局关闭 |
+
+**自动采集的环境信息**：
+- 页面URL、页面标题（中文映射）、设备类型、屏幕尺寸、UA、暗色模式状态
+
+### 管理端（/admin/feedbacks）
+
+| 功能 | 说明 |
+|------|------|
+| 反馈列表 | 分页 + 状态Tab筛选 + 类型筛选 |
+| 状态管理 | pending → read → resolved / ignored |
+| 详情展开 | 完整内容 + 图片预览 + 环境信息 + 管理员备注 |
+| 冷却配置 | 数字输入框 + 保存按钮（弹窗反馈结果） |
+| 功能开关 | Toggle 开关一键启停 |
+| 删除 | 删除反馈 + 自动清理关联图片文件 |
+| Dashboard统计 | 待处理数 / 本周新增 / 总数 |
+
+### API 接口
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| GET | `/api/feedbacks/enabled` | 查询功能状态+冷却时间 | 公开 |
+| POST | `/api/feedbacks` | 提交反馈（multipart/form-data） | 公开 |
+| GET | `/api/admin/feedbacks` | 反馈列表（分页+筛选） | 需鉴权 |
+| GET | `/api/admin/feedbacks/stats` | Dashboard统计数据 | 需鉴权 |
+| GET | `/api/admin/feedbacks/:id` | 单条反馈详情 | 需鉴权 |
+| PATCH | `/api/admin/feedbacks/:id` | 更新状态/备注 | 需鉴权 |
+| DELETE | `/api/admin/feedbacks/:id` | 删除反馈+清理图片 | 需鉴权 |
+
+### 图片存储
+
+- 路径：`/uploads/feedbacks/{YYYY-MM}/fb_{timestamp}_{index}_{random}.webp`
+- 按月归档子目录，自动创建
+- 删除反馈时遍历 images JSON 数组逐个删除文件
+
+### 安全措施
+
+| 措施 | 说明 |
+|------|------|
+| XSS防护 | `sanitize()` 函数转义 `<>&"'` |
+| 文件类型白名单 | 仅允许 image/jpeg, image/png, image/webp |
+| 文件大小限制 | 单文件3MB，最多2个 |
+| IP频率限制 | 每IP每小时10次，内存Map存储 |
+| 内容长度校验 | 10-500字，前后端双重 |
+| 临时文件清理 | 任何错误路径都确保清理 multer 临时文件 |
+

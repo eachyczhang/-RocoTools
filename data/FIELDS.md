@@ -269,3 +269,33 @@
 - 每只命定花种精灵最多配置 3 个技能（愿力冲击为固定技能，无需配置）
 - 技能来源分三类：升级技能、血脉技能、技能石技能
 - 固定性格通过 `pika_monthly_pets.fate_nature` 字段存储
+
+---
+
+## 用户反馈（数据库 feedbacks 表）
+
+| 字段 | 中文名 | 类型 | 说明 |
+|------|--------|------|------|
+| id | 主键 | INTEGER | 自增 |
+| type | 反馈类型 | TEXT | `'bug'` / `'suggestion'` / `'other'` |
+| content | 反馈内容 | TEXT | 10-500字，已做XSS过滤 |
+| contact | 联系方式 | TEXT | 选填，最长100字 |
+| images | 图片列表 | TEXT | JSON数组，存储相对路径如 `["2026-05/fb_xxx.webp"]` |
+| page_url | 来源页面URL | TEXT | 用户提交时所在页面 |
+| page_title | 来源页面标题 | TEXT | 中文页面名称 |
+| device_type | 设备类型 | TEXT | `'mobile'` / `'tablet'` / `'desktop'` |
+| screen_size | 屏幕尺寸 | TEXT | 如 `"1920x1080"` |
+| user_agent | 浏览器UA | TEXT | — |
+| ip | 用户IP | TEXT | 用于频率限制 |
+| dark_mode | 暗色模式 | INTEGER | 0=亮色, 1=暗色 |
+| status | 处理状态 | TEXT | `'pending'` / `'read'` / `'resolved'` / `'ignored'` |
+| admin_note | 管理员备注 | TEXT | — |
+| created_at | 创建时间 | DATETIME | — |
+| updated_at | 更新时间 | DATETIME | — |
+
+### 图片存储规则
+
+- 存储路径：`/uploads/feedbacks/{YYYY-MM}/fb_{timestamp}_{index}_{random}.webp`
+- 按月归档子目录
+- 自动压缩为 WebP（lossless，最大1920px）
+- 删除反馈时自动清理关联图片文件

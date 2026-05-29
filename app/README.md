@@ -37,7 +37,8 @@ app/
 │   │   │   │   ├── media.js    # 统一素材管理（全局浏览/删除）
 │   │   │   │   ├── export.js   # Excel 导出
 │   │   │   │   ├── petSkills.js # 精灵技能/蛋组/特性管理
-│   │   │   │   └── crawl.js    # BWIKI爬取（预览+应用，cheerio解析）
+│   │   │   │   ├── crawl.js    # BWIKI爬取（预览+应用，cheerio解析）
+│   │   │   │   └── feedbacks.js # 用户反馈管理（列表/详情/状态/删除）
 │   │   │   ├── pets.js         # 精灵 API
 │   │   │   ├── skills.js       # 技能 API
 │   │   │   ├── elements.js     # 属性 API
@@ -45,7 +46,8 @@ app/
 │   │   │   ├── natures.js      # 性格 API
 │   │   │   ├── seasons.js      # 赛季 API
 │   │   │   ├── events.js       # 活动 API
-│   │   │   └── pika.js         # 皮卡月刊 API
+│   │   │   ├── pika.js         # 皮卡月刊 API
+│   │   │   └── feedbacks.js    # 用户反馈 API（提交/状态查询）
 │   │   └── db/                 # SQLite 管理（schema + import + init）
 │   ├── data/                   # SQLite 数据库 + 备份（运行时生成）
 │   └── public/                 # 前端构建产物（build 后生成）
@@ -72,8 +74,8 @@ app/
         │   └── usePageVisibility.js # 页面可见性恢复（5分钟后台切回刷新）
         ├── styles/main.scss    # Tailwind + 全局组件类
         ├── views/
-        │   ├── user/           # 用户端 12 个页面
-│   └── admin/          # 管理端 16 个页面
+│   ├── user/           # 用户端 13 个页面
+│   └── admin/          # 管理端 17 个页面
         └── components/
             └── shared/         # 可复用组件
                 ├── DatePicker.vue      # 日期选择器
@@ -83,9 +85,10 @@ app/
                 ├── ModalDialog.vue     # 通用弹窗
                 ├── PetCard.vue         # 精灵卡片
                 ├── PetPicker.vue       # 精灵选择器（支持全形态）
-                ├── SearchSelect.vue    # 搜索下拉选择
-                ├── SkillPicker.vue     # 技能选择器（弹窗+多维筛选）
-                └── StatsRadar.vue      # 种族值雷达图
+            ├── SearchSelect.vue    # 搜索下拉选择
+            ├── SkillPicker.vue     # 技能选择器（弹窗+多维筛选）
+            ├── StatsRadar.vue      # 种族值雷达图
+            └── FeedbackFAB.vue     # 用户反馈浮动按钮（全站）
 ```
 
 ## 技术栈
@@ -141,6 +144,8 @@ pm2 start app/server/src/index.js --name roco -i 2
 | `GET /api/seasons/current` | 当前赛季 | 5 分钟 |
 | `GET /api/events?season_id&all` | 活动日历 | 5 分钟 |
 | `GET /api/pika-monthlies` | 皮卡月刊列表（含关联精灵） | 5 分钟 |
+| `GET /api/feedbacks/enabled` | 反馈功能状态 + 冷却配置 | 无缓存 |
+| `POST /api/feedbacks` | 提交用户反馈（含图片） | 无缓存 |
 
 ## 性能优化
 

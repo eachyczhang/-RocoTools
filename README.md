@@ -2,7 +2,7 @@
 
 洛克王国世界（Roco World）游戏数据查询与分析工具，提供精灵图鉴、技能查询、属性克制、打击面分析等功能。
 
-🌐 **在线体验**：[https://eachz.cn/rocotools/](https://eachz.cn/rocotools/)  
+🌐 **在线体验**：[https://eachz.cn/rocotools/](https://eachz.cn/rocotools/)
 📖 **数据来源**：[洛克王国世界 BWIKI](https://wiki.biligame.com/rocom)
 
 ---
@@ -24,6 +24,7 @@
 | 属性克制 | `/rocotools/elements` | 克制表(18×18)、双属性表、详细查询 |
 | 皮卡月刊 | `/rocotools/pika` | 角色时装期刊展示（全屏翻页、精灵切换） |
 | 命定花种 | `/rocotools/fate-flower` | 反制推荐（Boss克制精灵+技能搭配） |
+| 用户反馈 | 全站浮动按钮 | Bug报告/功能建议/图片上传 |
 
 ---
 
@@ -241,6 +242,8 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 | `GET /api/seasons/current` | 当前赛季 |
 | `GET /api/events?season_id&all` | 活动日历（默认仅活跃） |
 | `GET /api/pika-monthlies` | 皮卡月刊列表（含关联精灵） |
+| `GET /api/feedbacks/enabled` | 反馈功能状态 + 冷却时间配置 |
+| `POST /api/feedbacks` | 提交用户反馈（含图片上传） |
 
 ---
 
