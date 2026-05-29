@@ -298,7 +298,7 @@
     <!-- 悬浮导航：上一只/下一只（仅PC桌面，默认隐藏，鼠标靠近边缘时显示） -->
     <Teleport to="body">
       <!-- 左侧热区 + 按钮 -->
-      <div v-if="neighbors.prev" class="hidden lg:block fixed left-0 top-1/3 bottom-1/3 w-16 z-40 group/nav">
+      <div v-if="neighbors.prev" class="hidden xl:block fixed left-0 top-1/3 bottom-1/3 w-16 z-40 group/nav">
         <router-link :to="'/pets/' + neighbors.prev.uid" replace
           class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pl-2 pr-3 py-1.5 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/60 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500/40 active:scale-95 transition-all duration-300 opacity-0 group-hover/nav:opacity-100"
 :class="{ '!opacity-100': navVisible }">
@@ -307,7 +307,7 @@
         </router-link>
       </div>
       <!-- 右侧热区 + 按钮 -->
-      <div v-if="neighbors.next" class="hidden lg:block fixed right-0 top-1/3 bottom-1/3 w-16 z-40 group/nav">
+      <div v-if="neighbors.next" class="hidden xl:block fixed right-0 top-1/3 bottom-1/3 w-16 z-40 group/nav">
         <router-link :to="'/pets/' + neighbors.next.uid" replace
           class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/60 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500/40 active:scale-95 transition-all duration-300 opacity-0 group-hover/nav:opacity-100"
           :class="{ '!opacity-100': navVisible }">
@@ -320,7 +320,7 @@
     <!-- 滑动提示（仅触屏设备首次显示） -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="showSwipeHint" class="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 dark:bg-white/15 backdrop-blur-sm text-white text-xs shadow-lg">
+        <div v-if="showSwipeHint" class="xl:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 dark:bg-white/15 backdrop-blur-sm text-white text-xs shadow-lg">
           <svg class="w-4 h-4 animate-bounce-x-reverse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
           <span>左右滑动切换精灵</span>
           <svg class="w-4 h-4 animate-bounce-x" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -630,7 +630,7 @@ onMounted(() => loadPet(route.params.uid))
 // Show swipe hint once for mobile/tablet devices (< lg breakpoint)
 onMounted(() => {
   const hintKey = 'pet-swipe-hint-shown'
-  if (!localStorage.getItem(hintKey) && window.innerWidth < 1024) {
+  if (!localStorage.getItem(hintKey) && window.innerWidth < 1280) {
     // Delay slightly so page content loads first
     setTimeout(() => {
       showSwipeHint.value = true
@@ -643,7 +643,7 @@ onMounted(() => {
 
 // Desktop: briefly show nav buttons on page enter, then fade out
 onMounted(() => {
-  if (window.innerWidth >= 1024) {
+  if (window.innerWidth >= 1280) {
     navVisible.value = true
     setTimeout(() => { navVisible.value = false }, 2500)
   }
@@ -749,7 +749,8 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
+/* Unscoped: Teleport content needs global styles */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.6s ease;
 }
