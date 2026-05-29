@@ -723,6 +723,12 @@ function onTouchStart(e) {
   touchStartY = e.touches[0].clientY
   isHorizontalSwipe = null
   isSwiping.value = false
+
+  // Ignore touches starting near screen edges (browser back/forward gesture zone)
+  const edgeThreshold = 30
+  if (touchStartX < edgeThreshold || touchStartX > window.innerWidth - edgeThreshold) {
+    isHorizontalSwipe = false
+  }
 }
 
 function onTouchMove(e) {

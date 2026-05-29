@@ -2468,8 +2468,14 @@ let touchStartY = 0
 function onTouchStart(e) {
   touchStartX = e.touches[0].clientX
   touchStartY = e.touches[0].clientY
+  // Ignore touches starting near screen edges (browser back/forward gesture zone)
+  const edgeThreshold = 30
+  if (touchStartX < edgeThreshold || touchStartX > window.innerWidth - edgeThreshold) {
+    touchStartX = -1 // mark as invalid
+  }
 }
 function onTouchEnd(e) {
+  if (touchStartX < 0) return // edge touch, skip
   const dx = e.changedTouches[0].clientX - touchStartX
   const dy = e.changedTouches[0].clientY - touchStartY
   if (Math.abs(dx) < 100 || Math.abs(dx) < Math.abs(dy) * 1.5) return
