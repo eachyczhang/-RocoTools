@@ -1042,19 +1042,19 @@
       <span v-if="msg" class="text-sm" :class="ok ? 'text-green-600' : 'text-red-500'">{{ msg }}</span>
     </div>
 
-    <!-- 悬浮导航：上一只/下一只 -->
+    <!-- 悬浮导航：上一只/下一只（仅平板和PC显示） -->
     <Teleport to="body">
       <router-link v-if="!isNew && neighbors.prev" :to="'/admin/pets/' + neighbors.prev.uid"
-        class="fixed left-1 sm:left-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        class="hidden md:flex fixed left-3 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-1 px-3 py-4 rounded-xl bg-card/95 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
         :title="neighbors.prev.name">
-        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.prev.name }}</span>
+        <svg class="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        <span class="text-[11px] text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors max-w-14 truncate text-center">{{ neighbors.prev.name }}</span>
       </router-link>
       <router-link v-if="!isNew && neighbors.next" :to="'/admin/pets/' + neighbors.next.uid"
-        class="fixed right-1 sm:right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-2 sm:py-3 rounded-xl bg-card/90 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
+        class="hidden md:flex fixed right-3 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-1 px-3 py-4 rounded-xl bg-card/95 backdrop-blur-sm border border-border shadow-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-300 dark:hover:border-primary-500/30 transition-all group"
         :title="neighbors.next.name">
-        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-muted group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        <span class="hidden sm:block text-[10px] text-muted group-hover:text-primary-500 transition-colors max-w-12 truncate text-center">{{ neighbors.next.name }}</span>
+        <svg class="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-[11px] text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors max-w-14 truncate text-center">{{ neighbors.next.name }}</span>
       </router-link>
     </Teleport>
   </div>
@@ -1062,7 +1062,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive, onMounted } from 'vue'
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi, skillsApi, eggsApi } from '@/api'
 import { adminApi } from '@/api/admin'
@@ -2457,6 +2457,32 @@ async function applyCrawlSelected() {
 }
 
 onMounted(loadData)
+
+// Mobile swipe gesture: left swipe → next, right swipe → prev
+let touchStartX = 0
+let touchStartY = 0
+function onTouchStart(e) {
+  touchStartX = e.touches[0].clientX
+  touchStartY = e.touches[0].clientY
+}
+function onTouchEnd(e) {
+  const dx = e.changedTouches[0].clientX - touchStartX
+  const dy = e.changedTouches[0].clientY - touchStartY
+  if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+  if (dx < 0 && neighbors.value.next) {
+    router.push('/admin/pets/' + neighbors.value.next.uid)
+  } else if (dx > 0 && neighbors.value.prev) {
+    router.push('/admin/pets/' + neighbors.value.prev.uid)
+  }
+}
+onMounted(() => {
+  document.addEventListener('touchstart', onTouchStart, { passive: true })
+  document.addEventListener('touchend', onTouchEnd, { passive: true })
+})
+onUnmounted(() => {
+  document.removeEventListener('touchstart', onTouchStart)
+  document.removeEventListener('touchend', onTouchEnd)
+})
 
 // Watch route param changes for variant switching (same component reused)
 watch(() => route.params.uid, (newUid) => {
