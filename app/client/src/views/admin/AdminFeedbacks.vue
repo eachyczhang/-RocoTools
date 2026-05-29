@@ -88,7 +88,7 @@
             <div class="flex items-center gap-1.5 text-xs text-muted flex-wrap">
               <span class="inline-flex items-center gap-0.5">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                {{ item.page_url || '/' }}
+                {{ getPageName(item.page_url) }}
               </span>
               <span class="opacity-40">·</span>
               <span>{{ item.device_type || 'unknown' }}</span>
@@ -130,7 +130,7 @@
             <div class="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
               <label class="text-xs text-muted mb-2 block font-medium">环境信息</label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                <div><span class="text-muted">页面：</span>{{ item.page_url }} {{ item.page_title ? `(${item.page_title})` : '' }}</div>
+<div><span class="text-muted">页面：</span>{{ getPageName(item.page_url) }} ({{ item.page_url }})</div>
                 <div><span class="text-muted">设备：</span>{{ deviceIcon(item.device_type) }} {{ item.device_type }} · {{ item.screen_size }}</div>
                 <div class="sm:col-span-2"><span class="text-muted">UA：</span><span class="break-all">{{ item.user_agent }}</span></div>
                 <div><span class="text-muted">IP：</span>{{ item.ip }}</div>
@@ -231,6 +231,27 @@ const previewVisible = ref(false)
 const previewSrc = ref('')
 
 const statusCounts = reactive({ pending: 0, read: 0, resolved: 0, ignored: 0 })
+
+// Route path to Chinese name mapping
+const routeNameMap = {
+  '/': '首页',
+  '/season': '赛季',
+  '/events': '活动日历',
+  '/pets': '精灵图鉴',
+  '/skills': '技能列表',
+  '/coverage': '打击面',
+  '/eggs': '蛋组',
+  '/natures': '性格',
+  '/elements': '属性',
+  '/pika': '皮卡月刊',
+  '/fate-flower': '命定花种',
+}
+function getPageName(url) {
+  if (!url) return '/'
+  if (routeNameMap[url]) return routeNameMap[url]
+  const base = '/' + (url.split('/')[1] || '')
+  return routeNameMap[base] || url
+}
 
 const allStatuses = [
   { value: 'pending', label: '待处理' },
