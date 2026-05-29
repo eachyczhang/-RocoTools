@@ -320,31 +320,49 @@
     <!-- 滑动引导遮罩（首次进入，完成一次滑动后消失） -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="showSwipeGuide" class="xl:hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/70 backdrop-blur-[2px]" @click.self="dismissGuide">
-          <!-- 引导内容卡片 -->
-          <div class="flex flex-col items-center gap-6 px-8 py-10 max-w-xs text-center">
-            <!-- 手指滑动动画 -->
-            <div class="relative w-48 h-20 flex items-center justify-center">
-              <!-- 左右箭头轨迹 -->
-              <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/20 rounded-full"></div>
-              <!-- 左箭头 -->
-              <svg class="absolute left-2 w-5 h-5 text-white/50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              <!-- 右箭头 -->
-              <svg class="absolute right-2 w-5 h-5 text-white/50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              <!-- 滑动手指图标 -->
-              <div class="swipe-finger-anim">
-                <svg class="w-10 h-10 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+        <div v-if="showSwipeGuide" class="xl:hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/75 backdrop-blur-[3px]" @click.self="dismissGuide">
+          <!-- 引导内容 -->
+          <div class="flex flex-col items-center gap-8 px-8 py-12 max-w-sm text-center">
+            <!-- 动画区域 -->
+            <div class="relative w-56 sm:w-64 h-28 flex items-center justify-center">
+              <!-- 呼吸光环背景 -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="guide-pulse-ring w-24 h-24 rounded-full border-2 border-primary-400/30"></div>
+              </div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="guide-pulse-ring-delay w-32 h-32 rounded-full border border-primary-400/15"></div>
+              </div>
+              <!-- 滑动轨迹（发光） -->
+              <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 h-[2px] rounded-full overflow-hidden">
+                <div class="absolute inset-0 bg-white/10"></div>
+                <div class="guide-track-glow absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-primary-400/60 to-transparent"></div>
+              </div>
+              <!-- 左箭头（交替闪烁） -->
+              <div class="absolute left-0 top-1/2 -translate-y-1/2 guide-arrow-left">
+                <svg class="w-6 h-6 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+              </div>
+              <!-- 右箭头（交替闪烁） -->
+              <div class="absolute right-0 top-1/2 -translate-y-1/2 guide-arrow-right">
+                <svg class="w-6 h-6 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              </div>
+              <!-- 手指图标 + 拖尾 -->
+              <div class="swipe-finger-anim relative">
+                <div class="guide-finger-trail absolute inset-0 w-12 h-12 rounded-full bg-primary-400/20 blur-md"></div>
+                <svg class="relative w-12 h-12 text-white drop-shadow-[0_0_12px_rgba(214,159,35,0.5)]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M9.5 3.5a1.5 1.5 0 0 1 3 0v7.085l3.225-1.612a1.5 1.5 0 0 1 2.007.67l.036.073a1.5 1.5 0 0 1-.462 1.86l-5.87 4.39A5.5 5.5 0 0 1 8.136 17.5H7.5A3.5 3.5 0 0 1 4 14V9.5a1.5 1.5 0 0 1 3 0v1.75a.25.25 0 0 0 .5 0V6.5a1.5 1.5 0 0 1 2 0v-3z"/>
                 </svg>
               </div>
             </div>
-            <!-- 文字提示 -->
-            <div class="space-y-2">
-              <p class="text-white text-lg font-medium">左右滑动切换精灵</p>
-              <p class="text-white/60 text-sm">试试向左或向右滑动</p>
+            <!-- 文字提示（呼吸效果） -->
+            <div class="space-y-3 guide-text-breathe">
+              <p class="text-white text-xl sm:text-2xl font-semibold tracking-wide">左右滑动切换精灵</p>
+              <p class="text-white/50 text-sm sm:text-base">试试向左或向右滑动屏幕</p>
             </div>
             <!-- 底部提示 -->
-            <p class="text-white/40 text-xs mt-2">完成一次滑动后自动关闭</p>
+            <div class="flex flex-col items-center gap-3 mt-2">
+              <div class="w-12 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+              <p class="text-white/35 text-xs">完成一次滑动后自动关闭 · 点击空白跳过</p>
+            </div>
           </div>
         </div>
       </Transition>
@@ -784,20 +802,73 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Swipe guide finger animation */
+/* === Swipe Guide Animations === */
+
+/* Finger swipe: left-right motion */
 @keyframes swipe-finger {
-  0%, 100% { transform: translateX(0); opacity: 1; }
-  15% { transform: translateX(0); opacity: 1; }
-  45% { transform: translateX(50px); opacity: 0.7; }
-  50% { transform: translateX(50px); opacity: 0; }
-  55% { transform: translateX(0); opacity: 0; }
-  60% { transform: translateX(0); opacity: 1; }
-  75% { transform: translateX(-50px); opacity: 0.7; }
-  80% { transform: translateX(-50px); opacity: 0; }
-  85% { transform: translateX(0); opacity: 0; }
-  90% { transform: translateX(0); opacity: 1; }
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(0); }
+  35% { transform: translateX(55px); }
+  45% { transform: translateX(55px); }
+  55% { transform: translateX(0); }
+  65% { transform: translateX(0); }
+  85% { transform: translateX(-55px); }
+  92% { transform: translateX(-55px); }
 }
 .swipe-finger-anim {
-  animation: swipe-finger 3s ease-in-out infinite;
+  animation: swipe-finger 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Pulse ring: breathing glow */
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 0.15; }
+}
+.guide-pulse-ring {
+  animation: pulse-ring 2.5s ease-in-out infinite;
+}
+.guide-pulse-ring-delay {
+  animation: pulse-ring 2.5s ease-in-out infinite 0.8s;
+}
+
+/* Track glow: shimmer along the track */
+@keyframes track-glow {
+  0% { left: -33%; }
+  100% { left: 100%; }
+}
+.guide-track-glow {
+  animation: track-glow 2s linear infinite;
+}
+
+/* Arrows: alternating fade */
+@keyframes arrow-left {
+  0%, 100% { opacity: 0.3; transform: translateX(0) translateY(-50%); }
+  25% { opacity: 1; transform: translateX(-4px) translateY(-50%); }
+  50% { opacity: 0.3; transform: translateX(0) translateY(-50%); }
+}
+@keyframes arrow-right {
+  0%, 100% { opacity: 0.3; transform: translateX(0) translateY(-50%); }
+  50% { opacity: 0.3; transform: translateX(0) translateY(-50%); }
+  75% { opacity: 1; transform: translateX(4px) translateY(-50%); }
+}
+.guide-arrow-left {
+  animation: arrow-left 3.5s ease-in-out infinite;
+}
+.guide-arrow-right {
+  animation: arrow-right 3.5s ease-in-out infinite;
+}
+
+/* Text breathe */
+@keyframes text-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.guide-text-breathe {
+  animation: text-breathe 3s ease-in-out infinite;
+}
+
+/* Finger trail glow */
+.guide-finger-trail {
+  animation: pulse-ring 2s ease-in-out infinite;
 }
 </style>
