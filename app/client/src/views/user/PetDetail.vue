@@ -297,12 +297,12 @@
 
     <!-- 悬浮导航：上一只/下一只（仅平板和PC显示） -->
     <Teleport to="body">
-      <router-link v-if="neighbors.prev" :to="'/pets/' + neighbors.prev.uid"
+      <router-link v-if="neighbors.prev" :to="'/pets/' + neighbors.prev.uid" replace
         class="hidden md:flex fixed left-4 lg:left-6 top-1/2 -translate-y-1/2 z-40 items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/60 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500/40 active:scale-95 transition-all duration-200 group">
         <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         <span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors max-w-20 truncate">{{ neighbors.prev.name }}</span>
       </router-link>
-      <router-link v-if="neighbors.next" :to="'/pets/' + neighbors.next.uid"
+      <router-link v-if="neighbors.next" :to="'/pets/' + neighbors.next.uid" replace
         class="hidden md:flex fixed right-4 lg:right-6 top-1/2 -translate-y-1/2 z-40 items-center gap-2 pl-3.5 pr-2.5 py-2 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/60 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500/40 active:scale-95 transition-all duration-200 group">
         <span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-primary-500 transition-colors max-w-20 truncate">{{ neighbors.next.name }}</span>
         <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -676,9 +676,9 @@ function onTouchEnd() {
     swipeOffset.value = direction * window.innerWidth
     setTimeout(() => {
       if (direction > 0 && neighbors.value.prev) {
-        router.push('/pets/' + neighbors.value.prev.uid)
+        router.replace('/pets/' + neighbors.value.prev.uid)
       } else if (direction < 0 && neighbors.value.next) {
-        router.push('/pets/' + neighbors.value.next.uid)
+        router.replace('/pets/' + neighbors.value.next.uid)
       }
       // Reset after navigation
       setTimeout(() => {
