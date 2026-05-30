@@ -2105,22 +2105,34 @@ function moveAchievement(idx, dir) {
 // Helper functions for skill achievement display
 function getSkillIcon(skillRefUid) {
   const skill = skillForms.skills.find(s => s.skill_ref_uid === skillRefUid)
-  return skill?.skill_icon || getElementIcon(skill?.element) || ''
+  if (skill) return skill.skill_icon || getElementIcon(skill.element) || ''
+  // Fallback: find from achievements (copied from sibling)
+  const ach = achievements.value.find(a => a.skill_ref_uid === skillRefUid)
+  return ach?.skill_icon || ach?.element_icon || ''
 }
 
 function getSkillElement(skillRefUid) {
   const skill = skillForms.skills.find(s => s.skill_ref_uid === skillRefUid)
-  return skill?.element || '无属性'
+  if (skill) return skill.element || '无属性'
+  // Fallback: find from achievements (copied from sibling)
+  const ach = achievements.value.find(a => a.skill_ref_uid === skillRefUid)
+  return ach?.skill_element_name || '无属性'
 }
 
 function getSkillCategory(skillRefUid) {
   const skill = skillForms.skills.find(s => s.skill_ref_uid === skillRefUid)
-  return skill?.type || '-'
+  if (skill) return skill.type || '-'
+  // Fallback: find from achievements (copied from sibling)
+  const ach = achievements.value.find(a => a.skill_ref_uid === skillRefUid)
+  return ach?.skill_category || '-'
 }
 
 function getSkillPower(skillRefUid) {
   const skill = skillForms.skills.find(s => s.skill_ref_uid === skillRefUid)
-  return skill?.power || 0
+  if (skill) return skill.power || 0
+  // Fallback: find from achievements (copied from sibling)
+  const ach = achievements.value.find(a => a.skill_ref_uid === skillRefUid)
+  return ach?.skill_power || 0
 }
 
 function onAchievementSkillSelect(idx, skillRefUid) {
@@ -2237,7 +2249,10 @@ function copyAchievementsFromSibling(sib) {
       use_count: a.use_count || 0,
       reward_desc: a.reward_desc || '',
       skill_icon: a.skill_icon || '',
-      element_icon: '',
+      element_icon: a.skill_element_icon || '',
+      skill_element_name: a.skill_element_name || '',
+      skill_category: a.skill_category || '',
+      skill_power: a.skill_power || 0,
       is_default: 0,
       hidden: 0,
     })

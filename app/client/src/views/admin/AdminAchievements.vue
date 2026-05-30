@@ -462,7 +462,7 @@ function copySiblingAchievements(sib) {
     skill_name: a.skill_name || null,
     use_count: a.use_count || 0,
     reward_desc: a.reward_desc || null,
-    skill_icon: a.skill_icon || null,
+    skill_icon: a.skill_icon || a.skill_element_icon || null,
   }))
   // Append to existing customs (avoid duplicates by skill_ref_uid)
   for (const c of copied) {

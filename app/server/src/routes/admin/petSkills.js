@@ -564,9 +564,11 @@ router.get('/pet-siblings/:uid', authAdmin, (req, res) => {
     for (const s of siblings) {
       s.achievements = db.prepare(`
         SELECT pa.type, pa.title, pa.skill_ref_uid, pa.skill_name, pa.use_count, pa.reward_desc, pa.is_default,
-               sk.icon_url as skill_icon
+               sk.icon_url as skill_icon, sk.power as skill_power, sk.category as skill_category,
+               el.name as skill_element_name, el.icon as skill_element_icon
         FROM pet_achievements pa
         LEFT JOIN skills sk ON pa.skill_ref_uid = sk.uid
+        LEFT JOIN elements el ON sk.element_id = el.id
         WHERE pa.pet_uid = ? AND (pa.is_default = 0 OR pa.is_default IS NULL)
         ORDER BY pa.sort_order, pa.id
       `).all(s.uid);
