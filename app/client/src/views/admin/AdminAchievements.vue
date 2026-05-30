@@ -31,41 +31,43 @@
     <div v-if="loading" class="text-center py-12 text-muted">加载中...</div>
 
     <!-- List -->
-    <div v-else class="space-y-3">
+    <div v-else class="space-y-4">
       <div v-for="pet in pets" :key="pet.uid" class="card">
         <!-- Pet header -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
           <img :src="pet.thumb_url" :alt="pet.name"
-            class="w-10 h-10 rounded-full object-cover bg-gray-100 dark:bg-white/5 flex-shrink-0"
+            class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-gray-100 dark:bg-white/5 flex-shrink-0"
             @error="e => e.target.style.display='none'" />
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-medium text-sm">{{ pet.name }}</span>
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <span class="font-medium text-base">{{ pet.name }}</span>
               <span class="text-xs text-muted">({{ pet.uid }})</span>
-              <img v-if="pet.element_icon" :src="pet.element_icon" class="w-4 h-4" />
-              <img v-if="pet.sub_element_icon" :src="pet.sub_element_icon" class="w-4 h-4" />
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <img v-if="pet.element_icon" :src="pet.element_icon" class="w-5 h-5" />
+              <img v-if="pet.sub_element_icon" :src="pet.sub_element_icon" class="w-5 h-5" />
               <span v-if="pet.is_final_form" class="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400">⭐最终形态</span>
               <span v-if="pet.is_boss_form" class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400">👑首领形态</span>
               <span v-if="pet.has_boss_form && !pet.is_boss_form" class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">有首领形态</span>
             </div>
           </div>
           <!-- Quick actions (non-editing) -->
-          <div v-if="!pet.is_boss_form && editingUid !== pet.uid" class="flex gap-2 flex-shrink-0">
-            <button @click="startEdit(pet)" class="text-xs text-primary-500 hover:underline">编辑课题</button>
-            <router-link :to="`/admin/pets/${pet.uid}`" class="text-xs text-muted hover:text-primary-500">跳转详情</router-link>
+          <div v-if="!pet.is_boss_form && editingUid !== pet.uid" class="flex gap-3 flex-shrink-0">
+            <button @click="startEdit(pet)" class="text-sm text-primary-500 hover:underline font-medium">编辑课题</button>
+            <router-link :to="`/admin/pets/${pet.uid}`" class="text-sm text-muted hover:text-primary-500">跳转详情</router-link>
           </div>
         </div>
 
         <!-- Boss form notice -->
-        <div v-if="pet.is_boss_form" class="text-sm text-muted italic mt-2 pl-13">
+        <div v-if="pet.is_boss_form" class="text-sm text-muted italic mt-3 pl-[4.5rem] sm:pl-20">
           ⚠️ 首领形态，不展示图鉴课题
         </div>
 
         <!-- Achievement cards (summary mode) -->
         <template v-else-if="editingUid !== pet.uid">
-          <div class="mt-3 space-y-1.5 pl-13">
+          <div class="mt-3 space-y-2 pl-[4.5rem] sm:pl-20">
             <div v-for="a in pet.achievements" :key="a.id"
-              class="flex items-center gap-2 p-2 rounded-lg text-xs"
+              class="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-lg text-sm"
               :class="[a.hidden ? 'bg-gray-100/50 dark:bg-white/[0.02] opacity-50' : 'bg-gray-50 dark:bg-white/5']">
               <!-- Type badge -->
               <span class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
@@ -98,7 +100,7 @@
 
         <!-- ========== Inline Editor ========== -->
         <template v-else>
-          <div class="mt-3 pl-13 border-t pt-3 dark:border-white/10">
+          <div class="mt-4 pl-[4.5rem] sm:pl-20 border-t pt-4 dark:border-white/10">
             <!-- All achievements in card style -->
             <div class="space-y-2 mb-3">
               <!-- Default achievements -->
@@ -280,7 +282,7 @@ const saving = ref(false)
 const pets = ref([])
 const total = ref(0)
 const page = ref(1)
-const perPage = 20
+const perPage = 10
 const totalPages = computed(() => Math.ceil(total.value / perPage))
 const elements = ref([])
 const searchInput = ref('')
@@ -497,7 +499,4 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.pl-13 {
-  padding-left: 3.25rem;
-}
 </style>

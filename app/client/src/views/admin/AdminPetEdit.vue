@@ -781,7 +781,7 @@
       </div>
 
       <!-- Add buttons -->
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <button v-if="form.is_final_form" @click="addAchievement('skill')" class="text-xs text-primary-500 hover:underline"
           :disabled="!levelUpSkills.length">
           + 添加技能成就
@@ -789,6 +789,37 @@
         <button @click="addAchievement('text')" class="text-xs text-primary-500 hover:underline">
           + 添加文本成就
         </button>
+        <button @click="loadAchievementSiblings" class="text-xs text-blue-500 hover:underline" :disabled="achSiblingsLoading">
+          {{ achSiblingsLoading ? '加载中...' : '📋 从其他形态复制' }}
+        </button>
+      </div>
+
+      <!-- Sibling copy panel -->
+      <div v-if="achSiblingsVisible && achSiblings.length > 0" class="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20">
+        <div class="text-xs font-medium text-blue-600 dark:text-blue-400 mb-2">选择要复制课题的形态：</div>
+        <div class="space-y-2">
+          <div v-for="sib in achSiblings" :key="sib.uid"
+            class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-white/5">
+            <img :src="sib.thumb_url" class="w-8 h-8 rounded-full object-cover flex-shrink-0" @error="e => e.target.style.display='none'" />
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium">{{ sib.name }} <span class="text-muted">({{ sib.uid }})</span></div>
+              <div class="text-[10px] text-muted">
+                {{ sib.achievements.length > 0 ? sib.achievements.map(a => a.type === 'skill' ? `🎯${a.skill_name}` : `📝${a.title}`).join(' | ') : '暂无自定义课题' }}
+              </div>
+            </div>
+            <button v-if="sib.achievements.length > 0" @click="copyAchievementsFromSibling(sib)"
+              class="text-xs px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex-shrink-0">
+              复制({{ sib.achievements.length }})
+            </button>
+            <span v-else class="text-[10px] text-muted flex-shrink-0">无课题</span>
+          </div>
+        </div>
+        <div class="flex justify-end mt-2">
+          <button @click="achSiblingsVisible = false" class="text-xs text-muted hover:underline">关闭</button>
+        </div>
+      </div>
+      <div v-if="achSiblingsVisible && achSiblings.length === 0 && !achSiblingsLoading" class="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-white/5 text-xs text-muted text-center">
+        该精灵没有其他形态
       </div>
       <p v-if="form.is_final_form && !levelUpSkills.length" class="text-[10px] text-muted mt-1">提示：请先在技能配置中添加精灵技能，才能选择技能成就</p>
     </div>
@@ -2161,7 +2192,7 @@ async function cleanupDuplicates() {
   if (!confirm('确定要清理重复的默认课题吗？此操作不可撤销。')) {
     return;
   }
-  
+
   try {
     await adminApi.cleanupDuplicateAchievements(uid);
     await modal.success('清理成功', '重复的默认课题已清理完成');
@@ -2170,6 +2201,48 @@ async function cleanupDuplicates() {
   } catch (err) {
     await modal.alert('清理失败', err.message);
   }
+}
+
+// Sibling achievements copy
+const achSiblings = ref([])
+const achSiblingsVisible = ref(false)
+const achSiblingsLoading = ref(false)
+
+async function loadAchievementSiblings() {
+  if (achSiblingsVisible.value) { achSiblingsVisible.value = false; return }
+  achSiblingsLoading.value = true
+  try {
+    const res = await adminApi.getPetSiblings(uid)
+    achSiblings.value = res.siblings || []
+    achSiblingsVisible.value = true
+  } catch (err) {
+    console.error('Load siblings failed:', err)
+  } finally {
+    achSiblingsLoading.value = false
+  }
+}
+
+function copyAchievementsFromSibling(sib) {
+  for (const a of sib.achievements) {
+    // Avoid duplicates for skill type
+    if (a.type === 'skill' && a.skill_ref_uid) {
+      const exists = achievements.value.some(e => e.type === 'skill' && e.skill_ref_uid === a.skill_ref_uid && !e.is_default)
+      if (exists) continue
+    }
+    achievements.value.push({
+      type: a.type,
+      title: a.title || '',
+      skill_ref_uid: a.skill_ref_uid || '',
+      skill_name: a.skill_name || '',
+      use_count: a.use_count || 0,
+      reward_desc: a.reward_desc || '',
+      skill_icon: a.skill_icon || '',
+      element_icon: '',
+      is_default: 0,
+      hidden: 0,
+    })
+  }
+  achSiblingsVisible.value = false
 }
 
 // ============================================================
