@@ -37,22 +37,7 @@
       <div class="flex-shrink-0 w-[50px]"></div>
     </div>
 
-    <!-- Column Header (mobile/tablet <lg) -->
-    <div v-if="!loading && skills.length" class="lg:hidden flex items-center gap-3 px-3 pb-2 text-[10px] sm:text-xs text-muted uppercase tracking-wide">
-      <div class="flex-shrink-0 w-11 sm:w-12"></div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 mb-0.5">
-          <span>名称</span>
-          <span>UID</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span>属性</span>
-          <span>类型</span>
-          <span>威力</span>
-          <span>能耗</span>
-        </div>
-      </div>
-    </div>
+
 
     <!-- List -->
     <div v-if="!loading" class="space-y-2">
@@ -111,21 +96,21 @@
         </div>
 
         <!-- Mobile/Tablet layout (<lg) -->
-        <div class="lg:hidden flex items-center gap-3 px-3 py-3">
+        <div class="lg:hidden flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3">
           <!-- Icon -->
           <div class="flex-shrink-0">
-            <img v-if="skill.icon_url" :src="skill.icon_url" class="w-11 h-11 sm:w-12 sm:h-12 object-contain rounded-lg" loading="lazy" />
-            <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-11 h-11 sm:w-12 sm:h-12 object-contain rounded-lg" loading="lazy" />
-            <div v-else class="w-11 h-11 sm:w-12 sm:h-12 rounded-lg bg-gray-200 dark:bg-white/10"></div>
+            <img v-if="skill.icon_url" :src="skill.icon_url" class="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg" loading="lazy" />
+            <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg" loading="lazy" />
+            <div v-else class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-200 dark:bg-white/10"></div>
           </div>
           <!-- Info -->
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm sm:text-base font-medium truncate" :style="{ color: skill.element_color || '' }">{{ skill.name }}</span>
-              <span class="text-[11px] sm:text-xs text-muted font-mono flex-shrink-0">{{ skill.uid }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm sm:text-base font-semibold truncate" :style="{ color: skill.element_color || '' }">{{ skill.name }}</span>
+              <span class="text-[10px] sm:text-xs text-muted/60 font-mono flex-shrink-0">{{ skill.uid }}</span>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span v-if="skill.element_name" class="inline-flex items-center gap-1 text-[11px] sm:text-xs px-1.5 py-0.5 rounded-full"
+            <div class="flex items-center gap-1.5 sm:gap-2 mt-1">
+              <span v-if="skill.element_name" class="inline-flex items-center gap-0.5 text-[11px] sm:text-xs px-1.5 py-0.5 rounded-full"
                 :style="{ backgroundColor: (skill.element_color || '#888') + '18', color: skill.element_color || '#888' }">
                 <img v-if="skill.element_icon" :src="skill.element_icon" class="w-3.5 h-3.5" />
                 {{ skill.element_name }}
@@ -136,11 +121,15 @@
                         'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400'">
                 {{ skill.category }}
               </span>
-              <span v-if="skill.power" class="text-xs sm:text-sm font-bold"
-                :style="{ color: skill.element_color || '#D69F23' }">
-                威力 {{ skill.power }}
+              <span class="ml-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <span v-if="skill.power" class="text-xs sm:text-sm font-bold"
+                  :style="{ color: skill.element_color || '#D69F23' }">
+                  {{ skill.power }}
+                </span>
+                <span v-if="skill.cost" class="text-[11px] sm:text-xs text-muted bg-gray-100 dark:bg-white/8 px-1.5 py-0.5 rounded">
+                  ⚡{{ skill.cost }}
+                </span>
               </span>
-              <span v-if="skill.cost" class="text-xs sm:text-sm text-muted">能耗 {{ skill.cost }}</span>
             </div>
           </div>
         </div>
