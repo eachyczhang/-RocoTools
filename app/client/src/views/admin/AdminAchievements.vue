@@ -260,8 +260,9 @@
       </div>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 mt-6">
+    <!-- Pagination (sticky bottom) -->
+    <div v-if="totalPages > 1"
+      class="sticky bottom-0 z-10 flex items-center justify-center gap-4 py-3 mt-4 -mx-4 px-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-white/10">
       <button @click="loadList(page - 1)" :disabled="page <= 1" class="btn text-sm">← 上一页</button>
       <span class="text-sm text-muted">{{ page }} / {{ totalPages }}</span>
       <button @click="loadList(page + 1)" :disabled="page >= totalPages" class="btn text-sm">下一页 →</button>

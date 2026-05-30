@@ -182,8 +182,9 @@
       </div>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+    <!-- Pagination (sticky bottom) -->
+    <div v-if="totalPages > 1"
+      class="sticky bottom-0 z-10 flex items-center justify-center gap-2 py-3 mt-4 -mx-4 px-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-white/10">
       <button @click="goPage(currentPage - 1)" :disabled="currentPage <= 1"
         class="btn text-xs px-3 disabled:opacity-30">上一页</button>
       <span class="text-xs text-muted">第 {{ currentPage }}/{{ totalPages }} 页</span>
