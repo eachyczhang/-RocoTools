@@ -25,7 +25,7 @@
     <!-- Loading -->
     <div v-if="loading" class="text-center py-12 text-muted">加载中...</div>
 
-    <!-- Column Header (desktop only) -->
+    <!-- Column Header (desktop lg+) -->
     <div v-if="!loading && skills.length" class="hidden lg:flex items-center gap-4 px-4 pb-2 text-xs text-muted uppercase tracking-wide">
       <div class="flex-shrink-0 w-12"></div>
       <div class="flex-1 min-w-[120px]">名称</div>
@@ -35,6 +35,23 @@
       <div class="flex-shrink-0 w-[56px] text-right">威力</div>
       <div class="flex-shrink-0 w-[48px] text-right">能耗</div>
       <div class="flex-shrink-0 w-[50px]"></div>
+    </div>
+
+    <!-- Column Header (mobile/tablet <lg) -->
+    <div v-if="!loading && skills.length" class="lg:hidden flex items-center gap-3 px-3 pb-2 text-[10px] sm:text-xs text-muted uppercase tracking-wide">
+      <div class="flex-shrink-0 w-11 sm:w-12"></div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span>名称</span>
+          <span>UID</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span>属性</span>
+          <span>类型</span>
+          <span>威力</span>
+          <span>能耗</span>
+        </div>
+      </div>
     </div>
 
     <!-- List -->
