@@ -83,26 +83,47 @@
       </table>
     </div>
 
-    <!-- 移动端/平板：卡片列表 -->
-    <div class="lg:hidden space-y-2 sm:space-y-3">
+    <!-- 移动端/平板：卡片网格 -->
+    <div class="lg:hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
       <router-link v-for="skill in skills" :key="skill.uid" :to="`/skills/${skill.uid}`"
-        class="block card !p-3">
-        <div class="flex items-center gap-3">
-          <img v-if="skill.icon_url" :src="skill.icon_url" class="w-9 h-9 object-contain flex-shrink-0" loading="lazy" />
-          <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-9 h-9 object-contain flex-shrink-0" loading="lazy" />
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="font-medium text-sm truncate">{{ skill.name }}</span>
-              <img v-if="skill.element_icon" :src="skill.element_icon" class="w-4 h-4 flex-shrink-0" />
-              <span class="text-xs font-medium flex-shrink-0" :style="{ color: categoryColor(skill.category) }">{{ skill.category }}</span>
-            </div>
-            <div class="flex items-center gap-3 text-xs text-muted">
-              <span>能耗 {{ skill.cost || '-' }}</span>
-              <span>威力 {{ skill.power || '-' }}</span>
-            </div>
-          </div>
+        class="card group relative flex flex-col items-center p-3 sm:p-4 hover:ring-2 hover:ring-primary-500/30 transition-all">
+        <!-- Icon -->
+        <div class="w-12 h-12 sm:w-14 sm:h-14 mb-2">
+          <img v-if="skill.icon_url" :src="skill.icon_url" class="w-full h-full object-contain rounded-lg" loading="lazy" />
+          <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-full h-full object-contain rounded-lg" loading="lazy" />
+          <div v-else class="w-full h-full rounded-lg bg-gray-200 dark:bg-white/10"></div>
         </div>
-        <div v-if="skill.description" class="mt-1.5 text-xs text-muted line-clamp-2">
+        <!-- Name -->
+        <div class="text-sm sm:text-base font-semibold text-center truncate w-full"
+          :style="{ color: skill.element_color || '' }">
+          {{ skill.name }}
+        </div>
+        <!-- Badges row -->
+        <div class="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
+          <span v-if="skill.element_name" class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full"
+            :style="{ backgroundColor: (skill.element_color || '#888') + '18', color: skill.element_color || '#888' }">
+            <img v-if="skill.element_icon" :src="skill.element_icon" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            {{ skill.element_name }}
+          </span>
+          <span v-if="skill.category" class="text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full font-medium"
+            :class="skill.category === '物攻' ? 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400' :
+                    skill.category === '魔攻' ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' :
+                    'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400'">
+            {{ skill.category }}
+          </span>
+        </div>
+        <!-- Power & Cost -->
+        <div class="flex items-center justify-center gap-3 mt-1.5">
+          <span v-if="skill.power" class="text-sm sm:text-base font-bold"
+            :style="{ color: skill.element_color || '#D69F23' }">
+            威力 {{ skill.power }}
+          </span>
+          <span class="text-[11px] sm:text-xs text-muted">
+            能耗 {{ skill.cost ?? 0 }}
+          </span>
+        </div>
+        <!-- Description -->
+        <div v-if="skill.description" class="mt-1.5 text-[10px] sm:text-xs text-muted text-center line-clamp-2 w-full">
           {{ skill.description }}
         </div>
       </router-link>
