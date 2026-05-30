@@ -169,6 +169,7 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 | 代码分割 | Vue 框架独立 chunk，路由级懒加载 |
 | 系统字体 | 不加载网络字体，零额外请求 |
 | 路由滚动恢复 | scrollBehavior 延迟恢复，等待异步数据渲染 |
+| CDN 加速 | 腾讯云 CDN 全站加速，静态资源缓存 30 天 |
 
 ---
 
