@@ -71,8 +71,9 @@
       没有找到匹配的技能
     </div>
 
-    <!-- Pagination -->
-    <div class="flex justify-center items-center gap-4 mt-6" v-if="total > limit">
+    <!-- Pagination (sticky bottom) -->
+    <div v-if="total > limit"
+      class="sticky bottom-0 z-10 flex justify-center items-center gap-4 py-3 mt-4 -mx-4 px-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-white/10">
       <button @click="page > 1 && (page--, fetchData())" :disabled="page <= 1" class="btn text-sm">← 上一页</button>
       <span class="text-sm text-muted">{{ page }} / {{ Math.ceil(total / limit) }}</span>
       <button @click="page < Math.ceil(total / limit) && (page++, fetchData())"
