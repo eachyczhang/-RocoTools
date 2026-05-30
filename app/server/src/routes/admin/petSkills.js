@@ -336,6 +336,117 @@ router.get('/skills-next-uid', authAdmin, (req, res) => {
 // ============================================================
 
 /**
+ * GET /api/admin/achievements-list
+ * Batch list pets with achievement summaries (paginated)
+ */
+router.get('/achievements-list', authAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+  const offset = (page - 1) * limit;
+  const search = (req.query.search || '').trim();
+  const elementId = req.query.element_id ? parseInt(req.query.element_id) : null;
+  const achievementFilter = req.query.achievement_filter || 'all';
+
+  try {
+    const db = getDb();
+
+    // Build WHERE conditions
+    const conditions = [];
+    const params = [];
+
+    if (search) {
+      conditions.push('(p.name LIKE ? OR p.uid LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (elementId) {
+      conditions.push('(p.element_id = ? OR p.sub_element_id = ?)');
+      params.push(elementId, elementId);
+    }
+
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    // For achievement_filter, we need subquery
+    let havingClause = '';
+    if (achievementFilter === 'default_only') {
+      havingClause = 'HAVING custom_count = 0 AND default_count > 0';
+    } else if (achievementFilter === 'has_custom') {
+      havingClause = 'HAVING custom_count > 0';
+    } else if (achievementFilter === 'no_achievements') {
+      havingClause = 'HAVING default_count = 0 AND custom_count = 0';
+    }
+
+    // Count total (with filter)
+    const countSql = `
+      SELECT COUNT(*) as total FROM (
+        SELECT p.uid,
+          COALESCE(SUM(CASE WHEN pa.is_default = 1 THEN 1 ELSE 0 END), 0) as default_count,
+          COALESCE(SUM(CASE WHEN pa.is_default = 0 OR pa.is_default IS NULL THEN 1 ELSE 0 END), 0) as custom_count
+        FROM pets p
+        LEFT JOIN pet_achievements pa ON pa.pet_uid = p.uid
+        ${whereClause}
+        GROUP BY p.uid
+        ${havingClause}
+      )
+    `;
+    const totalRow = db.prepare(countSql).get(...params);
+    const total = totalRow ? totalRow.total : 0;
+
+    // Fetch paginated pets
+    const listSql = `
+      SELECT p.uid, p.name, p.pet_id, p.thumb_url, p.element_id, p.sub_element_id,
+        p.is_final_form, p.is_boss_form, p.has_boss_form,
+        e.icon as element_icon, se.icon as sub_element_icon,
+        COALESCE(SUM(CASE WHEN pa.is_default = 1 THEN 1 ELSE 0 END), 0) as default_count,
+        COALESCE(SUM(CASE WHEN (pa.is_default = 0 OR pa.is_default IS NULL) AND pa.id IS NOT NULL THEN 1 ELSE 0 END), 0) as custom_count,
+        COALESCE(SUM(CASE WHEN pa.hidden = 1 THEN 1 ELSE 0 END), 0) as hidden_count
+      FROM pets p
+      LEFT JOIN elements e ON e.id = p.element_id
+      LEFT JOIN elements se ON se.id = p.sub_element_id
+      LEFT JOIN pet_achievements pa ON pa.pet_uid = p.uid
+      ${whereClause}
+      GROUP BY p.uid
+      ${havingClause}
+      ORDER BY CAST(p.pet_id AS INTEGER), p.uid
+      LIMIT ? OFFSET ?
+    `;
+    const pets = db.prepare(listSql).all(...params, limit, offset);
+
+    // Fetch achievements for these pets
+    if (pets.length > 0) {
+      const uids = pets.map(p => p.uid);
+      const placeholders = uids.map(() => '?').join(',');
+      const achievements = db.prepare(`
+        SELECT pa.*, sk.icon_url as skill_icon, el.icon as skill_element_icon
+        FROM pet_achievements pa
+        LEFT JOIN skills sk ON pa.skill_ref_uid = sk.uid
+        LEFT JOIN elements el ON sk.element_id = el.id
+        WHERE pa.pet_uid IN (${placeholders})
+        ORDER BY pa.sort_order, pa.id
+      `).all(...uids);
+
+      // Group by pet_uid
+      const achievementMap = {};
+      for (const a of achievements) {
+        if (!achievementMap[a.pet_uid]) achievementMap[a.pet_uid] = [];
+        achievementMap[a.pet_uid].push(a);
+      }
+      for (const pet of pets) {
+        pet.achievements = achievementMap[pet.uid] || [];
+      }
+    } else {
+      for (const pet of pets) {
+        pet.achievements = [];
+      }
+    }
+
+    res.json({ pets, total });
+  } catch (err) {
+    console.error('[AchievementsList GET]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/admin/pet-achievements/:uid
  * Get all achievements for a pet
  */

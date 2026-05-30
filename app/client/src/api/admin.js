@@ -309,6 +309,12 @@ export const adminApi = {
     method: 'PATCH',
   }),
 
+  // 图鉴课题批量列表
+  getAchievementsList: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return adminRequest('/achievements-list' + (query ? '?' + query : ''))
+  },
+
   // 素材库目录管理
   libraryDirectories: () => adminRequest('/library/directories'),
   createLibraryDirectory: (dirPath) => adminRequest('/library/directories', {
