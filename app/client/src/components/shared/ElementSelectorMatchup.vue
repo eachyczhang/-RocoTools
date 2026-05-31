@@ -59,7 +59,7 @@
             </div>
             总览统计
           </h4>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+          <div class="grid grid-cols-2 gap-4 md:gap-5">
             <div class="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 text-center shadow-sm border border-gray-200/50 dark:border-gray-600/50">
               <div class="text-2xl md:text-3xl font-black text-red-500 dark:text-red-400 mb-2">{{ analysis.summary.weakToCount }}</div>
               <div class="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide">被克制属性</div>
@@ -68,14 +68,6 @@
               <div class="text-2xl md:text-3xl font-black text-green-500 dark:text-green-400 mb-2">{{ analysis.summary.resistToCount }}</div>
               <div class="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide">抵抗属性</div>
             </div>
-            <div class="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 text-center shadow-sm border border-gray-200/50 dark:border-gray-600/50">
-              <div class="text-2xl md:text-3xl font-black text-blue-500 dark:text-blue-400 mb-2">{{ analysis.summary.totalWeakToMultiplier.toFixed(1) }}×</div>
-              <div class="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide">总克制倍率</div>
-            </div>
-            <div class="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 text-center shadow-sm border border-gray-200/50 dark:border-gray-600/50">
-              <div class="text-2xl md:text-3xl font-black text-purple-500 dark:text-purple-400 mb-2">{{ analysis.summary.totalResistToMultiplier.toFixed(1) }}×</div>
-              <div class="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wide">总抵抗倍率</div>
-            </div>
           </div>
         </div>
 
@@ -83,16 +75,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           <!-- 被克制 -->
           <div v-if="analysis.weakTo.length" class="bg-gradient-to-br from-red-50/70 to-red-100/40 dark:from-red-950/25 dark:to-red-900/15 rounded-2xl p-5 md:p-6 border border-red-200/60 dark:border-red-800/40">
-            <h4 class="text-lg md:text-xl font-bold text-red-600 dark:text-red-400 mb-4 md:mb-5 flex items-center justify-between">
-              <span class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5.965 4.904l9.131 9.131a6.5 6.5 0 00-9.131-9.131zm8.07 10.192L4.904 5.965a6.5 6.5 0 009.131 9.131zM4.343 4.343a8 8 0 1111.314 11.314A8 8 0 014.343 4.343z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-                被克制（受到增伤）
-              </span>
-              <span class="text-base font-semibold text-red-500/80 dark:text-red-400/80">×{{ analysis.summary.totalWeakToMultiplier.toFixed(1) }}</span>
+            <h4 class="text-lg md:text-xl font-bold text-red-600 dark:text-red-400 mb-4 md:mb-5 flex items-center gap-3">
+              <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.965 4.904l9.131 9.131a6.5 6.5 0 00-9.131-9.131zm8.07 10.192L4.904 5.965a6.5 6.5 0 009.131 9.131zM4.343 4.343a8 8 0 1111.314 11.314A8 8 0 014.343 4.343z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              被克制（受到增伤）
             </h4>
             <div class="space-y-3">
               <div v-for="item in analysis.weakTo" :key="item.name" class="flex items-center justify-between bg-white/90 dark:bg-gray-800/90 rounded-xl p-4 shadow-sm border border-red-100/50 dark:border-red-800/30 hover:shadow-md transition-all duration-200">
@@ -112,16 +101,13 @@
 
           <!-- 抵抗 -->
           <div v-if="analysis.resistTo.length" class="bg-gradient-to-br from-green-50/70 to-green-100/40 dark:from-green-950/25 dark:to-green-900/15 rounded-2xl p-5 md:p-6 border border-green-200/60 dark:border-green-800/40">
-            <h4 class="text-lg md:text-xl font-bold text-green-600 dark:text-green-400 mb-4 md:mb-5 flex items-center justify-between">
-              <span class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-                抵抗（受到减伤）
-              </span>
-              <span class="text-base font-semibold text-green-500/80 dark:text-green-400/80">×{{ analysis.summary.totalResistToMultiplier.toFixed(1) }}</span>
+            <h4 class="text-lg md:text-xl font-bold text-green-600 dark:text-green-400 mb-4 md:mb-5 flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              抵抗（受到减伤）
             </h4>
             <div class="space-y-3">
               <div v-for="item in analysis.resistTo" :key="item.name" class="flex items-center justify-between bg-white/90 dark:bg-gray-800/90 rounded-xl p-4 shadow-sm border border-green-100/50 dark:border-green-800/30 hover:shadow-md transition-all duration-200">
@@ -241,8 +227,6 @@ const analysis = computed(() => {
   const summary = {
     weakToCount: weakTo.length,
     resistToCount: resistTo.length,
-    totalWeakToMultiplier: weakTo.reduce((sum, item) => sum + (item.multiplier - 1), 0) + weakTo.length,
-    totalResistToMultiplier: resistTo.reduce((sum, item) => sum + (1 - item.multiplier), 0) + resistTo.length,
   }
 
   return { weakTo, resistTo, summary }
