@@ -19,6 +19,11 @@
         :class="viewMode === 'detail' ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
         详细查询
       </button>
+      <button @click="viewMode = 'selector'"
+        class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
+        :class="viewMode === 'selector' ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
+        属性分析器
+      </button>
     </div>
 
     <!-- ========== 克制表格模式 ========== -->
@@ -128,6 +133,14 @@
       </div>
     </div>
 
+    <!-- ========== 属性分析器模式 ========== -->
+    <div v-if="viewMode === 'selector'">
+      <ElementSelectorMatchup
+        :elements="elements"
+        :multipliers="multipliers"
+      />
+    </div>
+
     <!-- ========== 详细查询模式 ========== -->
     <div v-if="viewMode === 'detail'">
       <!-- 属性网格 -->
@@ -204,15 +217,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { elementsApi } from '@/api'
 import { useTheme } from '@/composables/useTheme'
+import ElementSelectorMatchup from '@/components/shared/ElementSelectorMatchup.vue'
 
 const { isDark } = useTheme()
 const elements = ref([])
+const multipliers = ref({})
 const selected = ref(null)
 const viewMode = ref('table')
 
 onMounted(async () => {
   const res = await elementsApi.list()
   elements.value = res.elements
+
+  // 获取倍率数据
+  const multRes = await elementsApi.multipliers()
+  multipliers.value = multRes
 })
 
 // 单属性克制表
