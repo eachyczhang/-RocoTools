@@ -14,11 +14,7 @@
         :class="viewMode === 'dual' ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
         双属性表
       </button>
-      <button @click="viewMode = 'detail'"
-        class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
-        :class="viewMode === 'detail' ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
-        详细查询
-      </button>
+
       <button @click="viewMode = 'selector'"
         class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
         :class="viewMode === 'selector' ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
@@ -141,75 +137,7 @@
       />
     </div>
 
-    <!-- ========== 详细查询模式 ========== -->
-    <div v-if="viewMode === 'detail'">
-      <!-- 属性网格 -->
-      <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-9 gap-2 md:gap-3 mb-6 md:mb-8">
-        <button v-for="elem in elements" :key="elem.id"
-          class="card text-center !p-2 md:!p-3 cursor-pointer"
-          :class="selected?.id === elem.id ? 'ring-2 ring-primary-400' : ''"
-          @click="selected = selected?.id === elem.id ? null : elem">
-          <img :src="elem.icon" class="w-6 h-6 md:w-7 md:h-7 mx-auto mb-1" :alt="elem.name" />
-          <div class="text-[10px] md:text-xs font-medium" :style="{ color: elem.color }">{{ elem.name }}</div>
-        </button>
-      </div>
 
-      <!-- 选中属性详情 -->
-      <div class="card" v-if="selected">
-        <div class="flex items-center gap-2 md:gap-3 mb-3 md:mb-5">
-          <img :src="selected.icon" class="w-6 h-6 md:w-8 md:h-8" />
-          <h2 class="text-lg md:text-xl font-medium" :style="{ color: selected.color }">{{ selected.name }}</h2>
-          <span v-if="selected.immunity" class="badge bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 ml-auto text-xs">
-            免疫：{{ selected.immunity }}
-          </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <div>
-            <div class="text-muted text-xs mb-2 uppercase tracking-wide">攻击面</div>
-            <div class="space-y-2 md:space-y-3">
-              <div>
-                <span class="text-xs text-green-600 dark:text-green-400">克制 ×2</span>
-                <div class="flex flex-wrap gap-1 md:gap-1.5 mt-1">
-                  <span v-for="t in selected.strong_against" :key="t.id"
-                    class="badge text-xs bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400">{{ t.name }}</span>
-                  <span v-if="!selected.strong_against?.length" class="text-muted text-xs">无</span>
-                </div>
-              </div>
-              <div>
-                <span class="text-xs text-yellow-600 dark:text-yellow-400">被抵抗 ×0.5</span>
-                <div class="flex flex-wrap gap-1 md:gap-1.5 mt-1">
-                  <span v-for="t in selected.resisted_by" :key="t.id"
-                    class="badge text-xs bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400">{{ t.name }}</span>
-                  <span v-if="!selected.resisted_by?.length" class="text-muted text-xs">无</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div class="text-muted text-xs mb-2 uppercase tracking-wide">防御面</div>
-            <div class="space-y-2 md:space-y-3">
-              <div>
-                <span class="text-xs text-red-600 dark:text-red-400">弱点 ×2</span>
-                <div class="flex flex-wrap gap-1 md:gap-1.5 mt-1">
-                  <span v-for="t in selected.weak_to" :key="t.id"
-                    class="badge text-xs bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400">{{ t.name }}</span>
-                  <span v-if="!selected.weak_to?.length" class="text-muted text-xs">无</span>
-                </div>
-              </div>
-              <div>
-                <span class="text-xs text-blue-600 dark:text-blue-400">抗性 ×0.5</span>
-                <div class="flex flex-wrap gap-1 md:gap-1.5 mt-1">
-                  <span v-for="t in selected.resistant_to" :key="t.id"
-                    class="badge text-xs bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">{{ t.name }}</span>
-                  <span v-if="!selected.resistant_to?.length" class="text-muted text-xs">无</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -222,7 +150,6 @@ import ElementSelectorMatchup from '@/components/shared/ElementSelectorMatchup.v
 const { isDark } = useTheme()
 const elements = ref([])
 const multipliers = ref({})
-const selected = ref(null)
 const viewMode = ref('table')
 
 onMounted(async () => {
