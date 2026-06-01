@@ -65,7 +65,7 @@
 | [docs/game-notes/energy.md](./docs/game-notes/energy.md) | 能量系统设定 | 游戏能量机制变更时更新 |
 | [docs/game-notes/elements.md](./docs/game-notes/elements.md) | 属性系统设定（18种属性/克制/免疫） | 属性机制变更时更新 |
 | [docs/game-notes/skills.md](./docs/game-notes/skills.md) | 技能系统设定（分类/学习方式/应对/血脉） | 技能机制变更时更新 |
-| [docs/game-notes/pets.md](./docs/game-notes/pets.md) | 精灵系统设定（种族值/天赋/形态/进化/标签/课题） | 精灵相关机制变更时更新 |
+| [docs/game-notes/pets.md](./docs/game-notes/pets.md) | 精灵系统设定（种族值/等级/个体值/星级与成长值/觉醒/形态/进化/标签/课题） | 精灵相关机制变更时更新 |
 | [docs/game-notes/battle.md](./docs/game-notes/battle.md) | 战斗系统设定（背包/道具） | 战斗机制变更时更新 |
 | [docs/game-notes/seasons.md](./docs/game-notes/seasons.md) | 赛季系统设定（通行证/传说/限定/异色） | 赛季机制变更时更新 |
 | [docs/game-notes/events.md](./docs/game-notes/events.md) | 活动系统设定（版本活动/大量出没/常驻课题） | 活动机制变更时更新 |
