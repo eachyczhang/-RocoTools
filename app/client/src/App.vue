@@ -214,6 +214,15 @@
     <!-- 全局用户反馈 FAB（仅用户端） -->
     <FeedbackFAB />
 
+    <!-- SW 更新提示 Toast -->
+    <Transition name="fab">
+      <div v-if="showUpdateToast"
+        class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg shadow-lg text-sm font-medium"
+        :class="isDark ? 'bg-green-700 text-white' : 'bg-green-600 text-white'">
+        ✨ 已更新到最新版本
+      </div>
+    </Transition>
+
     <!-- 全局悬浮按钮：BWIKI爬取预览最小化时显示（仅管理端） -->
     <Transition name="fab">
       <button v-if="isAdminRoute && crawlHasData && crawlIsMinimized"
@@ -236,6 +245,7 @@ import { useModalState } from '@/composables/useModal'
 import { useImagePreview } from '@/composables/useImagePreview'
 import { usePageVisibility } from '@/composables/usePageVisibility'
 import { useCrawlPreview } from '@/composables/useCrawlPreview'
+import { useSwUpdate } from '@/composables/useSwUpdate'
 import ModalDialog from '@/components/shared/ModalDialog.vue'
 import ImagePreview from '@/components/shared/ImagePreview.vue'
 import FeedbackFAB from '@/components/FeedbackFAB.vue'
@@ -258,6 +268,9 @@ const { showPreview, previewSrc, closePreview } = useImagePreview()
 
 // 全局爬取预览状态
 const { hasData: crawlHasData, isMinimized: crawlIsMinimized, restore: crawlRestore } = useCrawlPreview()
+
+// Service Worker 更新提示
+const { showUpdateToast } = useSwUpdate()
 
 // Page visibility recovery: auto-reload when returning from background after long idle
 usePageVisibility({
