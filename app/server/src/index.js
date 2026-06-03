@@ -109,7 +109,20 @@ app.get('/', (req, res) => {
 // 前端静态文件（build 产物）挂载到 /rocotools/
 const DIST_DIR = path.join(__dirname, '..', 'public');
 if (fs.existsSync(DIST_DIR)) {
-  app.use('/rocotools', express.static(DIST_DIR));
+  // Service Worker files: no-cache to ensure updates are detected
+  app.use('/rocotools', express.static(DIST_DIR, {
+    setHeaders(res, filePath) {
+      const basename = path.basename(filePath);
+      if (basename === 'sw.js' || basename.startsWith('workbox-')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        if (basename === 'sw.js') {
+          res.setHeader('Service-Worker-Allowed', '/rocotools/');
+        }
+      }
+    },
+  }));
   // SPA fallback
   app.get('/rocotools/*', (req, res) => {
     res.sendFile(path.join(DIST_DIR, 'index.html'));
