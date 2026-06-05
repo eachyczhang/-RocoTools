@@ -1,324 +1,216 @@
 <template>
-  <div class="relative">
-    <!-- Selected -->
-    <div v-if="selectedSkill" class="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50 dark:bg-white/5">
-      <img v-if="selectedSkill.icon_url" :src="selectedSkill.icon_url" class="w-6 h-6 object-contain flex-shrink-0" />
-      <img v-else-if="selectedSkill.element_icon" :src="selectedSkill.element_icon" class="w-6 h-6 object-contain flex-shrink-0" />
-      <img v-if="selectedSkill.element_icon" :src="selectedSkill.element_icon" class="w-4 h-4 flex-shrink-0" />
-      <div class="flex-1 min-w-0">
-        <div class="text-xs font-medium truncate">{{ selectedSkill.name }}</div>
-      </div>
-      <span class="text-[10px] text-muted flex-shrink-0">{{ selectedSkill.category }} {{ selectedSkill.power ? 'P' + selectedSkill.power : '' }}</span>
-      <button @click="clear" class="text-[10px] text-primary-500 hover:underline flex-shrink-0">更换</button>
-    </div>
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="visible" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="close">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-3xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          :class="isDark ? 'bg-gray-800' : 'bg-white'">
+          <div class="h-1 bg-primary-500"></div>
 
-    <!-- Not selected: search + browse -->
-    <div v-else>
-      <div class="flex gap-1.5">
-        <input v-model="query" :placeholder="placeholder" class="input flex-1 text-xs"
-          @input="searchDebounced" @focus="onFocus" />
-        <button @click="openBrowser" class="btn-ghost text-xs whitespace-nowrap px-2" title="浏览选取">
-          📋
-        </button>
-      </div>
+          <!-- 头部：搜索 + 筛选 -->
+          <div class="p-4 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
+            <div class="flex items-center gap-2 mb-3">
+              <h3 class="font-roco text-lg text-primary-500">选择技能</h3>
+              <span class="text-xs text-muted ml-auto">共 {{ total }} 个技能</span>
+              <button @click="close" class="btn-ghost text-sm ml-2">关闭</button>
+            </div>
 
-      <!-- Search dropdown -->
-      <div v-if="showDropdown && results.length > 0"
-        class="absolute z-50 top-full left-0 right-0 mt-1 max-h-52 overflow-y-auto rounded-lg shadow-lg border"
-        :class="isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
-        <div v-for="skill in results" :key="skill.uid" @click="selectSkill(skill)"
-          class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors"
-          :class="isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'">
-          <img v-if="skill.icon_url" :src="skill.icon_url" class="w-5 h-5 object-contain flex-shrink-0" />
-          <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-5 h-5 object-contain flex-shrink-0" />
-          <img v-if="skill.element_icon" :src="skill.element_icon" class="w-4 h-4 flex-shrink-0" />
-          <div class="flex-1 min-w-0">
-            <div class="text-xs truncate">{{ skill.name }}</div>
+            <!-- 搜索框 -->
+            <div class="relative mb-3">
+              <input v-model="query" placeholder="搜索技能名称..." class="input w-full pl-8"
+                @input="debouncedSearch" />
+              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+
+            <!-- 属性筛选 -->
+            <div class="flex items-center gap-1 flex-wrap mb-2">
+              <button @click="filterElement = ''; fetchSkills()"
+                class="px-2 py-1 rounded text-xs transition-colors"
+                :class="!filterElement ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400' : 'text-muted hover:bg-gray-100 dark:hover:bg-white/5'">
+                全部
+              </button>
+              <button v-for="e in elements" :key="e.id" @click="filterElement = e.id; fetchSkills()"
+                class="p-1 rounded-lg transition-all"
+                :class="filterElement == e.id ? 'bg-primary-100 dark:bg-primary-500/20 ring-1 ring-primary-400' : 'opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-white/5'">
+                <img :src="e.icon" class="w-5 h-5" :alt="e.name" :title="e.name" />
+              </button>
+            </div>
+
+            <!-- 分类筛选 -->
+            <div class="flex items-center gap-1.5">
+              <button v-for="cat in categories" :key="cat.value" @click="filterCategory = cat.value; fetchSkills()"
+                class="text-xs px-2.5 py-1 rounded-full transition-colors"
+                :class="filterCategory === cat.value
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400'
+                  : 'bg-gray-100 dark:bg-white/5 text-muted hover:bg-gray-200 dark:hover:bg-white/10'">
+                {{ cat.label }}
+              </button>
+            </div>
           </div>
-          <span class="text-[10px] text-muted flex-shrink-0">{{ skill.category }} {{ skill.power ? 'P' + skill.power : '' }}</span>
-        </div>
-      </div>
 
-      <!-- No results -->
-      <div v-if="showDropdown && query.length >= 1 && results.length === 0 && !loading"
-        class="absolute z-50 top-full left-0 right-0 mt-1 px-3 py-2 rounded-lg shadow-lg border text-xs text-muted"
-        :class="isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
-        未找到技能
-      </div>
-
-      <!-- Click outside to close -->
-      <div v-if="showDropdown" class="fixed inset-0 z-40" @click="showDropdown = false"></div>
-    </div>
-
-    <!-- Browse modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showBrowser" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showBrowser = false">
-          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-          <div class="relative w-full max-w-4xl max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            :class="isDark ? 'bg-gray-900' : 'bg-white'">
-            <!-- Header -->
-            <div class="flex items-center justify-between px-5 py-3 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="font-roco text-base text-primary-500">选择技能</h3>
-              <button @click="showBrowser = false" class="text-muted hover:text-foreground text-lg">✕</button>
-            </div>
-
-            <!-- Filters -->
-            <div class="px-5 py-3 border-b space-y-3" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
-              <div class="flex flex-wrap gap-2">
-                <input v-model="browseSearch" placeholder="搜索技能名称..." @input="debouncedBrowseFetch" class="input w-full sm:w-52 text-sm" />
-                <select v-model="browseCategory" @change="browseFilterChanged" class="select text-sm">
-                  <option value="">分类：全部</option>
-                  <option v-for="c in ['物攻','魔攻','防御','状态']" :key="c" :value="c">分类：{{ c }}</option>
-                </select>
-                <select v-model="browseCounter" @change="browseFilterChanged" class="select text-sm">
-                  <option value="">应对：不限</option>
-                  <option value="none">应对：无</option>
-                  <option v-for="c in ['状态','防御','攻击']" :key="c" :value="c">应对：{{ c }}</option>
-                </select>
-                <select v-model="browseKeyword" @change="browseFilterChanged" class="select text-sm">
-                  <option value="">效果：不限</option>
-                  <option v-for="k in keywordOptions" :key="k.value" :value="k.value">{{ k.label }}</option>
-                </select>
-                <span class="text-muted text-xs self-center ml-auto">共 {{ browseTotal }} 条</span>
+          <!-- 技能列表 -->
+          <div class="flex-1 overflow-y-auto">
+            <div v-for="sk in skills" :key="sk.uid"
+              @click="selectSkill(sk)"
+              class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b"
+              :class="[
+                isDark ? 'border-gray-700/50 hover:bg-white/5' : 'border-gray-100 hover:bg-gray-50',
+                selectedUid === sk.uid ? (isDark ? 'bg-green-500/10' : 'bg-green-50') : ''
+              ]">
+              <!-- 图标 -->
+              <img v-if="sk.icon_url" :src="sk.icon_url" class="w-8 h-8 rounded object-contain flex-shrink-0" />
+              <div v-else class="w-8 h-8 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
+              <!-- 信息 -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-sm font-medium">{{ sk.name }}</span>
+                  <span v-if="sk.element_name" class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px]"
+                    :style="{ background: (sk.element_color || '#999') + '15', color: sk.element_color || '#999' }">
+                    <img v-if="sk.element_icon" :src="sk.element_icon" class="w-3 h-3" />
+                    {{ sk.element_name }}
+                  </span>
+                  <span v-if="sk.category" class="text-[10px] px-1.5 py-0.5 rounded" :class="categoryClass(sk.category)">
+                    {{ sk.category }}
+                  </span>
+                </div>
+                <div v-if="sk.description" class="text-[10px] text-muted mt-0.5 line-clamp-1">{{ sk.description }}</div>
               </div>
-              <!-- Element filter icons -->
-              <div class="flex flex-wrap gap-1.5">
-                <button @click="browseElementId = ''; browseFilterChanged()"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-medium transition-colors"
-                  :class="!browseElementId ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20' : 'bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'">
-                  全
-                </button>
-                <button v-for="elem in elemList" :key="elem.id"
-                  @click="browseElementId = elem.id; browseFilterChanged()"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                  :class="browseElementId === elem.id ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20' : 'bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'"
-                  :title="elem.name">
-                  <img :src="elem.icon" class="w-5 h-5" :alt="elem.name" />
-                </button>
+              <!-- 数值 -->
+              <div class="flex items-center gap-3 flex-shrink-0 text-xs text-center">
+                <div class="w-10">
+                  <div class="text-[9px] text-muted">能耗</div>
+                  <div class="font-medium">{{ sk.cost || '-' }}</div>
+                </div>
+                <div class="w-10">
+                  <div class="text-[9px] text-muted">威力</div>
+                  <div class="font-medium">{{ sk.power || '-' }}</div>
+                </div>
               </div>
+              <!-- 选中 -->
+              <span v-if="selectedUid === sk.uid" class="text-green-500 text-sm flex-shrink-0">✓</span>
             </div>
 
-            <!-- Skill list -->
-            <div class="flex-1 overflow-y-auto px-5 py-3">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="text-left text-muted text-xs">
-                    <th class="py-2 px-2 w-10">图标</th>
-                    <th class="py-2 px-2">名称</th>
-                    <th class="py-2 px-2">属性</th>
-                    <th class="py-2 px-2">分类</th>
-                    <th class="py-2 px-2 w-12">能耗</th>
-                    <th class="py-2 px-2 w-12">威力</th>
-                    <th class="py-2 px-2">效果</th>
-                    <th class="py-2 px-2 w-12">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="skill in browseSkills" :key="skill.uid"
-                    class="border-t transition-colors cursor-pointer"
-                    :class="isDark ? 'border-gray-700 hover:bg-white/5' : 'border-gray-100 hover:bg-gray-50'"
-                    @click="selectFromBrowser(skill)">
-                    <td class="py-2 px-2">
-                      <img v-if="skill.icon_url" :src="skill.icon_url" class="w-6 h-6 object-contain" />
-                      <img v-else-if="skill.element_icon" :src="skill.element_icon" class="w-6 h-6 object-contain" />
-                      <span v-else class="w-6 h-6 inline-block"></span>
-                    </td>
-                    <td class="py-2 px-2 font-medium text-xs">{{ skill.name }}</td>
-                    <td class="py-2 px-2">
-                      <span class="flex items-center gap-1">
-                        <img v-if="skill.element_icon" :src="skill.element_icon" class="w-4 h-4" />
-                        <span class="text-xs" :style="{ color: skill.element_color }">{{ skill.element_name }}</span>
-                      </span>
-                    </td>
-                    <td class="py-2 px-2">
-                      <span class="text-xs font-medium" :style="{ color: getCategoryColor(skill.category) }">{{ skill.category }}</span>
-                    </td>
-                    <td class="py-2 px-2 text-center text-xs">{{ skill.cost }}</td>
-                    <td class="py-2 px-2 text-center text-xs">{{ skill.power }}</td>
-                    <td class="py-2 px-2 text-xs text-muted max-w-[200px] truncate" :title="skill.description">{{ skill.description }}</td>
-                    <td class="py-2 px-2 text-center">
-                      <button @click.stop="selectFromBrowser(skill)" class="text-primary-500 hover:text-primary-600 text-xs font-medium">选择</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-if="!browseSkills.length && !browseLoading" class="text-center text-muted text-xs py-8">无匹配技能</div>
-              <div v-if="browseLoading" class="text-center text-muted text-xs py-8">加载中...</div>
+            <!-- 加载更多 -->
+            <div v-if="skills.length < total" class="text-center py-3">
+              <button @click="loadMore" class="btn-ghost text-xs">加载更多 ({{ skills.length }}/{{ total }})</button>
             </div>
 
-            <!-- Pagination -->
-            <div v-if="browseTotal > browseLimit" class="flex justify-center items-center gap-3 px-5 py-3 border-t" :class="isDark ? 'border-gray-700' : 'border-gray-200'">
-              <button @click="browsePage > 1 && (browsePage--, fetchBrowseSkills())" :disabled="browsePage <= 1" class="btn-ghost text-xs">← 上一页</button>
-              <span class="text-xs text-muted">{{ browsePage }} / {{ Math.ceil(browseTotal / browseLimit) }}</span>
-              <button @click="browsePage < Math.ceil(browseTotal / browseLimit) && (browsePage++, fetchBrowseSkills())"
-                :disabled="browsePage >= Math.ceil(browseTotal / browseLimit)" class="btn-ghost text-xs">下一页 →</button>
+            <!-- 空状态 -->
+            <div v-if="!skills.length && !loading" class="text-center py-10 text-muted text-sm">
+              未找到匹配技能
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
-  </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { useTheme } from '@/composables/useTheme'
+import { ref, onMounted } from 'vue'
 import { skillsApi, elementsApi } from '@/api'
-import { categoryColor as getCategoryColor } from '@/constants/categoryColors'
+import { useTheme } from '@/composables/useTheme'
 
 const { isDark } = useTheme()
 
 const props = defineProps({
-  modelValue: { type: String, default: '' },
-  placeholder: { type: String, default: '搜索技能名称...' },
+  visible: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:modelValue', 'selected'])
+const emit = defineEmits(['select', 'update:visible'])
 
-// === Quick search mode ===
 const query = ref('')
-const results = ref([])
-const selectedSkill = ref(null)
-const showDropdown = ref(false)
+const filterElement = ref('')
+const filterCategory = ref('')
+const skills = ref([])
+const total = ref(0)
+const page = ref(1)
 const loading = ref(false)
+const elements = ref([])
+const selectedUid = ref('')
 
-let timer = null
-function searchDebounced() {
-  clearTimeout(timer)
-  if (!query.value.trim()) { results.value = []; showDropdown.value = false; return }
-  showDropdown.value = true
-  timer = setTimeout(async () => {
-    loading.value = true
-    try {
-      const res = await skillsApi.list({ search: query.value.trim(), limit: 20 })
-      results.value = res.skills || []
-    } catch { results.value = [] }
-    loading.value = false
-  }, 200)
-}
-
-function onFocus() {
-  if (query.value.trim() && results.value.length) showDropdown.value = true
-}
-
-function selectSkill(skill) {
-  selectedSkill.value = skill
-  showDropdown.value = false
-  query.value = ''
-  results.value = []
-  emit('update:modelValue', skill.uid)
-  emit('selected', skill)
-}
-
-function clear() {
-  selectedSkill.value = null
-  emit('update:modelValue', '')
-  emit('selected', null)
-}
-
-// === Browse modal mode ===
-const showBrowser = ref(false)
-const browseSkills = ref([])
-const browseTotal = ref(0)
-const browsePage = ref(1)
-const browseLimit = ref(30)
-const browseSearch = ref('')
-const browseCategory = ref('')
-const browseCounter = ref('')
-const browseElementId = ref('')
-const browseKeyword = ref('')
-const browseLoading = ref(false)
-const elemList = ref([])
-
-const keywordOptions = [
-  { value: '连击', label: '连击' },
-  { value: '回复', label: '回复' },
-  { value: '吸血', label: '吸血' },
-  { value: '永久', label: '永久增益' },
-  { value: '印记', label: '印记' },
-  { value: '驱散', label: '驱散' },
-  { value: '打断', label: '打断' },
-  { value: '脱离', label: '脱离' },
-  { value: '更换', label: '更换精灵' },
-  { value: '先手', label: '先手' },
-  { value: '迸发', label: '迸发' },
-  { value: '迅捷', label: '迅捷' },
-  { value: '蓄力', label: '蓄力' },
-  { value: '中毒', label: '中毒' },
-  { value: '灼烧', label: '灼烧' },
-  { value: '冻结', label: '冻结' },
-  { value: '萌化', label: '萌化' },
-  { value: '奉献', label: '奉献' },
+const categories = [
+  { label: '全部', value: '' },
+  { label: '物攻', value: '物攻' },
+  { label: '魔攻', value: '魔攻' },
+  { label: '防御', value: '防御' },
+  { label: '状态', value: '状态' },
 ]
 
-async function openBrowser() {
-  showBrowser.value = true
-  if (elemList.value.length === 0) {
-    try {
-      const res = await elementsApi.list()
-      elemList.value = res.elements || []
-    } catch (err) { console.error('[SkillPicker]', err) }
+function categoryClass(cat) {
+  const map = {
+    '物攻': 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
+    '魔攻': 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400',
+    '防御': 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    '状态': 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400',
   }
-  browsePage.value = 1
-  fetchBrowseSkills()
+  return map[cat] || 'bg-gray-100 text-gray-600'
 }
 
-let browseDebounceTimer = null
-function debouncedBrowseFetch() {
-  clearTimeout(browseDebounceTimer)
-  browseDebounceTimer = setTimeout(() => { browsePage.value = 1; fetchBrowseSkills() }, 300)
+let timer = null
+function debouncedSearch() {
+  clearTimeout(timer)
+  timer = setTimeout(() => { page.value = 1; fetchSkills() }, 200)
 }
 
-function browseFilterChanged() {
-  browsePage.value = 1
-  fetchBrowseSkills()
-}
-
-async function fetchBrowseSkills() {
-  browseLoading.value = true
+async function fetchSkills() {
+  page.value = 1
+  loading.value = true
   try {
     const res = await skillsApi.list({
-      page: browsePage.value,
-      limit: browseLimit.value,
-      search: browseSearch.value,
-      category: browseCategory.value,
-      counter: browseCounter.value,
-      element_id: browseElementId.value,
-      keyword: browseKeyword.value,
+      search: query.value.trim(),
+      element_id: filterElement.value,
+      category: filterCategory.value,
+      limit: 50,
+      page: 1,
     })
-    browseSkills.value = res.skills || []
-    browseTotal.value = res.total || 0
-  } catch (err) {
-    console.error('[SkillPicker]', err)
-    browseSkills.value = []
-  }
-  browseLoading.value = false
+    skills.value = res.skills || []
+    total.value = res.total || 0
+  } catch {}
+  loading.value = false
 }
 
-function selectFromBrowser(skill) {
-  selectedSkill.value = skill
-  showBrowser.value = false
-  emit('update:modelValue', skill.uid)
-  emit('selected', skill)
-}
-
-// === Initial load ===
-async function loadInitial() {
-  if (!props.modelValue) return
+async function loadMore() {
+  page.value++
   try {
-    const skill = await skillsApi.get(props.modelValue)
-    if (skill) selectedSkill.value = skill
-  } catch (err) {
-    console.error('[SkillPicker]', err)
-  }
+    const res = await skillsApi.list({
+      search: query.value.trim(),
+      element_id: filterElement.value,
+      category: filterCategory.value,
+      limit: 50,
+      page: page.value,
+    })
+    skills.value.push(...(res.skills || []))
+  } catch {}
 }
 
-watch(() => props.modelValue, (val) => {
-  if (!val) {
-    selectedSkill.value = null
-  } else if (!selectedSkill.value || selectedSkill.value.uid !== val) {
-    loadInitial()
-  }
-}, { immediate: true })
+function selectSkill(sk) {
+  selectedUid.value = sk.uid
+  emit('select', {
+    skill_ref_uid: sk.uid,
+    skill_name: sk.name,
+    skill_element: sk.element_name || '',
+    skill_type: sk.category || '',
+    skill_cost: sk.cost,
+    skill_power: sk.power,
+    skill_icon: sk.icon_url || '',
+    skill_element_icon: sk.element_icon || '',
+    skill_element_color: sk.element_color || '',
+  })
+  close()
+}
+
+function close() {
+  emit('update:visible', false)
+}
+
+onMounted(async () => {
+  try {
+    const res = await elementsApi.list()
+    elements.value = res.elements || []
+  } catch {}
+  fetchSkills()
+})
 </script>

@@ -810,9 +810,15 @@ onMounted(async () => {
 
     const res = await eventsApi.list(null, true)
     // Filter fate_flower events
-    events.value = (res.events || []).filter(
+    let fateEvents = (res.events || []).filter(
       e => e.category === 'routine' && (e.sub_type === 'fate_flower' || e.sub_type === 'destiny')
     )
+    // 如果有 eventId 参数，只显示该活动的精灵
+    const eventId = route.query.eventId
+    if (eventId) {
+      fateEvents = fateEvents.filter(e => String(e.id) === String(eventId))
+    }
+    events.value = fateEvents
   } catch (err) {
     console.error('[FateFlower] Load events failed:', err)
   }

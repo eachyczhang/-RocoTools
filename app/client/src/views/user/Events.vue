@@ -108,7 +108,7 @@
         <div class="space-y-3">
           <component :is="isFateFlower(event) ? 'router-link' : 'div'"
             v-for="event in routineEvents" :key="event.id"
-            :to="isFateFlower(event) ? '/fate-flower' : undefined"
+            :to="isFateFlower(event) ? `/fate-flower?eventId=${event.id}` : undefined"
             class="block border border-surface-light-border dark:border-surface-dark-border rounded-lg p-3 relative"
             :class="{ 'cursor-pointer hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5 transition-colors': isFateFlower(event) }">
             <div class="flex items-center gap-2 mb-2" :class="{ 'pr-16': isFateFlower(event) }">

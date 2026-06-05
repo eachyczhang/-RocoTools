@@ -2,7 +2,7 @@
 <template>
   <div>
     <router-link to="/admin/pika" class="text-sm text-muted hover:text-primary-500 mb-3 inline-block">← 返回皮卡月刊</router-link>
-    <h1 class="font-roco text-xl sm:text-2xl text-pink-500 mb-4">🌸 命定花种技能配置</h1>
+    <h1 class="font-roco text-xl sm:text-2xl text-pink-500 mb-4">🌸 命定花种技能配置 <span v-if="monthlyTitle" class="text-base text-muted font-normal">· {{ monthlyTitle }}</span></h1>
 
     <!-- Counter-picks toggle -->
     <div class="flex items-center gap-3 mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30">
@@ -123,131 +123,53 @@
           </div>
 
           <!-- 3 skill slots -->
-          <div class="space-y-4">
-            <div v-for="(slot, idx) in skillSlots" :key="idx" class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <!-- Slot header -->
-              <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50">
-                <div class="flex items-center gap-2">
-                  <span class="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center"
-                    :class="slot.skill_ref_uid ? 'bg-green-100 dark:bg-green-500/20 text-green-600' : 'bg-gray-200 dark:bg-gray-600 text-muted'">{{ idx + 1 }}</span>
-                  <span class="text-sm font-medium">技能槽 {{ idx + 1 }}</span>
-                  <span v-if="slot.skill_source" class="text-[10px] px-1.5 py-0.5 rounded-full"
-                    :class="sourceTagClass(slot.skill_source)">{{ sourceLabel(slot.skill_source) }}</span>
+          <div class="space-y-3">
+            <div v-for="(slot, idx) in skillSlots" :key="idx"
+              class="rounded-xl border overflow-hidden"
+              :class="slot.skill_ref_uid ? 'border-green-200 dark:border-green-500/30' : 'border-gray-200 dark:border-gray-700'">
+              <!-- 已选技能 -->
+              <div v-if="slot.skill_ref_uid" class="flex items-center gap-3 px-4 py-3">
+                <span class="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-600 flex-shrink-0">{{ idx + 1 }}</span>
+                <img v-if="slot.skill_icon" :src="slot.skill_icon" class="w-8 h-8 rounded object-contain flex-shrink-0" />
+                <img v-else-if="slot.skill_element_icon" :src="slot.skill_element_icon" class="w-8 h-8 rounded object-contain flex-shrink-0" />
+                <div v-else class="w-8 h-8 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-medium text-sm">{{ slot.skill_name }}</span>
+                    <span v-if="slot.skill_element" class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px]"
+                      :style="{ background: (slot.skill_element_color || '#999') + '15', color: slot.skill_element_color || '#999' }">
+                      <img v-if="slot.skill_element_icon" :src="slot.skill_element_icon" class="w-3 h-3" />
+                      {{ slot.skill_element }}
+                    </span>
+                    <span v-if="slot.skill_type" class="text-[10px] text-muted px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">{{ slot.skill_type }}</span>
+                  </div>
                 </div>
-                <button v-if="slot.skill_ref_uid" @click="clearSlot(idx)" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded cursor-pointer">清除</button>
+                <div class="flex items-center gap-3 flex-shrink-0 text-xs text-center">
+                  <div class="w-10">
+                    <div class="text-[9px] text-muted">能耗</div>
+                    <div class="font-medium">{{ slot.skill_cost != null ? slot.skill_cost : '-' }}</div>
+                  </div>
+                  <div class="w-10">
+                    <div class="text-[9px] text-muted">威力</div>
+                    <div class="font-medium">{{ slot.skill_power || '-' }}</div>
+                  </div>
+                </div>
+                <button @click="openPicker(idx)" class="text-xs text-primary-500 hover:underline flex-shrink-0 cursor-pointer">更换</button>
+                <button @click="clearSlot(idx)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0 cursor-pointer">清除</button>
               </div>
 
-              <div class="p-4">
-                <!-- Source selector -->
-                <div class="flex items-center gap-3 mb-3">
-                  <label class="text-xs text-muted flex-shrink-0">来源：</label>
-                  <div class="flex gap-1.5">
-                    <button v-for="src in ['skills', 'bloodline_skills', 'learnable_stones']" :key="src"
-                      @click="setSource(idx, src)"
-                      class="text-xs px-2.5 py-1 rounded-full transition-colors cursor-pointer"
-                      :class="slot.skill_source === src ? sourceTagClass(src) + ' ring-1 ring-current' : 'bg-gray-100 dark:bg-white/5 text-muted hover:bg-gray-200'">
-                      {{ sourceLabel(src) }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Skill search & select -->
-                <div v-if="slot.skill_source">
-                  <div class="relative mb-2">
-                    <input
-                      v-model="slot._search"
-                      class="input w-full text-sm pl-8"
-                      placeholder="搜索技能名称..."
-                      @focus="slot._showList = true"
-                      @blur="hideListDelayed(idx)"
-                    />
-                    <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                  </div>
-
-                  <!-- Skill list -->
-                  <div v-if="slot._showList || !slot.skill_ref_uid" class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" @mousedown.prevent>
-                    <div
-                      v-for="sk in getFilteredSkills(slot.skill_source, slot._search)"
-                      :key="sk.skill_ref_uid || sk.uid || sk.name"
-                      @click="pickSkill(idx, sk)"
-                      class="flex items-center gap-2.5 px-3 py-2 hover:bg-primary-50 dark:hover:bg-primary-500/10 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700/50 last:border-0"
-                      :class="slot.skill_ref_uid === (sk.skill_ref_uid || sk.uid) ? 'bg-green-50 dark:bg-green-500/10' : ''"
-                    >
-                      <!-- Skill icon -->
-                      <img v-if="sk.skill_icon" :src="sk.skill_icon" class="w-7 h-7 rounded object-contain flex-shrink-0" />
-                      <img v-else-if="elemMap[sk.element]?.icon" :src="elemMap[sk.element].icon" class="w-7 h-7 rounded object-contain flex-shrink-0" />
-                      <div v-else class="w-7 h-7 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
-                      <!-- Skill info -->
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="text-sm font-medium">{{ sk.name }}</span>
-                          <span v-if="elemMap[sk.element]" class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px]"
-                            :style="{ background: elemMap[sk.element].color + '15', color: elemMap[sk.element].color }">
-                            <img :src="elemMap[sk.element].icon" class="w-3 h-3" />
-                            {{ sk.element }}
-                          </span>
-                          <span v-if="sk.type" class="text-[10px] text-muted px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">{{ sk.type }}</span>
-                        </div>
-                        <div v-if="sk.description" class="text-[10px] text-muted mt-0.5 truncate">{{ sk.description }}</div>
-                      </div>
-                      <!-- Power & cost -->
-                      <div class="flex items-center gap-2 flex-shrink-0 text-xs text-center">
-                        <div class="w-10">
-                          <div class="text-[9px] text-muted">能耗</div>
-                          <div class="font-medium">{{ sk.cost || '-' }}</div>
-                        </div>
-                        <div class="w-10">
-                          <div class="text-[9px] text-muted">威力</div>
-                          <div class="font-medium">{{ sk.power || '-' }}</div>
-                        </div>
-                      </div>
-                      <!-- Selected indicator -->
-                      <span v-if="slot.skill_ref_uid === (sk.skill_ref_uid || sk.uid)" class="text-green-500 text-sm">✓</span>
-                    </div>
-                    <div v-if="!getFilteredSkills(slot.skill_source, slot._search).length" class="text-center py-4 text-muted text-xs">
-                      无匹配技能
-                    </div>
-                  </div>
-
-                  <!-- Selected skill preview -->
-                  <div v-if="slot.skill_ref_uid && !slot._showList" class="mt-2 p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
-                    <div class="flex items-center gap-2.5">
-                      <img v-if="slot.skill_icon" :src="slot.skill_icon" class="w-7 h-7 rounded object-contain flex-shrink-0" />
-                      <img v-else-if="elemMap[slot.skill_element]?.icon" :src="elemMap[slot.skill_element].icon" class="w-7 h-7 rounded object-contain flex-shrink-0" />
-                      <div v-else class="w-7 h-7 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="text-green-500 text-sm">✓</span>
-                          <span class="font-medium text-sm">{{ slot.skill_name }}</span>
-                          <span v-if="elemMap[slot.skill_element]" class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px]"
-                            :style="{ background: elemMap[slot.skill_element].color + '15', color: elemMap[slot.skill_element].color }">
-                            <img :src="elemMap[slot.skill_element].icon" class="w-3 h-3" />
-                            {{ slot.skill_element }}
-                          </span>
-                          <span v-if="slot.skill_type" class="text-[10px] text-muted px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">{{ slot.skill_type }}</span>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-2 flex-shrink-0 text-xs text-center">
-                        <div class="w-10">
-                          <div class="text-[9px] text-muted">能耗</div>
-                          <div class="font-medium">{{ slot.skill_cost != null ? slot.skill_cost : '-' }}</div>
-                        </div>
-                        <div class="w-10">
-                          <div class="text-[9px] text-muted">威力</div>
-                          <div class="font-medium">{{ slot.skill_power || '-' }}</div>
-                        </div>
-                      </div>
-                      <button @click="slot._showList = true" class="text-xs text-primary-500 hover:underline flex-shrink-0 cursor-pointer">重新选择</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else class="text-center py-4 text-muted text-xs">请先选择技能来源</div>
+              <!-- 未选技能 -->
+              <div v-else class="flex items-center gap-3 px-4 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                @click="openPicker(idx)">
+                <span class="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-muted flex-shrink-0">{{ idx + 1 }}</span>
+                <span class="text-sm text-muted">点击选择技能</span>
+                <span class="ml-auto text-xs text-primary-500">📋 从全部技能中选择</span>
               </div>
             </div>
           </div>
+
+          <!-- SkillPicker 弹窗 -->
+          <SkillPicker v-model:visible="pickerVisible" @select="onSkillSelected" />
 
           <!-- Save button -->
           <div class="flex justify-end mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -268,13 +190,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { adminApi, petsApi, elementsApi, eventsApi, naturesApi } from '@/api'
+import { useRoute } from 'vue-router'
+import { adminApi, petsApi, elementsApi, naturesApi } from '@/api'
 import { useModal } from '@/composables/useModal'
+import SkillPicker from '@/components/shared/SkillPicker.vue'
 
+const route = useRoute()
 const modal = useModal()
 
 const loaded = ref(false)
-const events = ref([])
+const monthlyPets = ref([])
 const selectedPet = ref(null)
 const petDetail = ref(null)
 const elemMap = ref({})
@@ -284,91 +209,43 @@ const naturesList = ref([])
 const selectedNature = ref('')
 const savingNature = ref(false)
 const counterPicksEnabled = ref(false)
+const monthlyTitle = ref('')
 
 const skillSlots = ref([
-  { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
-  { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
-  { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
+  { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
+  { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
+  { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
 ])
 
-// Pet skills cache
-const petSkillsCache = ref({})
+// SkillPicker 弹窗状态
+const pickerVisible = ref(false)
+const pickerTargetIdx = ref(0)
 
-// Extract all unique pets from fate_flower events
-const allPets = computed(() => {
-  const petMap = new Map()
-  for (const event of events.value) {
-    const pets = parsePetIcons(event.pet_icon)
-    for (const p of pets) {
-      if (p.uid && !petMap.has(p.uid)) {
-        petMap.set(p.uid, p)
-      }
-    }
+const allPets = computed(() => monthlyPets.value)
+
+function openPicker(idx) {
+  pickerTargetIdx.value = idx
+  pickerVisible.value = true
+}
+
+function onSkillSelected(sk) {
+  const idx = pickerTargetIdx.value
+  skillSlots.value[idx] = {
+    skill_ref_uid: sk.skill_ref_uid,
+    skill_name: sk.skill_name,
+    skill_source: 'all',
+    skill_element: sk.skill_element,
+    skill_type: sk.skill_type,
+    skill_cost: sk.skill_cost,
+    skill_power: sk.skill_power,
+    skill_icon: sk.skill_icon,
+    skill_element_icon: sk.skill_element_icon,
+    skill_element_color: sk.skill_element_color,
   }
-  return Array.from(petMap.values())
-})
-
-function parsePetIcons(petIcon) {
-  if (!petIcon || !petIcon.startsWith('[')) return []
-  try { return JSON.parse(petIcon) } catch { return [] }
-}
-
-function sourceLabel(source) {
-  const map = { skills: '升级技能', bloodline_skills: '血脉技能', learnable_stones: '技能石' }
-  return map[source] || source
-}
-
-function sourceTagClass(source) {
-  const map = {
-    skills: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    bloodline_skills: 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400',
-    learnable_stones: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
-  }
-  return map[source] || 'bg-gray-100 text-gray-600'
-}
-
-function getFilteredSkills(source, search) {
-  if (!selectedPet.value) return []
-  const cache = petSkillsCache.value[selectedPet.value.uid]
-  if (!cache) return []
-  const list = cache[source] || []
-  if (!search) return list
-  const kw = search.toLowerCase()
-  return list.filter(s => s.name?.toLowerCase().includes(kw) || s.element?.toLowerCase().includes(kw))
-}
-
-function setSource(idx, source) {
-  skillSlots.value[idx].skill_source = source
-  skillSlots.value[idx].skill_ref_uid = ''
-  skillSlots.value[idx].skill_name = ''
-  skillSlots.value[idx]._search = ''
-  skillSlots.value[idx]._showList = true
-}
-
-function hideListDelayed(idx) {
-  // Delay hiding to allow click events on list items to fire first
-  setTimeout(() => {
-    if (skillSlots.value[idx]) {
-      skillSlots.value[idx]._showList = false
-    }
-  }, 200)
-}
-
-function pickSkill(idx, sk) {
-  const uid = sk.skill_ref_uid || sk.uid
-  skillSlots.value[idx].skill_ref_uid = uid
-  skillSlots.value[idx].skill_name = sk.name
-  skillSlots.value[idx].skill_element = sk.element || ''
-  skillSlots.value[idx].skill_type = sk.type || ''
-  skillSlots.value[idx].skill_cost = sk.cost
-  skillSlots.value[idx].skill_power = sk.power
-  skillSlots.value[idx].skill_icon = sk.skill_icon || ''
-  skillSlots.value[idx]._showList = false
-  skillSlots.value[idx]._search = ''
 }
 
 function clearSlot(idx) {
-  skillSlots.value[idx] = { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false }
+  skillSlots.value[idx] = { skill_ref_uid: '', skill_name: '', skill_source: 'all' }
 }
 
 async function selectPet(pet) {
@@ -379,18 +256,6 @@ async function selectPet(pet) {
   try {
     const detail = await petsApi.get(pet.uid)
     petDetail.value = detail
-
-    // Cache pet skills
-    if (!petSkillsCache.value[pet.uid]) {
-      petSkillsCache.value[pet.uid] = {
-        skills: detail.skills || [],
-        bloodline_skills: detail.bloodline_skills || [],
-        learnable_stones: detail.learnable_stones || [],
-      }
-    }
-
-    // Load existing fate flower skill config
-    // Find the monthly_pet_id for this pet
     await loadExistingConfig(pet.uid)
   } catch (err) {
     console.error('[AdminFateFlower] Load pet failed:', err)
@@ -400,32 +265,15 @@ async function selectPet(pet) {
 async function loadExistingConfig(petUid) {
   // Reset slots
   skillSlots.value = [
-    { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
-    { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
-    { skill_ref_uid: '', skill_name: '', skill_source: '', _search: '', _showList: false },
+    { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
+    { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
+    { skill_ref_uid: '', skill_name: '', skill_source: 'all' },
   ]
 
   try {
-    // Find monthly that contains this pet
-    const evtList = events.value
-    // We need to find the monthly_pet_id from the admin API
-    // Use the events to find the monthly_id, then get skills
-    // Actually, let's query all monthlies to find the one with this pet
-    const pikaRes = await adminApi.list('pika_monthlies')
-    const monthlies = (pikaRes.rows || []).map(r => ({ ...r, pets: r.pets ? JSON.parse(r.pets) : [] }))
-
-    // Find latest monthly containing this pet
-    let monthlyId = null
-    for (const m of monthlies) {
-      if (m.pets.some(p => p.pet_uid === petUid)) {
-        monthlyId = m.id
-        break
-      }
-    }
-
+    const monthlyId = route.query.monthlyId
     if (!monthlyId) return
 
-    // Get fate flower skills for this monthly
     const skillRes = await adminApi.getFateFlowerSkills(monthlyId)
     const petConfig = (skillRes.pets || []).find(p => p.pet_uid === petUid)
     if (petConfig) {
@@ -433,24 +281,25 @@ async function loadExistingConfig(petUid) {
       selectedNature.value = petConfig.fate_nature || ''
       const saved = petConfig.skills || []
       for (let i = 0; i < Math.min(saved.length, 3); i++) {
-        // Find full skill info from cache
-        const cache = petSkillsCache.value[petUid]
-        let skillInfo = null
-        if (cache && saved[i].skill_source) {
-          const list = cache[saved[i].skill_source] || []
-          skillInfo = list.find(s => (s.skill_ref_uid || s.uid) === saved[i].skill_ref_uid)
+        // 从技能库加载完整信息
+        let skillDetail = null
+        if (saved[i].skill_ref_uid) {
+          try {
+            const { skillsApi } = await import('@/api')
+            skillDetail = await skillsApi.get(saved[i].skill_ref_uid)
+          } catch {}
         }
         skillSlots.value[i] = {
           skill_ref_uid: saved[i].skill_ref_uid,
           skill_name: saved[i].skill_name,
-          skill_source: saved[i].skill_source,
-          skill_element: skillInfo?.element || '',
-          skill_type: skillInfo?.type || '',
-          skill_cost: skillInfo?.cost ?? null,
-          skill_power: skillInfo?.power ?? null,
-          skill_icon: skillInfo?.skill_icon || '',
-          _search: '',
-          _showList: false,
+          skill_source: saved[i].skill_source || 'all',
+          skill_element: skillDetail?.element_name || '',
+          skill_type: skillDetail?.category || '',
+          skill_cost: skillDetail?.cost ?? null,
+          skill_power: skillDetail?.power ?? null,
+          skill_icon: skillDetail?.icon_url || '',
+          skill_element_icon: skillDetail?.element_icon || '',
+          skill_element_color: skillDetail?.element_color || '',
         }
       }
     }
@@ -481,11 +330,11 @@ async function saveSkillConfig() {
   }
 
   const validSkills = skillSlots.value
-    .filter(s => s.skill_ref_uid && s.skill_source)
+    .filter(s => s.skill_ref_uid)
     .map((s, i) => ({
       skill_ref_uid: s.skill_ref_uid,
       skill_name: s.skill_name,
-      skill_source: s.skill_source,
+      skill_source: 'all',
       sort_order: i,
     }))
 
@@ -522,11 +371,21 @@ onMounted(async () => {
     const natRes = await naturesApi.list()
     naturesList.value = natRes.natures || []
 
-    // Load fate_flower events
-    const res = await eventsApi.list(null, true)
-    events.value = (res.events || []).filter(
-      e => e.category === 'routine' && (e.sub_type === 'fate_flower' || e.sub_type === 'destiny')
-    )
+    // Load monthly pets by monthlyId
+    const monthlyId = route.query.monthlyId
+    if (monthlyId) {
+      const pikaRes = await adminApi.list('pika_monthlies', { limit: 100 })
+      const monthly = (pikaRes.rows || []).find(r => String(r.id) === String(monthlyId))
+      if (monthly) {
+        monthlyTitle.value = monthly.title || `第${monthly.id}期`
+        const pets = monthly.pets ? JSON.parse(monthly.pets) : []
+        monthlyPets.value = pets.filter(p => p.uid || p.pet_uid).map(p => ({
+          uid: p.pet_uid || p.uid,
+          name: p.pet_name || p.name || p.pet_uid,
+          icon: p.pet_icon || p.icon || '',
+        }))
+      }
+    }
   } catch (err) {
     console.error('[AdminFateFlower] Load failed:', err)
   }

@@ -52,7 +52,7 @@
                   <h3 class="font-medium text-base">{{ item.name }}</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                  <router-link to="/admin/fate-flower" class="text-xs text-pink-500 hover:text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/20 px-2 py-1 rounded transition-colors">🌸 配置技能</router-link>
+                  <router-link :to="`/admin/fate-flower?monthlyId=${item.id}`" class="text-xs text-pink-500 hover:text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/20 px-2 py-1 rounded transition-colors">🌸 配置技能</router-link>
                   <button @click="openEdit(item)" class="text-xs text-primary-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-2 py-1 rounded transition-colors">编辑</button>
                   <button @click="deleteItem(item)" class="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors">删除</button>
                 </div>
