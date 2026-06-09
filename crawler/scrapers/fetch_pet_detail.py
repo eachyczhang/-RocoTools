@@ -135,64 +135,174 @@ def _split_elements(text: str) -> tuple:
 
 
 def parse_detail(html: str) -> dict:
+    """
+    解析精灵详情页 HTML。
+    适配 2025+ BWIKI 新版页面结构（class 前缀 sprite-），保留旧版 fallback。
+    """
     soup = BeautifulSoup(html, "lxml")
     detail = {}
 
-    # 属性（支持双属性）
-    attr_el = soup.select_one(".rocom_sprite_grament_attributes")
-    if attr_el:
-        attr_imgs = attr_el.find_all("img")
-        if attr_imgs:
-            elements_raw = []
-            for img in attr_imgs:
+    # ── 属性（支持双属性）──
+    # 新版：.sprite-phone-type 内的 .sprite_type（精灵本体属性，排除克制面板）
+    phone_type = soup.select_one(".sprite-phone-type")
+    if phone_type:
+        elements_raw = []
+        for el in phone_type.select(".sprite_type"):
+            img = el.find("img")
+            if img:
                 alt = img.get("alt", "")
                 match = re.search(r"属性\s+(.+?)\.png", alt)
                 if match:
-                    elements_raw.append(match.group(1).strip())
+                    name = match.group(1).strip()
+                    if name not in elements_raw:
+                        elements_raw.append(name)
+        if elements_raw:
+            detail["element"] = elements_raw[0]
+            detail["sub_element"] = elements_raw[1] if len(elements_raw) > 1 else None
+
+    # Fallback：从 .sprite-firstpage 提取（排除克制面板和技能面板）
+    if not detail.get("element"):
+        first_page = soup.select_one(".sprite-firstpage")
+        if first_page:
+            elements_raw = []
+            for el in first_page.select(".sprite_type"):
+                # 跳过在克制面板或技能面板内的
+                if el.find_parent(class_="sprite-info-type"):
+                    continue
+                if el.find_parent(class_="sprite-skill"):
+                    continue
+                img = el.find("img")
+                if img:
+                    alt = img.get("alt", "")
+                    match = re.search(r"属性\s+(.+?)\.png", alt)
+                    if match:
+                        name = match.group(1).strip()
+                        if name not in elements_raw:
+                            elements_raw.append(name)
             if elements_raw:
                 detail["element"] = elements_raw[0]
                 detail["sub_element"] = elements_raw[1] if len(elements_raw) > 1 else None
+
+    # Fallback：旧版
+    if not detail.get("element"):
+        attr_el = soup.select_one(".rocom_sprite_grament_attributes")
+        if attr_el:
+            attr_imgs = attr_el.find_all("img")
+            if attr_imgs:
+                elements_raw = []
+                for img in attr_imgs:
+                    alt = img.get("alt", "")
+                    match = re.search(r"属性\s+(.+?)\.png", alt)
+                    if match:
+                        elements_raw.append(match.group(1).strip())
+                if elements_raw:
+                    detail["element"] = elements_raw[0]
+                    detail["sub_element"] = elements_raw[1] if len(elements_raw) > 1 else None
+                else:
+                    raw_text = attr_el.get_text(strip=True)
+                    detail["element"], detail["sub_element"] = _split_elements(raw_text)
             else:
-                # fallback: 从文本拆分双属性
                 raw_text = attr_el.get_text(strip=True)
                 detail["element"], detail["sub_element"] = _split_elements(raw_text)
-        else:
-            raw_text = attr_el.get_text(strip=True)
-            detail["element"], detail["sub_element"] = _split_elements(raw_text)
 
-    # 特性图标
-    ability_icon_el = soup.select_one(".rocom_sprite_info_characteristic_content_icon img")
-    if ability_icon_el:
-        src = ability_icon_el.get("src", "")
+    # ── 特性图标 ──
+    # 新版：.sprite-trait-icon img
+    trait_icon_el = soup.select_one(".sprite-trait-icon img")
+    if trait_icon_el:
+        src = trait_icon_el.get("src", "")
         detail["ability_icon"] = _fix_url(src) if src else None
     else:
-        detail["ability_icon"] = None
+        # Fallback：旧版
+        ability_icon_el = soup.select_one(".rocom_sprite_info_characteristic_content_icon img")
+        if ability_icon_el:
+            src = ability_icon_el.get("src", "")
+            detail["ability_icon"] = _fix_url(src) if src else None
+        else:
+            detail["ability_icon"] = None
 
-    # 立绘图片（4个 li 顺序固定：本体、异色、果实、宠物蛋）
-    img_section = soup.select_one(".rocom_sprite_grament_img")
+    # ── 立绘图片 ──
+    # 新版：.allImgTab 内的 img 或 .imgAll-sprite-img
+    img_section = soup.select_one(".allImgTab")
     if img_section:
-        items = img_section.find_all("li")
+        # 新版用 tab 切换：本体/蛋/果实，查找所有 img
+        all_imgs = img_section.select("img.imgAll-sprite-img, img")
         img_keys = ["image_default", "image_shiny", "image_fruit", "image_egg"]
         for i, key in enumerate(img_keys):
-            if i < len(items):
-                img = items[i].find("img")
-                src = img.get("src", "") if img else ""
+            if i < len(all_imgs):
+                src = all_imgs[i].get("src", "")
                 detail[key] = _fix_url(src) if src else None
             else:
                 detail[key] = None
+    else:
+        # Fallback：旧版 .rocom_sprite_grament_img
+        old_img_section = soup.select_one(".rocom_sprite_grament_img")
+        if old_img_section:
+            items = old_img_section.find_all("li")
+            img_keys = ["image_default", "image_shiny", "image_fruit", "image_egg"]
+            for i, key in enumerate(img_keys):
+                if i < len(items):
+                    img = items[i].find("img")
+                    src = img.get("src", "") if img else ""
+                    detail[key] = _fix_url(src) if src else None
+                else:
+                    detail[key] = None
 
-    # 身高/体重
-    physique = soup.select_one(".rocom_sprite_info_physique")
-    if physique:
-        text = physique.get_text()
-        h = re.search(r"([\d.~]+)\s*[Mm]", text)
-        w = re.search(r"([\d.~]+)\s*[Kk][Gg]", text)
-        if h:
-            detail["height"] = h.group(1)
-        if w:
-            detail["weight"] = w.group(1)
+    # ── 身高/体重 ──
+    # 新版：.sprite-info-attrother .imgtext-row，通过 img alt 区分身高/体重
+    attr_other = soup.select_one(".sprite-info-attrother")
+    if attr_other:
+        for row in attr_other.select(".imgtext-row"):
+            img = row.find("img")
+            alt = img.get("alt", "") if img else ""
+            text = row.get_text(strip=True)
+            if "身高" in alt:
+                h = re.search(r"([\d.~]+)\s*[Mm]", text)
+                if h:
+                    detail["height"] = h.group(1)
+            elif "体重" in alt:
+                w = re.search(r"([\d.~]+)\s*[Kk][Gg]", text)
+                if w:
+                    detail["weight"] = w.group(1)
 
-    # 分布
+    # Fallback：旧版
+    if not detail.get("height"):
+        physique = soup.select_one(".rocom_sprite_info_physique")
+        if physique:
+            text = physique.get_text()
+            h = re.search(r"([\d.~]+)\s*[Mm]", text)
+            w = re.search(r"([\d.~]+)\s*[Kk][Gg]", text)
+            if h:
+                detail["height"] = h.group(1)
+            if w:
+                detail["weight"] = w.group(1)
+
+    # ── 种族值 ──
+    # 新版：.sprite-info-attrlist > .sprite-info-attr
+    #   .sprite-info-attrname 内含标签文字（生命/物攻/魔攻/物防/魔防/速度）
+    #   .sprite-info-attrnum 为数值
+    attr_list = soup.select_one(".sprite-info-attrlist")
+    if attr_list:
+        for item in attr_list.select(".sprite-info-attr"):
+            name_el = item.select_one(".sprite-info-attrname")
+            num_el = item.select_one(".sprite-info-attrnum")
+            if not name_el or not num_el:
+                continue
+            label = name_el.get_text(strip=True)
+            num = _safe_int(num_el.get_text(strip=True))
+            if "生命" in label:
+                detail["hp"] = num
+            elif "物攻" in label:
+                detail["atk"] = num
+            elif "魔攻" in label:
+                detail["matk"] = num
+            elif "物防" in label:
+                detail["def"] = num
+            elif "魔防" in label:
+                detail["mdef"] = num
+            elif "速度" in label:
+                detail["speed"] = num
+
+    # ── 分布 ──
     location_el = soup.find(string=re.compile(r"精灵分布"))
     if location_el:
         parent = location_el.find_parent()
@@ -201,56 +311,184 @@ def parse_detail(html: str) -> dict:
             if loc:
                 detail["location"] = loc
 
-    # 进化链（含进化等级）
-    # 页面结构：[精灵1] [等级A] [精灵2] [等级B] [精灵3]
-    # 等级含义：精灵1 在等级A 进化为精灵2，精灵2 在等级B 进化为精灵3
-    evo_box = soup.select_one(".rocom_spirit_evolution_box")
-    if evo_box:
-        stages = []   # 按顺序收集精灵名称
-        levels = []   # 按顺序收集进化等级
-        children = evo_box.find_all(recursive=False)
-        for child in children:
-            cls_list = child.get("class", [])
-            # 进化阶段节点
-            if any(c.startswith("rocom_spirit_evolution_") and c[-1].isdigit() for c in cls_list):
-                link = child.find("a")
-                if link:
-                    name = link.get("title", "").strip()
-                    if name:
-                        stages.append(name)
-            # 进化等级节点
-            elif "rocom_spirit_evolution_level" in cls_list:
-                level_text = child.get_text(strip=True)
-                level = int(level_text) if level_text.isdigit() else level_text
-                levels.append(level)
-
-        # 组装：第1阶 evolve_level=null，后续阶 evolve_level=对应等级
-        if stages:
-            evo_chain = []
-            for i, name in enumerate(stages):
-                evolve_level = levels[i - 1] if i > 0 and i - 1 < len(levels) else None
-                evo_chain.append({"name": name, "evolve_level": evolve_level})
+    # ── 进化链 ──
+    # 新版：.sprite-evolve-tab > .sprite-evolve-section
+    evolve_tab = soup.select_one(".sprite-evolve-tab")
+    if evolve_tab:
+        evo_chain = []
+        for section in evolve_tab.select(".sprite-evolve-section"):
+            name_el = section.select_one(".sprite-evolve-name")
+            level_el = section.select_one(".sprite-evolve-level")
+            if name_el:
+                # 去除内嵌的 .sprite-evolve-form 子元素文字
+                form_el = name_el.select_one(".sprite-evolve-form")
+                if form_el:
+                    form_el.decompose()
+                name = name_el.get_text(strip=True)
+                evolve_level = None
+                if level_el:
+                    m = re.search(r"(\d+)", level_el.get_text(strip=True))
+                    if m:
+                        evolve_level = int(m.group(1))
+                if name:
+                    evo_chain.append({"name": name, "evolve_level": evolve_level})
+        if evo_chain:
             detail["evolution_chain"] = evo_chain
 
-    # 精灵技能
-    sprite_tab = soup.select_one('.tabbertab[title="精灵技能"]')
-    if sprite_tab:
-        detail["skills"] = _parse_skill_boxes(sprite_tab)
+    # Fallback：旧版
+    if not detail.get("evolution_chain"):
+        evo_box = soup.select_one(".rocom_spirit_evolution_box")
+        if evo_box:
+            stages = []
+            levels = []
+            children = evo_box.find_all(recursive=False)
+            for child in children:
+                cls_list = child.get("class", [])
+                if any(c.startswith("rocom_spirit_evolution_") and c[-1].isdigit() for c in cls_list):
+                    link = child.find("a")
+                    if link:
+                        name = link.get("title", "").strip()
+                        if name:
+                            stages.append(name)
+                elif "rocom_spirit_evolution_level" in cls_list:
+                    level_text = child.get_text(strip=True)
+                    m = re.search(r"(\d+)", level_text)
+                    level = int(m.group(1)) if m else level_text
+                    levels.append(level)
+            if stages:
+                evo_chain = []
+                for i, name in enumerate(stages):
+                    evolve_level = levels[i - 1] if i > 0 and i - 1 < len(levels) else None
+                    evo_chain.append({"name": name, "evolve_level": evolve_level})
+                detail["evolution_chain"] = evo_chain
 
-    # 血脉技能
-    bloodline_tab = soup.select_one('.tabbertab[title="血脉技能"]')
-    if bloodline_tab:
-        detail["bloodline_skills"] = _parse_skill_boxes(bloodline_tab)
+    # ── 技能 ──
+    # 新版：#CardSelectTr 内技能卡片，通过 data 属性区分来源
+    skill_container = soup.select_one("#CardSelectTr")
+    if skill_container and skill_container.name == "div":
+        # 新版 grid 容器（精灵详情页的技能面板）
+        detail["skills"] = _parse_skill_cards(skill_container, "默认")
+        detail["bloodline_skills"] = _parse_skill_cards(skill_container, "血脉")
+        detail["learnable_stones"] = _parse_skill_cards(skill_container, "技能石")
 
-    # 可学技能石
-    stone_tab = soup.select_one('.tabbertab[title="可学技能石"]')
-    if stone_tab:
-        detail["learnable_stones"] = _parse_skill_boxes(stone_tab)
+    # Fallback：旧版 tab 结构
+    if not detail.get("skills"):
+        sprite_tab = soup.select_one('.tabbertab[title="精灵技能"]')
+        if sprite_tab:
+            detail["skills"] = _parse_skill_boxes(sprite_tab)
+    if not detail.get("bloodline_skills"):
+        bloodline_tab = soup.select_one('.tabbertab[title="血脉技能"]')
+        if bloodline_tab:
+            detail["bloodline_skills"] = _parse_skill_boxes(bloodline_tab)
+    if not detail.get("learnable_stones"):
+        stone_tab = soup.select_one('.tabbertab[title="可学技能石"]')
+        if stone_tab:
+            detail["learnable_stones"] = _parse_skill_boxes(stone_tab)
 
     return detail
 
 
+def _parse_skill_cards(container, source_type: str) -> list[dict]:
+    """
+    解析新版 #CardSelectTr (div grid) 内的技能卡片。
+
+    卡片结构：
+      <div class="divsort skill-single"
+           data-param1="默认|血脉|技能石"
+           data-param2="物攻|魔攻|防御|状态"
+           data-param3="普通|火|光|...">
+        <div class="skill-single-head">
+          <img alt="Skill XXXXXX.png"/>
+          <div class="skill-single-head-info">
+            <span class="skill-name font-roco">技能名</span>
+            <div class="skill-head-typelist">
+              <span>耗能</span><span>分类</span><span>系别</span><span>威力</span>
+              <span class="imgtext-row"><img/><span>1</span></span>  (耗能值)
+              <span><img alt="图标 技能 类别 物攻.png"/></span>    (类别)
+              <span><img alt="图标 宠物 属性 普通.png"/></span>    (属性)
+              <span>65</span>                                      (威力)
+            </div>
+          </div>
+        </div>
+        <div class="skill-single-body">
+          <div class="skill-desc">
+            <div class="skill-desc-atk">描述</div>
+            <div class="skill-desc-story">风味文本</div>
+          </div>
+          <div class="skill-source">解锁：（默认）Lv.1</div>
+        </div>
+      </div>
+    """
+    skills = []
+    # Only select direct children with class "skill-single" (skip duplicates in .bs-modal)
+    for card in container.find_all(class_=lambda c: c and "skill-single" in c, recursive=False):
+        param1 = card.get("data-param1", "")
+        if param1 != source_type:
+            continue
+
+        skill = {}
+
+        # 技能名称
+        name_el = card.select_one(".skill-name")
+        if name_el:
+            skill["name"] = name_el.get_text(strip=True)
+
+        # data-param2 = 类型, data-param3 = 属性
+        skill["type"] = card.get("data-param2", "")
+        skill["element"] = card.get("data-param3", "")
+
+        # 从 typelist 精确提取：耗能/类别/属性/威力
+        typelist = card.select_one(".skill-head-typelist")
+        if typelist:
+            value_spans = typelist.find_all(recursive=False)
+            # 前4个是标题(耗能/分类/系别/威力)，后4个是值
+            if len(value_spans) >= 8:
+                # 耗能值 (index 4)
+                cost_span = value_spans[4]
+                cost_inner = cost_span.find_all("span")
+                if cost_inner:
+                    skill["cost"] = _safe_int(cost_inner[-1].get_text(strip=True))
+
+                # 类别 (index 5) - 从 img alt 提取
+                type_img = value_spans[5].find("img")
+                if type_img:
+                    alt = type_img.get("alt", "")
+                    m = re.search(r"类别\s+(.+?)\.png", alt)
+                    if m:
+                        skill["type"] = m.group(1).strip()
+
+                # 属性 (index 6) - 从 img alt 提取
+                elem_img = value_spans[6].find("img")
+                if elem_img:
+                    alt = elem_img.get("alt", "")
+                    m = re.search(r"属性\s+(.+?)\.png", alt)
+                    if m:
+                        skill["element"] = m.group(1).strip()
+
+                # 威力 (index 7)
+                skill["power"] = _safe_int(value_spans[7].get_text(strip=True))
+
+        # 描述
+        desc_el = card.select_one(".skill-desc-atk")
+        if desc_el:
+            skill["description"] = desc_el.get_text(strip=True)
+
+        # 等级（从 .skill-source 提取）
+        source_el = card.select_one(".skill-source")
+        if source_el:
+            source_text = source_el.get_text(strip=True)
+            lv_match = re.search(r"Lv\.?\s*(\d+)", source_text, re.IGNORECASE)
+            if lv_match:
+                skill["level"] = lv_match.group(1)
+
+        if skill.get("name"):
+            skills.append(skill)
+
+    return skills
+
+
 def _parse_skill_boxes(container) -> list[dict]:
+    """旧版 .rocom_sprite_skill_box 解析（fallback）"""
     skills = []
     for box in container.select(".rocom_sprite_skill_box"):
         skill = {}

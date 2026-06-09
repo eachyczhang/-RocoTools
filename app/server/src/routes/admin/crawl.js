@@ -117,118 +117,383 @@ function normalizeRange(str) {
 
 /**
  * Parse pet detail from BWIKI HTML using cheerio
+ * 
+ * Adapted to the new BWIKI page structure (2025+ redesign).
+ * New class prefix: "sprite-" (old "rocom_sprite_" classes are hidden via display:none).
  */
 function parseDetail(html, cheerio) {
   const $ = cheerio.load(html);
   const detail = {};
 
-  // Element (supports dual-element)
-  const attrEl = $('.rocom_sprite_grament_attributes');
-  if (attrEl.length) {
-    const attrImgs = attrEl.find('img');
-    if (attrImgs.length) {
-      const elementsRaw = [];
-      attrImgs.each((_, img) => {
-        const alt = $(img).attr('alt') || '';
+  // ── Element (属性) ──
+  // New: .sprite_type in .sprite-phone-type area (精灵本体属性，排除克制面板)
+  // .sprite-phone-type contains only the pet's own element(s)
+  const phoneType = $('.sprite-phone-type');
+  if (phoneType.length) {
+    const elementsRaw = [];
+    phoneType.find('.sprite_type').each((_, el) => {
+      const img = $(el).find('img');
+      if (img.length) {
+        const alt = img.attr('alt') || '';
         const match = alt.match(/属性\s+(.+?)\.png/);
-        if (match) elementsRaw.push(match[1].trim());
+        if (match) {
+          const name = match[1].trim();
+          if (!elementsRaw.includes(name)) elementsRaw.push(name);
+        }
+      }
+    });
+    if (elementsRaw.length) {
+      detail.element = elementsRaw[0];
+      detail.sub_element = elementsRaw[1] || null;
+    }
+  }
+
+  // Fallback: try .sprite_type outside of dmg/skill panels
+  if (!detail.element) {
+    const firstPage = $('.sprite-firstpage');
+    if (firstPage.length) {
+      const elementsRaw = [];
+      firstPage.find('.sprite_type').each((_, el) => {
+        if ($(el).closest('.sprite-info-type').length) return;
+        if ($(el).closest('.sprite-skill').length) return;
+        const img = $(el).find('img');
+        if (img.length) {
+          const alt = img.attr('alt') || '';
+          const match = alt.match(/属性\s+(.+?)\.png/);
+          if (match) {
+            const name = match[1].trim();
+            if (!elementsRaw.includes(name)) elementsRaw.push(name);
+          }
+        }
       });
       if (elementsRaw.length) {
         detail.element = elementsRaw[0];
         detail.sub_element = elementsRaw[1] || null;
+      }
+    }
+  }
+
+  // Fallback: old structure (in case some pages haven't migrated)
+  if (!detail.element) {
+    const attrEl = $('.rocom_sprite_grament_attributes');
+    if (attrEl.length) {
+      const attrImgs = attrEl.find('img');
+      if (attrImgs.length) {
+        const elementsRaw = [];
+        attrImgs.each((_, img) => {
+          const alt = $(img).attr('alt') || '';
+          const match = alt.match(/属性\s+(.+?)\.png/);
+          if (match) elementsRaw.push(match[1].trim());
+        });
+        if (elementsRaw.length) {
+          detail.element = elementsRaw[0];
+          detail.sub_element = elementsRaw[1] || null;
+        } else {
+          const rawText = attrEl.text().trim();
+          [detail.element, detail.sub_element] = splitElements(rawText);
+        }
       } else {
         const rawText = attrEl.text().trim();
         [detail.element, detail.sub_element] = splitElements(rawText);
       }
-    } else {
-      const rawText = attrEl.text().trim();
-      [detail.element, detail.sub_element] = splitElements(rawText);
     }
   }
 
-  // Ability
-  const abilityNameEl = $('.rocom_sprite_info_characteristic_content_name');
-  if (abilityNameEl.length) {
-    detail.ability_name = abilityNameEl.text().trim();
+  // ── Ability (特性) ──
+  // New: .sprite-trait-name / .sprite-trait-desc
+  const traitNameEl = $('.sprite-trait-name');
+  if (traitNameEl.length) {
+    detail.ability_name = traitNameEl.first().text().trim();
   }
-  const abilityDescEl = $('.rocom_sprite_info_characteristic_content_desc');
-  if (abilityDescEl.length) {
-    detail.ability_desc = abilityDescEl.text().trim();
-  }
-
-  // Height / Weight
-  const physique = $('.rocom_sprite_info_physique');
-  if (physique.length) {
-    const text = physique.text();
-    const h = text.match(/([\d.~]+)\s*[Mm]/);
-    const w = text.match(/([\d.~]+)\s*[Kk][Gg]/);
-    if (h) detail.height = h[1];
-    if (w) detail.weight = w[1];
+  const traitDescEl = $('.sprite-trait-desc');
+  if (traitDescEl.length) {
+    detail.ability_desc = traitDescEl.first().text().trim();
   }
 
-  // Stats (种族值)
-  const statsSection = $('.rocom_sprite_grament_stats, .rocom_sprite_info_stats');
-  if (statsSection.length) {
-    // Try parsing from stat bars
-    const statItems = statsSection.find('.rocom_sprite_stats_item, .rocom_sprite_info_stats_item');
-    if (statItems.length) {
-      statItems.each((_, item) => {
-        const label = $(item).find('.rocom_sprite_stats_name, .rocom_sprite_info_stats_name').text().trim();
-        const value = $(item).find('.rocom_sprite_stats_num, .rocom_sprite_info_stats_num').text().trim();
-        const num = safeInt(value);
-        if (label.includes('生命') || label.includes('HP')) detail.hp = num;
-        else if (label.includes('物攻') || label.includes('攻击')) detail.atk = num;
-        else if (label.includes('魔攻') || label.includes('特攻')) detail.matk = num;
-        else if (label.includes('物防') || label.includes('防御')) detail.def = num;
-        else if (label.includes('魔防') || label.includes('特防')) detail.mdef = num;
-        else if (label.includes('速度')) detail.speed = num;
-      });
+  // Fallback: old structure
+  if (!detail.ability_name) {
+    const abilityNameEl = $('.rocom_sprite_info_characteristic_content_name');
+    if (abilityNameEl.length) detail.ability_name = abilityNameEl.text().trim();
+    const abilityDescEl = $('.rocom_sprite_info_characteristic_content_desc');
+    if (abilityDescEl.length) detail.ability_desc = abilityDescEl.text().trim();
+  }
+
+  // ── Height / Weight (身高/体重) ──
+  // New: .sprite-info-attrother .imgtext-row with img alt containing 身高/体重
+  const attrOther = $('.sprite-info-attrother');
+  if (attrOther.length) {
+    attrOther.find('.imgtext-row').each((_, row) => {
+      const img = $(row).find('img');
+      const alt = img.attr('alt') || '';
+      const text = $(row).text().trim();
+      if (alt.includes('身高')) {
+        const h = text.match(/([\d.~]+)\s*[Mm]/);
+        if (h) detail.height = h[1];
+      } else if (alt.includes('体重')) {
+        const w = text.match(/([\d.~]+)\s*[Kk][Gg]/);
+        if (w) detail.weight = w[1];
+      }
+    });
+  }
+
+  // Fallback: old structure
+  if (!detail.height) {
+    const physique = $('.rocom_sprite_info_physique');
+    if (physique.length) {
+      const text = physique.text();
+      const h = text.match(/([\d.~]+)\s*[Mm]/);
+      const w = text.match(/([\d.~]+)\s*[Kk][Gg]/);
+      if (h) detail.height = h[1];
+      if (w) detail.weight = w[1];
     }
   }
 
-  // Fallback: try to parse stats from the info table
+  // ── Stats (种族值) ──
+  // New: .sprite-info-attrlist > .sprite-info-attr
+  //   each has .sprite-info-attrname (with img alt "图标 图鉴 生命.png" etc.)
+  //   and .sprite-info-attrnum for the value
+  const attrList = $('.sprite-info-attrlist');
+  if (attrList.length) {
+    attrList.find('.sprite-info-attr').each((_, item) => {
+      const nameEl = $(item).find('.sprite-info-attrname');
+      const numEl = $(item).find('.sprite-info-attrnum');
+      if (!nameEl.length || !numEl.length) return;
+
+      const label = nameEl.text().trim();
+      const num = safeInt(numEl.text().trim());
+
+      if (label.includes('生命')) detail.hp = num;
+      else if (label.includes('物攻')) detail.atk = num;
+      else if (label.includes('魔攻')) detail.matk = num;
+      else if (label.includes('物防')) detail.def = num;
+      else if (label.includes('魔防')) detail.mdef = num;
+      else if (label.includes('速度')) detail.speed = num;
+    });
+  }
+
+  // Fallback: old structure
   if (!detail.hp) {
-    const infoTable = $('.rocom_sprite_info_table, .rocom_sprite_grament_info');
-    if (infoTable.length) {
-      const text = infoTable.text();
-      const patterns = [
-        { key: 'hp', re: /生命[：:\s]*(\d+)/i },
-        { key: 'atk', re: /物攻[：:\s]*(\d+)/i },
-        { key: 'matk', re: /魔攻[：:\s]*(\d+)/i },
-        { key: 'def', re: /物防[：:\s]*(\d+)/i },
-        { key: 'mdef', re: /魔防[：:\s]*(\d+)/i },
-        { key: 'speed', re: /速度[：:\s]*(\d+)/i },
-      ];
-      for (const { key, re } of patterns) {
-        const m = text.match(re);
-        if (m) detail[key] = safeInt(m[1]);
+    const statsSection = $('.rocom_sprite_grament_stats, .rocom_sprite_info_stats');
+    if (statsSection.length) {
+      const statItems = statsSection.find('.rocom_sprite_stats_item, .rocom_sprite_info_stats_item');
+      if (statItems.length) {
+        statItems.each((_, item) => {
+          const label = $(item).find('.rocom_sprite_stats_name, .rocom_sprite_info_stats_name').text().trim();
+          const value = $(item).find('.rocom_sprite_stats_num, .rocom_sprite_info_stats_num').text().trim();
+          const num = safeInt(value);
+          if (label.includes('生命') || label.includes('HP')) detail.hp = num;
+          else if (label.includes('物攻') || label.includes('攻击')) detail.atk = num;
+          else if (label.includes('魔攻') || label.includes('特攻')) detail.matk = num;
+          else if (label.includes('物防') || label.includes('防御')) detail.def = num;
+          else if (label.includes('魔防') || label.includes('特防')) detail.mdef = num;
+          else if (label.includes('速度')) detail.speed = num;
+        });
       }
     }
   }
 
-  // Skills (精灵技能) - only take the first matching tab to avoid duplicates
-  const spriteTab = $('[title="精灵技能"].tabbertab, .tabbertab[title="精灵技能"]').first();
-  if (spriteTab.length) {
-    detail.skills = parseSkillBoxes($, spriteTab);
+  // Fallback: regex from full page text
+  if (!detail.hp) {
+    const fullText = $.root().text();
+    const patterns = [
+      { key: 'hp', re: /生命[：:\s]*(\d+)/i },
+      { key: 'atk', re: /物攻[：:\s]*(\d+)/i },
+      { key: 'matk', re: /魔攻[：:\s]*(\d+)/i },
+      { key: 'def', re: /物防[：:\s]*(\d+)/i },
+      { key: 'mdef', re: /魔防[：:\s]*(\d+)/i },
+      { key: 'speed', re: /速度[：:\s]*(\d+)/i },
+    ];
+    for (const { key, re } of patterns) {
+      const m = fullText.match(re);
+      if (m) detail[key] = safeInt(m[1]);
+    }
   }
 
-  // Bloodline skills (血脉技能)
-  const bloodlineTab = $('[title="血脉技能"].tabbertab, .tabbertab[title="血脉技能"]').first();
-  if (bloodlineTab.length) {
-    detail.bloodline_skills = parseSkillBoxes($, bloodlineTab);
+  // ── Evolution (进化链) ──
+  // New: .sprite-evolve-tab > .sprite-evolve-section
+  const evolveTab = $('.sprite-evolve-tab');
+  if (evolveTab.length) {
+    const evoChain = [];
+    evolveTab.find('.sprite-evolve-section').each((_, section) => {
+      const nameEl = $(section).find('.sprite-evolve-name');
+      const levelEl = $(section).find('.sprite-evolve-level');
+      if (nameEl.length) {
+        const name = nameEl.clone().children('.sprite-evolve-form').remove().end().text().trim();
+        const level = levelEl.length ? levelEl.text().trim() : null;
+        // Parse level number from "Lv.16" format
+        let evolveLevel = null;
+        if (level) {
+          const m = level.match(/(\d+)/);
+          if (m) evolveLevel = parseInt(m[1], 10);
+        }
+        if (name) evoChain.push({ name, evolve_level: evolveLevel });
+      }
+    });
+    if (evoChain.length) detail.evolution_chain = evoChain;
   }
 
-  // Learnable stones (可学技能石)
-  const stoneTab = $('[title="可学技能石"].tabbertab, .tabbertab[title="可学技能石"]').first();
-  if (stoneTab.length) {
-    detail.learnable_stones = parseSkillBoxes($, stoneTab);
+  // Fallback: old structure
+  if (!detail.evolution_chain) {
+    const evoBox = $('.rocom_spirit_evolution_box');
+    if (evoBox.length) {
+      const stages = [];
+      const levels = [];
+      evoBox.children().each((_, child) => {
+        const cls = $(child).attr('class') || '';
+        if (/rocom_spirit_evolution_\d/.test(cls)) {
+          const link = $(child).find('a');
+          if (link.length) {
+            const name = (link.attr('title') || '').trim();
+            if (name) stages.push(name);
+          }
+        } else if (cls.includes('rocom_spirit_evolution_level')) {
+          const levelText = $(child).text().trim();
+          const m = levelText.match(/(\d+)/);
+          levels.push(m ? parseInt(m[1], 10) : levelText);
+        }
+      });
+      if (stages.length) {
+        const evoChain = [];
+        for (let i = 0; i < stages.length; i++) {
+          const evolveLevel = (i > 0 && i - 1 < levels.length) ? levels[i - 1] : null;
+          evoChain.push({ name: stages[i], evolve_level: evolveLevel });
+        }
+        detail.evolution_chain = evoChain;
+      }
+    }
+  }
+
+  // ── Skills (技能) ──
+  // New: skills are in #CardSelectTr with filter buttons in .skill-sourcetype
+  // Each skill card has data attributes for filtering by source (默认/血脉/技能石)
+  // Try new structure first
+  const skillContainer = $('#CardSelectTr');
+  if (skillContainer.length) {
+    // New structure: parse skill cards with data-param attributes
+    // Cards are filtered by source type via data attributes
+    detail.skills = parseSkillCards($, skillContainer, '默认');
+    detail.bloodline_skills = parseSkillCards($, skillContainer, '血脉');
+    detail.learnable_stones = parseSkillCards($, skillContainer, '技能石');
+  }
+
+  // Fallback: old tab-based structure
+  if (!detail.skills) {
+    const spriteTab = $('[title="精灵技能"].tabbertab, .tabbertab[title="精灵技能"]').first();
+    if (spriteTab.length) detail.skills = parseSkillBoxes($, spriteTab);
+  }
+  if (!detail.bloodline_skills) {
+    const bloodlineTab = $('[title="血脉技能"].tabbertab, .tabbertab[title="血脉技能"]').first();
+    if (bloodlineTab.length) detail.bloodline_skills = parseSkillBoxes($, bloodlineTab);
+  }
+  if (!detail.learnable_stones) {
+    const stoneTab = $('[title="可学技能石"].tabbertab, .tabbertab[title="可学技能石"]').first();
+    if (stoneTab.length) detail.learnable_stones = parseSkillBoxes($, stoneTab);
   }
 
   return detail;
 }
 
 /**
- * Parse skill boxes from a container
+ * Parse skill cards from new #CardSelectTr structure (2025+ redesign)
+ * 
+ * Card structure:
+ *   <div class="divsort skill-single" data-param1="默认|血脉|技能石" data-param2="物攻|魔攻|防御|状态" data-param3="普通|火|...">
+ *     <div class="skill-single-head">
+ *       <img alt="Skill XXXXXX.png"/>  (技能图标)
+ *       <div class="skill-single-head-info">
+ *         <span class="skill-name font-roco">技能名</span>
+ *         <div class="skill-head-typelist">
+ *           <span>耗能</span><span>分类</span><span>系别</span><span>威力</span>  (标题行)
+ *           <span class="imgtext-row"><img/>星星<span>1</span></span>  (耗能值)
+ *           <span><img alt="图标 技能 类别 物攻.png"/></span>  (类别)
+ *           <span><img alt="图标 宠物 属性 普通.png"/></span>  (属性)
+ *           <span>65</span>  (威力)
+ *         </div>
+ *       </div>
+ *     </div>
+ *     <div class="skill-single-body">
+ *       <div class="skill-desc">
+ *         <div class="skill-desc-atk">描述</div>
+ *         <div class="skill-desc-story">风味文本</div>
+ *       </div>
+ *       <div class="skill-source">解锁：（默认）Lv.1</div>
+ *     </div>
+ *   </div>
+ */
+function parseSkillCards($, container, sourceType) {
+  const skills = [];
+  // Select only direct .skill-single children (skip duplicates inside .bs-modal)
+  container.children('.skill-single').each((_, card) => {
+    const $card = $(card);
+    // Filter by source type (data-param1)
+    const param1 = $card.attr('data-param1') || '';
+    if (param1 !== sourceType) return;
+
+    const skill = {};
+
+    // Skill name
+    const nameEl = $card.find('.skill-name');
+    if (nameEl.length) skill.name = nameEl.first().text().trim();
+
+    // data-param2 = type (物攻/魔攻/防御/状态)
+    skill.type = $card.attr('data-param2') || '';
+
+    // data-param3 = element (普通/火/光...)
+    skill.element = $card.attr('data-param3') || '';
+
+    // Parse typelist values: the grid has 4 header spans then 4 value spans
+    // Values order: 耗能, 分类(img), 系别(img), 威力
+    const typelist = $card.find('.skill-head-typelist');
+    if (typelist.length) {
+      const valueSpans = typelist.children('span');
+      // First 4 are labels (耗能/分类/系别/威力), next 4 are values
+      if (valueSpans.length >= 8) {
+        // Cost (5th span - index 4): contains number inside nested span
+        const costSpan = $(valueSpans[4]);
+        const costNum = costSpan.find('span').last().text().trim();
+        skill.cost = safeInt(costNum);
+
+        // Type from img alt (6th span - index 5): "图标 技能 类别 物攻.png"
+        const typeImg = $(valueSpans[5]).find('img');
+        if (typeImg.length) {
+          const alt = typeImg.attr('alt') || '';
+          const m = alt.match(/类别\s+(.+?)\.png/);
+          if (m) skill.type = m[1].trim();
+        }
+
+        // Element from img alt (7th span - index 6): "图标 宠物 属性 普通.png"
+        const elemImg = $(valueSpans[6]).find('img');
+        if (elemImg.length) {
+          const alt = elemImg.attr('alt') || '';
+          const m = alt.match(/属性\s+(.+?)\.png/);
+          if (m) skill.element = m[1].trim();
+        }
+
+        // Power (8th span - index 7)
+        const powerText = $(valueSpans[7]).text().trim();
+        skill.power = safeInt(powerText);
+      }
+    }
+
+    // Description
+    const descEl = $card.find('.skill-desc-atk');
+    if (descEl.length) skill.description = descEl.first().text().trim();
+
+    // Level from .skill-source: "解锁：（默认）Lv.1" or "解锁：（血脉）Lv.40"
+    const sourceEl = $card.find('.skill-source');
+    if (sourceEl.length) {
+      const sourceText = sourceEl.text().trim();
+      const lvMatch = sourceText.match(/Lv\.?\s*(\d+)/i);
+      if (lvMatch) skill.level = lvMatch[1];
+    }
+
+    if (skill.name) skills.push(skill);
+  });
+  return skills;
+}
+
+/**
+ * Parse skill boxes from old tab-based container (legacy fallback)
  */
 function parseSkillBoxes($, container) {
   const skills = [];
