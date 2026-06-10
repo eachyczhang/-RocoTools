@@ -6,6 +6,38 @@
 
 ---
 
+## V1.2 — BWIKI 新版适配 + 命定花种 + 技能课题拉取 (2026-06-10)
+
+> 适配 BWIKI 2025+ 精灵详情页全面改版，新增命定花种全技能选择、技能使用课题自动拉取。
+
+### 🔧 BWIKI 新版页面适配
+
+- 精灵详情页 class 全面更新（`rocom_sprite_*` → `sprite-*`），旧版已被 `display:none`
+- 重写 `crawl.js` parseDetail + parseSkillCards：属性/种族值/特性/身高体重/进化链/技能
+- 重写 `fetch_pet_detail.py` parse_detail + _parse_skill_cards
+- 属性精确提取：从 `.sprite-phone-type` 获取，排除克制面板干扰
+- 技能去重：仅取 `#CardSelectTr` 直接子 `.skill-single`，排除模态弹窗副本
+- 保留旧版选择器作为 fallback，兼容未迁移页面
+- 精灵筛选列表页结构未变，无需改动
+
+### 🌸 命定花种功能增强
+
+- 新建 `SkillPicker.vue` 全技能选择弹窗（搜索/属性筛选/分类筛选/分页加载）
+- AdminFateFlower 改为从全部技能库选择，去掉来源限制
+- 管理端从皮卡月刊跳转传 `monthlyId`，只显示该期精灵
+- 用户端从活动页跳转传 `eventId`，只显示该活动精灵
+
+### 📋 技能使用课题拉取
+
+- 新增独立脚本 `app/server/scripts/crawl-skill-achievements.js`
+- 从 BWIKI 精灵详情页 `.sprite-topic-item` 提取 "使用N次XXX" 格式课题
+- 自动关联 skills 表得到 `skill_ref_uid`，写入 `pet_achievements` (type='skill')
+- 支持 `--dry-run`/`--force`/`--filter`/`--delay` 参数
+- 不覆盖已有手动配置，不影响默认课题
+- 前端 PetDetail.vue 已有 skill 类型完整展示逻辑，无需改动
+
+---
+
 ## V1.1 — 用户反馈模块 + CDN 加速 (2026-05-30)
 
 > 新增用户反馈系统，支持用户端提交反馈（含图片）和管理端审阅处理。配置腾讯云 CDN 全站加速。

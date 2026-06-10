@@ -254,6 +254,7 @@ node src/db/import.js
 | `sync-evolution-chains.js` | `app/server/scripts/sync-evolution-chains.js` | 批量合并所有精灵的进化链多路线数据 |
 | `sync-final-forms.js` | `app/server/scripts/sync-final-forms.js` | 自动检测并标记最终形态精灵 |
 | `sync-default-achievements.js` | `app/server/scripts/sync-default-achievements.js` | 同步默认图鉴课题 |
+| `crawl-skill-achievements.js` | `app/server/scripts/crawl-skill-achievements.js` | 从 BWIKI 拉取技能使用课题（关联 skills 表） |
 | `migrate-show-shiny.js` | `app/server/scripts/migrate-show-shiny.js` | 添加 show_shiny 列（已集成到 sync_db） |
 | `migrate-height-weight.js` | `app/server/scripts/migrate-height-weight.js` | 规范化身高体重格式（已集成到 sync_db） |
 | `migrate-pet-tags.js` | `app/server/scripts/migrate-pet-tags.js` | 添加标签列到 pets 表（首次部署） |
@@ -277,10 +278,27 @@ node scripts/sync-default-achievements.js
 # 预览模式（不写入数据库）
 node scripts/sync-final-forms.js --dry-run
 node scripts/sync-default-achievements.js --dry-run
+
+# 技能使用课题拉取（两阶段分离，避免重复请求 BWIKI）
+
+# 阶段1：从 BWIKI 抓取 → 存入缓存 JSON（不写库）
+node scripts/crawl-skill-achievements.js crawl
+node scripts/crawl-skill-achievements.js crawl --filter=pet_004_1  # 指定精灵
+node scripts/crawl-skill-achievements.js crawl --delay=5000        # 自定义间隔
+
+# 阶段2：从缓存写入数据库
+node scripts/crawl-skill-achievements.js apply             # 执行写入
+node scripts/crawl-skill-achievements.js apply --dry-run   # 预览不写入
+node scripts/crawl-skill-achievements.js apply --force     # 强制覆盖已有
+
+# 一步模式（crawl + apply，兼容旧用法）
+node scripts/crawl-skill-achievements.js                   # 全量
+node scripts/crawl-skill-achievements.js --dry-run         # 预览
 ```
 
 **说明**：
-- 以上同步脚本已集成到 `sync_db.js`，通常无需单独执行
+- `sync-*` 脚本已集成到 `sync_db.js`，通常无需单独执行
+- `crawl-skill-achievements.js` 是独立的 BWIKI 爬取脚本，**不**集成到 sync_db（需要网络请求）
 - 扫描所有精灵的进化链数据，将分支进化路线合并为完整的二维数组
 - 跳过 `manual_edit=1` 的记录（不覆盖手动配置）
 
@@ -288,6 +306,7 @@ node scripts/sync-default-achievements.js --dry-run
 - 直接操作了数据库而没有走管理端保存流程
 - 怀疑进化链数据不一致，需要全量校验修复
 - 批量导入了新的爬虫数据后想单独验证
+- 需要补全技能使用课题数据（运行 `crawl-skill-achievements.js`）
 
 ---
 

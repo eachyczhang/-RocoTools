@@ -85,6 +85,7 @@ app/server/root-static/*
 # ============================================================
 temp/
 scripts/.last_image_sync
+app/server/scripts/_cache_*
 scripts/ability-icon-tool/input/*
 !scripts/ability-icon-tool/input/.gitkeep
 scripts/ability-icon-tool/output/*
