@@ -1076,20 +1076,22 @@ function getNeighbors(uid) {
   if (!current) return null;
 
   const prev = db.prepare(`
-    SELECT p.uid, p.name, p.pet_id FROM pets p
+    SELECT p.uid, p.name, p.pet_id, pd.avatar_url FROM pets p
+    LEFT JOIN pet_details pd ON p.uid = pd.pet_uid
     WHERE p.pet_id < ? AND p.uid = (SELECT MIN(p2.uid) FROM pets p2 WHERE p2.pet_id = p.pet_id)
     ORDER BY p.pet_id DESC LIMIT 1
   `).get(current.pet_id);
 
   const next = db.prepare(`
-    SELECT p.uid, p.name, p.pet_id FROM pets p
+    SELECT p.uid, p.name, p.pet_id, pd.avatar_url FROM pets p
+    LEFT JOIN pet_details pd ON p.uid = pd.pet_uid
     WHERE p.pet_id > ? AND p.uid = (SELECT MIN(p2.uid) FROM pets p2 WHERE p2.pet_id = p.pet_id)
     ORDER BY p.pet_id ASC LIMIT 1
   `).get(current.pet_id);
 
   return {
-    prev: prev ? { uid: prev.uid, name: prev.name } : null,
-    next: next ? { uid: next.uid, name: next.name } : null,
+    prev: prev ? { uid: prev.uid, name: prev.name, avatar_url: prev.avatar_url || null } : null,
+    next: next ? { uid: next.uid, name: next.name, avatar_url: next.avatar_url || null } : null,
   };
 }
 

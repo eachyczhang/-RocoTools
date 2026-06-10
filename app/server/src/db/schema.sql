@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS pet_details (
   pet_uid         TEXT PRIMARY KEY,
   element_id      INTEGER,
   ability_icon    TEXT,
+  avatar_url      TEXT,              -- 精灵Q版小头像路径
   image_default   TEXT,
   image_shiny     TEXT,
   image_fruit     TEXT,

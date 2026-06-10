@@ -79,6 +79,7 @@
 | Key | 中文名 | 类型 |
 |-----|--------|------|
 | element | 属性 | object `{id,key,name,color,icon}` |
+| avatar_url | Q版小头像 | string/null | `/public/pets/avatars/{uid}_avatar.png` |
 | image_default | 本体立绘 | string/null | `/public/pets/default/{uid}_default.png` |
 | image_shiny | 异色立绘 | string/null | `/public/pets/shiny/{uid}_shiny.png` |
 | image_fruit | 果实图片 | string/null | `/public/pets/fruit/{uid}_fruit.png` |

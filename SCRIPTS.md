@@ -255,6 +255,7 @@ node src/db/import.js
 | `sync-final-forms.js` | `app/server/scripts/sync-final-forms.js` | 自动检测并标记最终形态精灵 |
 | `sync-default-achievements.js` | `app/server/scripts/sync-default-achievements.js` | 同步默认图鉴课题 |
 | `crawl-skill-achievements.js` | `app/server/scripts/crawl-skill-achievements.js` | 从 BWIKI 拉取技能使用课题（关联 skills 表） |
+| `crawl-pet-avatars.js` | `app/server/scripts/crawl-pet-avatars.js` | 从 BWIKI 拉取精灵Q版小头像（下载图片+写入 pet_details） |
 | `migrate-show-shiny.js` | `app/server/scripts/migrate-show-shiny.js` | 添加 show_shiny 列（已集成到 sync_db） |
 | `migrate-height-weight.js` | `app/server/scripts/migrate-height-weight.js` | 规范化身高体重格式（已集成到 sync_db） |
 | `migrate-pet-tags.js` | `app/server/scripts/migrate-pet-tags.js` | 添加标签列到 pets 表（首次部署） |
@@ -294,6 +295,17 @@ node scripts/crawl-skill-achievements.js apply --force     # 强制覆盖已有
 # 一步模式（crawl + apply，兼容旧用法）
 node scripts/crawl-skill-achievements.js                   # 全量
 node scripts/crawl-skill-achievements.js --dry-run         # 预览
+
+# 精灵Q版小头像拉取（进化链中的圆形头像）
+
+# 阶段1：从 BWIKI 抓取头像 URL → 缓存
+node scripts/crawl-pet-avatars.js crawl
+node scripts/crawl-pet-avatars.js crawl --filter=pet_002   # 指定精灵
+
+# 阶段2：从缓存下载图片 → 写入 pet_details.avatar_url
+node scripts/crawl-pet-avatars.js apply
+node scripts/crawl-pet-avatars.js apply --dry-run          # 预览
+node scripts/crawl-pet-avatars.js apply --force            # 覆盖已有
 ```
 
 **说明**：
