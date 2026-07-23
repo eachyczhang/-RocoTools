@@ -5,6 +5,12 @@
 🌐 **在线体验**：[https://eachz.cn/rocotools/](https://eachz.cn/rocotools/)
 📖 **数据来源**：[洛克王国世界 BWIKI](https://wiki.biligame.com/rocom)
 
+## AI / Codex 工程入口
+
+从仓库根目录启动 Codex。仓库级规则会自动读取 [AGENTS.md](./AGENTS.md)，工程上下文与跨电脑交接从 [docs/ai/START_HERE.md](./docs/ai/START_HERE.md) 开始。
+
+历史 .ai-memory.md、.dev/skills/ 和本机 .codex/ 仅作线索；当前代码、Git 历史及 docs/ai/ 中带验证证据的记录优先。
+
 ---
 
 ## 功能预览

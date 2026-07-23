@@ -1,0 +1,4 @@
+interface:
+  display_name: "RocoTools 上下文交接"
+  short_description: "建立、验证并可靠交接 RocoTools 工程上下文"
+  default_prompt: "Use $rocotools-context-handoff to 按仓库指引启动或结束 RocoTools 任务，并生成可跨电脑续接的交接记录。"

@@ -1,0 +1,57 @@
+# RocoTools Agent Instructions
+
+本文件定义 RocoTools 仓库级 Agent。所有 Codex 会话在分析、修改、审查或交接本工程时均须遵守。
+
+## 启动
+
+第一条用户可见进度必须包含以下明确指向：
+
+> RocoTools 启动指向：`docs/ai/START_HERE.md` → `PROJECT_CONTEXT.md` → `STATUS.md` → `RISK_REGISTER.md` → `HANDOFF.md`。当前先验证上下文，尚未修改代码。
+
+然后：
+
+1. 完整阅读 `docs/ai/START_HERE.md`，按其中顺序建立上下文。
+2. 运行 `powershell -ExecutionPolicy Bypass -File scripts/verify-context.ps1`，或在命令不可用时执行等价只读检查。
+3. 根据当前任务读取相关正式文档、代码和 Git 历史。
+4. 修改前先向用户总结架构、术语、状态、规范、风险、TODO 和未确定内容。
+
+## 事实优先级
+
+1. 当前代码、Git 历史、实际配置和可复现检查。
+2. `docs/ai/` 中带证据与验证日期的工程上下文。
+3. 正式 README、架构、数据、管理、部署和游戏规则文档。
+4. `.ai-memory.md`、`.dev/skills/` 和历史 CodeBuddy 记录，仅作为检索线索。
+
+发现冲突时，以当前可验证事实为准，并在任务范围允许时更新 `docs/ai/`。
+
+## 开发边界
+
+- 保留用户改动，只修改任务必要文件。
+- 未经明确授权，不部署、不推送、不重启生产服务、不迁移或恢复数据库、不删除数据、不轮换密钥。
+- 数据变更必须检查 `app/server/src/db/schema.sql`、迁移/导入兼容、默认值、索引、外键、备份与回滚。
+- 新管理页面必须核对路由、桌面入口、移动入口、Dashboard、前端 API 和后端路由。
+- 认证、公告 HTML、上传、反馈附件、备份、数据库发布默认按高风险处理。
+- 优先执行只读检查、语法检查和临时输出构建；不为验证覆盖运行数据。
+- 不把密码、Token、生产数据库、用户反馈或隐私数据写入 Git、日志、示例或 AI 文档。
+
+## 状态与交接
+
+功能状态只使用 `deployed`、`committed`、`working-tree`、`planned`、`deprecated`。
+
+产生代码、配置、数据结构、风险判断或工程事实变化时，结束前更新：
+
+- `docs/ai/HANDOFF.md`：当前续接点。
+- `docs/ai/STATUS.md`：功能状态变化。
+- `docs/ai/RISK_REGISTER.md`：风险、证据、验证与剩余风险变化。
+
+最终答复必须包含以下明确指向，并说明这些文件本次是否已更新：
+
+> RocoTools 结束指向：`docs/ai/HANDOFF.md`（下一步）→ `docs/ai/STATUS.md`（功能状态）→ `docs/ai/RISK_REGISTER.md`（风险与剩余事项）。
+
+## 验证与完成定义
+
+- 报告当前分支、基准 commit 和工作区状态。
+- 运行与风险相称的测试、构建或检查，明确未验证项。
+- 不把“代码存在”写成“已经上线”；`deployed` 必须附线上或生产证据。
+- 不把 stash、未提交文件或本机 `.codex` 当成跨电脑交接。
+- 未完成工作必须提交并推送到功能分支后，才能保证另一台电脑可恢复。
