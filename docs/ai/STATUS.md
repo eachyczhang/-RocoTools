@@ -16,6 +16,7 @@
 | 技能课题抓取 | committed | `b51f526` | Git 与脚本 | 独立两阶段脚本 |
 | Q 版头像 | committed | `419a62a` | Git、schema、构建日期 | 线上 SHA 未知 |
 | 管理端 Excel 整库导出 | committed | `550eb4a` | 路由与前端代码 | 不等于用户端报告导出 |
+| 可移植 Agent 与上下文交接 Skill | committed | `a5f2ba4` | Agent/Skill 校验、客户端构建、后端语法、SQLite 核验 | 位于功能分支，未合并或部署 |
 | 双库隔离与发布 | planned | 无 | 全仓与全 Git 历史无相关符号 | 旧安全报告中的未提交实现不在当前仓库 |
 | 精灵对比 | planned | 无 | README/AI memory 待办 | 范围待定义 |
 | 用户端 Excel/PDF 报告 | planned | 无 | 待办与现代码对比 | 与管理端整库导出区分 |
@@ -27,7 +28,7 @@
 - 2026-07-23 上下文核验开始时工作区干净。
 - 没有 stash。
 - 没有包含双库实现的其他可见分支。
-- 本轮“可移植 Agent 与 skill”文件处于 `working-tree`，提交前不会出现在其他电脑。
+- “可移植 Agent 与上下文交接 Skill”已在 `eachzhang/codex/context-handoff` 提交为 `a5f2ba4`，状态为 `committed`；尚未合并或部署。
 
 ## 线上只读证据
 

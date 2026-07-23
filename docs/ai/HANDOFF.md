@@ -1,13 +1,14 @@
 # RocoTools 当前交接
 
 > 更新时间：2026-07-23
-> 交接状态：working-tree
+> 交接状态：committed
 
 ## 基准
 
 - 仓库：`F:\roco`
 - 分支：`eachzhang/codex/context-handoff`
-- 基准 commit：`419a62a553b2eab1e72bf9348eb140347707a136`
+- 产品基准 commit：`419a62a553b2eab1e72bf9348eb140347707a136`
+- 上下文实现 commit：`a5f2ba417ca810abba7633635d594d8cb70895b1`
 - 基准时 `origin/main`：同上
 - stash：无
 
@@ -26,7 +27,7 @@
 
 ## 下一步
 
-1. 将已验证改动提交并推送到 `origin/eachzhang/codex/context-handoff`。
+1. 推送本分支到 `origin/eachzhang/codex/context-handoff`。
 2. 新电脑拉取该分支后，从仓库根目录启动 Codex，并先运行 `scripts/verify-context.ps1`。
 3. 后续单独处理 `RISK_REGISTER.md` 中的安全与文档漂移事项。
 
@@ -45,7 +46,7 @@
 - `scripts/verify-context.ps1`：通过；SQLite `integrity_check=ok`，374 个宠物、494 个形态、495 个技能、18 个属性、15 个蛋组、30 个性格。
 - 上下文探针：未发现双库代码；同步默认模式为安全的“不自动导入”；H-01/H-02/H-03 和未启用 hooks 仍告警。
 - `git diff --check`：通过，无输出。
-- 最终 `git status --short`：`.ai-memory.md`、`README.md` 已修改；`.agents/`、`AGENTS.md`、`docs/ai/`、`scripts/verify-context.ps1` 未跟踪。
+- `git status --short`：实现提交 `a5f2ba4` 完成后工作区干净；本文件与 `STATUS.md` 的 committed 状态更新另行提交。
 
 ## 未确定/外部依赖
 
