@@ -27,9 +27,10 @@
 
 ## 下一步
 
-1. 推送本分支到 `origin/eachzhang/codex/context-handoff`。
-2. 新电脑拉取该分支后，从仓库根目录启动 Codex，并先运行 `scripts/verify-context.ps1`。
-3. 后续单独处理 `RISK_REGISTER.md` 中的安全与文档漂移事项。
+1. 新电脑执行 `git fetch origin` 并检出 `eachzhang/codex/context-handoff`。
+2. 从仓库根目录启动 Codex，并先运行 `scripts/verify-context.ps1`。
+3. 审核后决定是否将该分支合并到 `main`。
+4. 后续单独处理 `RISK_REGISTER.md` 中的安全与文档漂移事项。
 
 ## 本次不包含
 
