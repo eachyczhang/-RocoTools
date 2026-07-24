@@ -14,9 +14,10 @@
 2. `docs/ai/PROJECT_CONTEXT.md`：稳定架构、模块、术语和数据流。
 3. `docs/ai/STATUS.md`：已上线、已提交、本地开发和规划状态。
 4. `docs/ai/RISK_REGISTER.md`：高/中风险、证据与待办。
-5. `docs/ai/HANDOFF.md`：最近任务、基准 commit、下一步和阻塞项。
-6. 当前任务涉及的正式文档和代码。
-7. Git 历史与只读验证结果。
+5. `docs/ai/TODO.md`：当前优先级、待办范围和完成定义。
+6. `docs/ai/HANDOFF.md`：最近任务、基准 commit、下一步和阻塞项。
+7. 当前任务涉及的正式文档和代码。
+8. Git 历史与只读验证结果。
 
 不要为了“建立上下文”默认重读所有游戏规则、所有历史 AI 文件或无关代码。先使用本目录路由，再按任务范围渐进读取。
 
@@ -52,7 +53,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-context.ps1
 
 1. 运行相关测试、构建或只读检查。
 2. 检查 `git status --short` 和变更范围。
-3. 更新 `HANDOFF.md`；事实或风险变化时同步更新 `STATUS.md`、`RISK_REGISTER.md`。
+3. 更新 `HANDOFF.md`；优先级变化时同步更新 `TODO.md`，事实或风险变化时同步更新 `STATUS.md`、`RISK_REGISTER.md`。
 4. 记录基准 commit、分支、改动、验证、未验证、下一步和阻塞项。
 5. 最终答复明确指向：
 

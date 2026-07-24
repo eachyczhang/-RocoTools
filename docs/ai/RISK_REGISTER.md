@@ -1,6 +1,6 @@
 # RocoTools 风险登记
 
-> 最近核验：2026-07-23
+> 最近核验：2026-07-24
 > 风险状态：`open`、`mitigated`、`accepted`、`not-applicable`、`needs-verification`
 
 ## 高风险
@@ -22,7 +22,7 @@
 | M-03 | 上传校验不统一 | open | 管理上传仍含 MIME 依赖和先落原始文件路径 | 实际解码、像素限制、去元数据、重编码、原子落盘 |
 | M-04 | 生产配置漂移 | needs-verification | 线上有 HSTS；仓库 `nginx.prod.conf` 未配置 HSTS | 获取生产配置差异，回写可公开模板 |
 | M-05 | Git hooks 未启用 | open | hook 文件存在但 `core.hooksPath` 为空 | 安装脚本 + CI；不能只依赖本机 hook |
-| M-06 | 同步/部署文档漂移 | open | `sync_db.js` 默认不导入；`deploy.sh` 不运行 sync；文档仍称完整同步 | 更新 README、SCRIPTS、DEPLOY 和旧 AI memory |
+| M-06 | 同步/部署文档漂移 | open | `sync_db.js` 默认不导入；2026-07-24 审查的服务器 `deploy.sh` 副本不运行 sync，且自 `07f830f` 起不受 Git 跟踪；文档仍称完整同步或自动部署 | 更新 README、SCRIPTS、DEPLOY 和旧 AI memory；建立脱敏、受控的部署脚本规范或校验方式 |
 
 ## 双库历史风险
 
