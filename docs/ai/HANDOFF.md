@@ -7,6 +7,7 @@
 
 - 仓库：`F:\roco`
 - 当前分支：`main`
+- 本轮工作区基准：`85bd071111c70aaa9152a5a5f670c1453a244101`
 - 文档分支原基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
 - `main` / `origin/main` 已包含文档合并点：`8c37af0d69f6af4f337dfa0f1db6e1904852a2ea`
 - 产品代码基准：`419a62a`
@@ -40,10 +41,12 @@
 17. 审核 `main..eachzhang/codex/docs-drift` 的 6 个提交；确认仅包含文档、文档 Skill、旧路径兼容入口和正式部署文档的 `.gitignore` 放行规则。
 18. 将文档分支 fast-forward 合并到 `main` 并推送 GitHub；文档合并点为 `8c37af0`。
 19. 确认旧上下文和文档分支均已完全合入 `origin/main` 且未被 worktree 使用后，删除其本地及远端分支。
+20. 将项目根目录限制、渐进式检索、默认排除目录、按改动验证、重资源操作需确认和临时进程清理要求追加到根 `AGENTS.md`，未覆盖既有规则。
 
 ## 验证记录
 
 - `scripts/verify-context.ps1`：合并及清理后通过；本地 SQLite `integrity_check=ok`，统计口径一致。
+- 本轮提交前 `scripts/verify-context.ps1`：通过；分支为 `main`、HEAD 基准为 `85bd071`，仅两个预期文档处于 working-tree。
 - Markdown 本地链接检查：通过。
 - 受维护文档敏感 IP、反馈旧 API/状态、已删除脚本和“push 即部署”扫描：通过。
 - `git diff --check`：通过。
