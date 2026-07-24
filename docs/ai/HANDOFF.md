@@ -52,7 +52,7 @@
 
 ## 下一步
 
-1. 审核 `main..eachzhang/codex/docs-drift`；当前分支相对 `main` 领先 4 个纯文档提交。
+1. 审核 `main..eachzhang/codex/docs-drift`；该范围仅包含文档提交，实时提交数以 Git 为准。
 2. 确认后 fast-forward 合并并推送 `main`。
 3. 从新任务验证 `docs/README.md`、根 `AGENTS.md` 和 `$rocotools-context-handoff`。
 4. 从最新 `main` 创建精灵对比功能分支，先核对可复用 API/组件并确定双精灵 MVP。

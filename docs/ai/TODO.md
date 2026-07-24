@@ -111,8 +111,8 @@
 
 ### 6. 文档分支收口
 
-- [x] `eachzhang/codex/docs-drift` 已推送，HEAD 为 `9554a16`。
-- [x] 确认该分支相对 `main` 领先 4 个文档提交，不含业务源码、schema 或运行数据。
+- [x] `eachzhang/codex/docs-drift` 已推送并与远程跟踪分支一致。
+- [x] 确认 `main..eachzhang/codex/docs-drift` 仅包含文档提交，不含业务源码、schema 或运行数据；实时提交数以 Git 为准。
 - [ ] 审核 `main..eachzhang/codex/docs-drift` 的最终差异。
 - [ ] fast-forward 合并到 `main` 并推送远程。
 - [ ] 合并后从新任务验证 `docs/README.md`、根 `AGENTS.md` 和 `$rocotools-context-handoff`。
