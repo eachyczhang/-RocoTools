@@ -1,9 +1,9 @@
 # RocoTools 功能状态
 
 > 最近核验：2026-07-24
-> 仓库 `main`：`848207a9561c43146c9cf6223c6f4829b22eec88`
+> 仓库 `main` 已包含文档合并点：`8c37af0d69f6af4f337dfa0f1db6e1904852a2ea`
 > 产品代码基准：`419a62a553b2eab1e72bf9348eb140347707a136`
-> 当前文档修复分支基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
+> 文档修复分支原基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
 > 状态词：`deployed`、`committed`、`working-tree`、`planned`、`deprecated`
 
 ## 已验证状态
@@ -22,15 +22,15 @@
 | 双库隔离与发布 | planned | 无 | 全仓与全 Git 历史无相关符号 | 旧安全报告中的未提交实现不在当前仓库 |
 | 精灵对比 | planned | 无 | README/AI memory 待办 | 范围待定义 |
 | 用户端 Excel/PDF 报告 | planned | 无 | 待办与现代码对比 | 与管理端整库导出区分 |
-| 文档一致性修复 | committed | `7735ecb` | 链接、命令、统计、状态和敏感信息扫描通过 | 独立分支，尚未合并 `main` |
-| 文档目录整理 | committed | `4ff7ac4` | 7 份正文归档、旧路径兼容入口、文档中心及链接验证通过 | 独立分支，尚未合并 `main` |
+| 文档一致性修复 | committed | `7735ecb`、合并点 `8c37af0` | 链接、命令、统计、状态和敏感信息扫描通过 | 已 fast-forward 进入并推送 `main` |
+| 文档目录整理 | committed | `4ff7ac4`、合并点 `8c37af0` | 7 份正文归档、旧路径兼容入口、文档中心及链接验证通过 | 已 fast-forward 进入并推送 `main` |
 
 ## 当前仓库状态基线
 
-- `main` 与 `origin/main` 均为 `848207a`；产品代码最新提交仍为 `419a62a`。
-- 当前工作分支：`eachzhang/codex/docs-drift`，从 `848207a` 创建。
-- 文档一致性修复已提交到 `eachzhang/codex/docs-drift`，不含产品源码、schema 或运行数据。
-- 文档目录第一批整理已提交到 `eachzhang/codex/docs-drift`，只涉及 Markdown 路径、索引和兼容入口。
+- `main` 与 `origin/main` 均已包含文档合并点 `8c37af0`；产品代码最新提交仍为 `419a62a`。
+- 当前工作分支：`main`。
+- 文档一致性修复和目录整理已 fast-forward 合并并推送到 `main`，不含产品源码、schema 或运行数据。
+- 已删除本地和远端的 `eachzhang/codex/context-handoff`、`eachzhang/codex/docs-drift`；其提交均由 `main` 保留。
 - `SCRIPTS.md` 原行尾状态已通过工作区/索引哈希一致性确认并清除。
 - 没有 stash；没有包含双库实现的其他可见分支。
 - 可移植 Agent 与上下文交接 Skill 已合并并推送到 `main`，状态为 `committed`；生产部署仍未通过服务器 SHA 验证。

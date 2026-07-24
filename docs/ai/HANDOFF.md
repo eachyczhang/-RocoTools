@@ -6,9 +6,9 @@
 ## 基准
 
 - 仓库：`F:\roco`
-- 当前分支：`eachzhang/codex/docs-drift`
-- 分支基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
-- `main` / `origin/main`：`848207a`
+- 当前分支：`main`
+- 文档分支原基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
+- `main` / `origin/main` 已包含文档合并点：`8c37af0d69f6af4f337dfa0f1db6e1904852a2ea`
 - 产品代码基准：`419a62a`
 - 文档一致性实现提交：`7735ecb284871a0e7ef382d4ad0656427b6947dc`
 - 文档目录整理基准：`3c22a7aab13bdecfd6d0d5680e9efd68d952c91b`
@@ -17,7 +17,7 @@
 
 ## 当前目标
 
-收口文档修复分支并明确下一阶段：先合并、验证文档入口，再从最新 `main` 启动精灵对比功能。
+文档修复与目录整理已进入 `main`；下一阶段先从新任务验证文档和 Agent 入口，再启动精灵对比功能。
 
 ## 已完成
 
@@ -37,10 +37,13 @@
 14. 将架构、独立功能、提交规范和展示标准共 7 份正文移动到分类目录。
 15. 旧路径保留兼容入口，仓库内部权威引用改为新路径。
 16. 更新 README、DOC_RULES、AI memory、开发 Skills 和 AI 上下文中的文档路径。
+17. 审核 `main..eachzhang/codex/docs-drift` 的 6 个提交；确认仅包含文档、文档 Skill、旧路径兼容入口和正式部署文档的 `.gitignore` 放行规则。
+18. 将文档分支 fast-forward 合并到 `main` 并推送 GitHub；文档合并点为 `8c37af0`。
+19. 确认旧上下文和文档分支均已完全合入 `origin/main` 且未被 worktree 使用后，删除其本地及远端分支。
 
 ## 验证记录
 
-- `scripts/verify-context.ps1`：启动时通过；本地 SQLite `integrity_check=ok`，统计口径一致。
+- `scripts/verify-context.ps1`：合并及清理后通过；本地 SQLite `integrity_check=ok`，统计口径一致。
 - Markdown 本地链接检查：通过。
 - 受维护文档敏感 IP、反馈旧 API/状态、已删除脚本和“push 即部署”扫描：通过。
 - `git diff --check`：通过。
@@ -52,11 +55,9 @@
 
 ## 下一步
 
-1. 审核 `main..eachzhang/codex/docs-drift`；该范围仅包含文档提交，实时提交数以 Git 为准。
-2. 确认后 fast-forward 合并并推送 `main`。
-3. 从新任务验证 `docs/README.md`、根 `AGENTS.md` 和 `$rocotools-context-handoff`。
-4. 从最新 `main` 创建精灵对比功能分支，先核对可复用 API/组件并确定双精灵 MVP。
-5. 生产 SHA、PM2 和精确构建证据继续保留为外部核验事项，不阻塞本地功能定义。
+1. 从新任务验证 `docs/README.md`、根 `AGENTS.md` 和 `$rocotools-context-handoff`。
+2. 从最新 `main` 创建精灵对比功能分支，先核对可复用 API/组件并确定双精灵 MVP。
+3. 生产 SHA、PM2 和精确构建证据继续保留为外部核验事项，不阻塞本地功能定义。
 
 ## 未确定/外部依赖
 

@@ -3,7 +3,7 @@
 > 更新时间：2026-07-24
 > 当前状态：committed
 > 当前优先级：文档一致性 → 功能实现 → CI / 性能 / 安全专项
-> 当前执行指向：先合并并验证文档分支，再从最新 `main` 创建精灵对比功能分支。
+> 当前执行指向：从新任务验证文档与 Agent 入口，再从最新 `main` 创建精灵对比功能分支。
 
 ## 已确认的工作原则
 
@@ -113,16 +113,17 @@
 
 - [x] `eachzhang/codex/docs-drift` 已推送并与远程跟踪分支一致。
 - [x] 确认 `main..eachzhang/codex/docs-drift` 仅包含文档提交，不含业务源码、schema 或运行数据；实时提交数以 Git 为准。
-- [ ] 审核 `main..eachzhang/codex/docs-drift` 的最终差异。
-- [ ] fast-forward 合并到 `main` 并推送远程。
+- [x] 审核 `main..eachzhang/codex/docs-drift` 的最终差异。
+- [x] fast-forward 合并到 `main` 并推送远程；文档合并点为 `8c37af0`。
 - [ ] 合并后从新任务验证 `docs/README.md`、根 `AGENTS.md` 和 `$rocotools-context-handoff`。
-- [ ] 将文档一致性修复和目录整理状态更新为已进入 `main`。
+- [x] 将文档一致性修复和目录整理状态更新为已进入 `main`。
+- [x] 删除已完全合入 `main` 的本地和远端旧 Codex 分支。
 
 ## P1：优先实现产品功能
 
 ### 1. 精灵对比
 
-- [ ] 文档分支合并后，从最新 `main` 创建独立功能分支。
+- [ ] 从最新 `main` 创建独立功能分支。
 - [ ] 核对现有精灵列表、详情 API、`PetPicker`、`StatsRadar` 和属性顺序实现，确认可复用边界。
 - [ ] 定义首期范围和验收标准。
 - [ ] 首期建议限定同时对比 2 只精灵；确认后再实现。
