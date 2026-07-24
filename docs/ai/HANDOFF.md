@@ -1,7 +1,7 @@
 # RocoTools 当前交接
 
 > 更新时间：2026-07-24
-> 交接状态：committed
+> 交接状态：working-tree
 
 ## 基准
 
@@ -11,11 +11,12 @@
 - `main` / `origin/main`：`848207a`
 - 产品代码基准：`419a62a`
 - 文档一致性实现提交：`7735ecb284871a0e7ef382d4ad0656427b6947dc`
+- 文档目录整理基准：`3c22a7aab13bdecfd6d0d5680e9efd68d952c91b`
 - stash：无
 
 ## 当前目标
 
-完成 P0 文档漂移修复，提交并推送独立文档分支；不改业务逻辑、数据结构或运行数据。
+完成第一批文档目录整理：集中权威正文、保留旧路径兼容入口并验证引用；不改业务逻辑、数据结构或运行数据。
 
 ## 已完成
 
@@ -31,6 +32,10 @@
 10. 更新 README、架构、app/scripts/crawler README、CHANGELOG、DOC_RULES、AI memory 和已跟踪开发 Skills。
 11. 从 `.ai-memory.md` 移除真实源站 IP；历史 CHANGELOG 和生成报告保留并标明其口径。
 12. 更新 STATUS、TODO 和 RISK_REGISTER；M-06 文档漂移标记为 mitigated。
+13. 新增 `docs/README.md` 文档中心。
+14. 将架构、独立功能、提交规范和展示标准共 7 份正文移动到分类目录。
+15. 旧路径保留兼容入口，仓库内部权威引用改为新路径。
+16. 更新 README、DOC_RULES、AI memory、开发 Skills 和 AI 上下文中的文档路径。
 
 ## 验证记录
 
@@ -39,14 +44,18 @@
 - 受维护文档敏感 IP、反馈旧 API/状态、已删除脚本和“push 即部署”扫描：通过。
 - `git diff --check`：通过。
 - 产品源码、数据库 schema 和运行数据 diff：无。
+- 7 份迁移正文内容保持一致；架构文档仅清理 1 行既有尾随空格。
+- 受 Git 管理及本轮新增 Markdown 本地链接检查通过。
+- 固定 AI 上下文路径验证通过；旧路径兼容入口可解析。
 - 服务器只读 SSH：认证仍失败，本轮未执行远程命令、部署、PM2/Nginx reload 或数据库操作。
 
 ## 下一步
 
-1. 审核 `eachzhang/codex/docs-drift`，决定是否合并到 `main`。
-2. 合并后从新任务验证根目录 `AGENTS.md` 和仓库 Skill 自动生效。
-3. 配置可用 SSH 公钥后补取生产 SHA、PM2 状态和精确构建证据。
-4. 文档稳定后进入精灵对比功能定义与实现。
+1. 完成文档链接、正文哈希、上下文脚本和变更范围验证。
+2. 提交并推送 `eachzhang/codex/docs-drift`。
+3. 审核该分支，决定是否合并到 `main`。
+4. 合并后从新任务验证根目录 `AGENTS.md` 和仓库 Skill 自动生效。
+5. 文档稳定后进入精灵对比功能定义与实现。
 
 ## 未确定/外部依赖
 

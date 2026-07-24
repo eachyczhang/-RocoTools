@@ -194,7 +194,7 @@ npm run dev              # http://localhost:5173
 ### 任务 7：修改文本高亮关键词
 
 1. 在 `SkillDescription.vue` 的 `HIGHLIGHT_KEYWORDS` 数组中添加/修改
-2. 更新 `docs/TEXT_HIGHLIGHT_COLORS.md` 文档
+2. 更新 `docs/standards/text-highlight-colors.md` 文档
 3. 参考 `.dev/skills/roco-text-highlight.md`
 
 ---
@@ -334,8 +334,8 @@ npm run dev              # http://localhost:5173
 | `data/STRUCTURE_RULES.md` | 数据结构化规则 |
 | `app/client/RESPONSIVE.md` | 响应式适配规范 |
 | `app/client/DESIGN.md` | 视觉设计规范（色彩/组件/暗色模式/交互） |
-| `docs/ARCHITECTURE.md` | 工程架构设计图（Mermaid 12张图） |
-| `docs/TEXT_HIGHLIGHT_COLORS.md` | 文本高亮颜色规范（18属性+关键词映射） |
+| `docs/architecture/README.md` | 工程架构设计图（Mermaid） |
+| `docs/standards/text-highlight-colors.md` | 文本高亮颜色规范（18属性+关键词映射） |
 | `docs/game-notes/*.md` | 游戏设定笔记 |
 
 ---
@@ -353,7 +353,7 @@ npm run dev              # http://localhost:5173
 - [x] 进化条件结构化配置（4种类型：文本/技能/属性/精灵） 2026-05-24
 - [x] 文本高亮颜色系统（18属性色+印记+状态+机制关键词） 2026-05-24
 - [x] 特性管理模块 (AdminAbilities) 2026-05-24
-- [x] 工程架构设计图 (docs/ARCHITECTURE.md) 2026-05-24
+- [x] 工程架构设计图（现位于 `docs/architecture/README.md`）2026-05-24
 - [x] AI Skills 整理（evolution/text-highlight/admin/data-spec/deploy） 2026-05-24
 
 ---

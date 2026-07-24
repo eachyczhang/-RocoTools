@@ -163,7 +163,7 @@ cd app/server && pm2 start ecosystem.config.js
 
 ### 文本高亮系统
 
-技能描述和特性描述中的关键词自动变色，支持 40+ 关键词映射到 18 种属性色系。详见 [docs/TEXT_HIGHLIGHT_COLORS.md](../docs/TEXT_HIGHLIGHT_COLORS.md)。
+技能描述和特性描述中的关键词自动变色，支持 40+ 关键词映射到 18 种属性色系。详见 [文本高亮颜色规范](../docs/standards/text-highlight-colors.md)。
 
 ### 进化链展示
 

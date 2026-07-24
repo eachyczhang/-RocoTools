@@ -73,9 +73,14 @@
 │   └── client/             # Vue3 前端（Vite + TailwindCSS）
 │       ├── RESPONSIVE.md   # 响应式适配规范
 │       └── DESIGN.md       # 视觉设计规范
-├── docs/                   # 文档
-│   ├── ARCHITECTURE.md     # 工程架构设计图（Mermaid）
-│   ├── TEXT_HIGHLIGHT_COLORS.md  # 文本高亮颜色规范
+├── docs/                   # 文档中心
+│   ├── README.md           # 文档总入口
+│   ├── ai/                 # AI 上下文、状态、风险与交接
+│   ├── architecture/       # 工程架构
+│   ├── development/        # 开发规范
+│   ├── features/           # 独立功能文档
+│   ├── standards/          # 展示和交互标准
+│   ├── operations/         # 部署与运维
 │   └── game-notes/         # 游戏设定笔记
 ├── .dev/skills/            # AI Skills（开发参考）
 ├── nginx.conf              # Nginx 站点配置（Brotli + 长缓存）
@@ -203,11 +208,12 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 
 | 文档 | 说明 |
 |------|------|
+| [docs/README.md](./docs/README.md) | 文档中心：按架构、功能、开发、标准、数据、游戏规则和运维分类 |
 | [DOC_RULES.md](./DOC_RULES.md) | 文档整理规则（所有 md 文件清单、维护规则、整理记录） |
 | [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（爬虫/同步/图片/构建的用途、参数和顺序） |
 | [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南（构建、PM2、Nginx、服务器脚本边界） |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 工程架构设计图（12张 Mermaid 图：系统架构/数据流/ER图/路由/部署等） |
-| [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（18属性色号+关键词映射表） |
+| [docs/architecture/README.md](./docs/architecture/README.md) | 工程架构设计图（系统架构、数据流、ER 图、路由和部署） |
+| [docs/standards/text-highlight-colors.md](./docs/standards/text-highlight-colors.md) | 文本高亮颜色规范（18 属性色号和关键词映射） |
 | [app/ADMIN_RULES.md](./app/ADMIN_RULES.md) | 管理端业务规则（缓存/命名/校验/图片/进化条件/Nginx等） |
 | [app/client/DESIGN.md](./app/client/DESIGN.md) | 视觉设计规范（色彩体系/组件样式/暗色模式/交互） |
 | [app/client/RESPONSIVE.md](./app/client/RESPONSIVE.md) | 响应式适配规范（Mobile-first 三端断点） |

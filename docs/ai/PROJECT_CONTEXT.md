@@ -83,7 +83,8 @@ BWIKI
 ## 相关正式文档
 
 - `README.md`
-- `docs/ARCHITECTURE.md`
+- `docs/README.md`
+- `docs/architecture/README.md`
 - `app/README.md`
 - `app/ADMIN_RULES.md`
 - `data/FIELDS.md`

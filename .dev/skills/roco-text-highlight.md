@@ -125,13 +125,13 @@
 
 1. 在 `SkillDescription.vue` 的 `HIGHLIGHT_KEYWORDS` 数组中添加 `{ text: '关键词', color: '#色号' }`
 2. 确保按长度降序排列（或依赖代码中的自动排序）
-3. 更新 `docs/TEXT_HIGHLIGHT_COLORS.md` 文档
+3. 更新 `docs/standards/text-highlight-colors.md` 文档
 
 ---
 
 ## 相关文档
 
-- 完整颜色映射表：`docs/TEXT_HIGHLIGHT_COLORS.md`
+- 完整颜色映射表：`docs/standards/text-highlight-colors.md`
 - 视觉设计规范：`app/client/DESIGN.md`
 
 ---

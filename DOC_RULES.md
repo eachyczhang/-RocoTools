@@ -20,7 +20,6 @@
 | [README.md](./README.md) | 项目总览（功能/技术栈/结构/API/快速开始） | 新增页面/API/核心特性时更新；保持文档索引表完整 |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志（V1.0 起，按模块分类记录变更） | 保留历史事实；发布新版本或补充遗漏记录时更新 |
 | [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（用途/参数/顺序/注意事项） | 新增脚本或修改同步流程时更新；与 `scripts/README.md` 对齐 |
-| [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南 | 部署事实变化时更新；禁止包含真实主机、用户、密码或密钥 |
 | [DOC_RULES.md](./DOC_RULES.md) | 本文件：文档整理规则与记录 | 每次系统性整理文档后更新时间和索引 |
 | [AGENTS.md](./AGENTS.md) | RocoTools 仓库级 Agent 行为与交接规则 | 工程级工作流或权限边界变化时更新 |
 | [.ai-memory.md](./.ai-memory.md) | 历史工程记忆和检索线索 | 不作为当前状态真相；发现明确漂移或敏感信息时修正 |
@@ -53,12 +52,14 @@
 
 | 文件 | 用途 | 整理规则 |
 |------|------|----------|
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 工程架构设计图（Mermaid 图：系统/数据流/ER/路由/部署） | 架构变更（新增表/路由/服务）时更新 |
-| [docs/counter-picks.md](./docs/counter-picks.md) | 反制推荐模块开发规则与算法原理（标签体系/克制倍率/评分权重） | 反制推荐算法或标签规则变更时更新 |
-| [docs/PATCH_NOTES_TABLE_RULES.md](./docs/PATCH_NOTES_TABLE_RULES.md) | 公告表格展示规范（列数/排序/图标/样式/各模块格式） | 公告脚本表格格式变更时更新 |
-| [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（属性色号/关键词映射） | 新增高亮关键词或修改颜色时更新 |
-| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Git 提交规范（commit message 格式/pre-commit 检查项/绕过方式） | Git hooks 规则变更时更新 |
-| [docs/feedback.md](./docs/feedback.md) | 已上线用户反馈模块的实现、API、附件边界和风险 | 反馈入口、接口、存储或状态变化时更新 |
+| [docs/README.md](./docs/README.md) | 正式文档分类入口 | 新增、移动或废弃正式文档时更新 |
+| [docs/architecture/README.md](./docs/architecture/README.md) | 工程架构设计图（系统/数据流/ER/路由/部署） | 架构变更时更新 |
+| [docs/features/counter-picks.md](./docs/features/counter-picks.md) | 反制推荐算法、标签和接口 | 反制推荐规则变更时更新 |
+| [docs/features/feedback.md](./docs/features/feedback.md) | 已上线用户反馈实现、API、附件边界和风险 | 反馈入口、接口、存储或状态变化时更新 |
+| [docs/features/admin-achievements-batch.md](./docs/features/admin-achievements-batch.md) | 图鉴课题批量管理页面、交互和 API | 图鉴课题批量管理变更时更新 |
+| [docs/development/commit-convention.md](./docs/development/commit-convention.md) | Git 提交格式、Hooks 和检查项 | Git hooks 规则变更时更新 |
+| [docs/standards/patch-notes-table.md](./docs/standards/patch-notes-table.md) | 公告表格、排序、图标和响应式展示规范 | 公告脚本表格格式变更时更新 |
+| [docs/standards/text-highlight-colors.md](./docs/standards/text-highlight-colors.md) | 文本高亮颜色和关键词匹配规范 | 高亮关键词或颜色变化时更新 |
 | [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南 | 部署脚本、PM2、Nginx 或发布边界变化时更新 |
 | [docs/ai/START_HERE.md](./docs/ai/START_HERE.md) | AI 工程上下文入口 | 启动顺序和交接规则变化时更新 |
 | [docs/ai/PROJECT_CONTEXT.md](./docs/ai/PROJECT_CONTEXT.md) | 当前架构、术语和数据口径 | 稳定工程事实变化时更新 |
@@ -66,6 +67,8 @@
 | [docs/ai/RISK_REGISTER.md](./docs/ai/RISK_REGISTER.md) | 风险、证据和剩余事项 | 风险状态或证据变化时更新 |
 | [docs/ai/TODO.md](./docs/ai/TODO.md) | 当前优先级与完成定义 | 优先级、范围或完成状态变化时更新 |
 | [docs/ai/HANDOFF.md](./docs/ai/HANDOFF.md) | 当前分支、验证、下一步和阻塞项 | 每次工程任务结束前更新 |
+
+旧的 `docs/ARCHITECTURE.md`、`docs/counter-picks.md`、`docs/feedback.md`、`docs/admin-achievements-batch.md`、`docs/COMMIT_CONVENTION.md`、`docs/PATCH_NOTES_TABLE_RULES.md` 和 `docs/TEXT_HIGHLIGHT_COLORS.md` 仅保留兼容入口，不再维护正文。
 
 ### docs/game-notes/
 
@@ -92,6 +95,12 @@
 | [.dev/skills/roco-evolution.md](./.dev/skills/roco-evolution.md) | 进化链与进化条件配置系统 | 进化系统变更时更新 |
 | [.dev/skills/roco-text-highlight.md](./.dev/skills/roco-text-highlight.md) | 文本高亮颜色系统 | 高亮规则变更时更新 |
 
+### .agents/skills/（Codex Skills）
+
+| 文件 | 用途 | 整理规则 |
+|------|------|----------|
+| [.agents/skills/rocotools-context-handoff/SKILL.md](./.agents/skills/rocotools-context-handoff/SKILL.md) | RocoTools 上下文恢复、状态核验与跨电脑交接 | 启动、交接或状态语言规则变化时更新 |
+
 ### crawler/
 
 | 文件 | 用途 | 整理规则 |
@@ -113,7 +122,7 @@
    - 新增/修改 API → README.md + ADMIN_RULES.md
    - 新增脚本 → SCRIPTS.md + scripts/README.md
    - 游戏机制变更 → docs/game-notes/ 对应文件
-   - 数据库结构变更 → data/FIELDS.md + docs/ARCHITECTURE.md
+   - 数据库结构变更 → data/FIELDS.md + docs/architecture/README.md
    - 前端组件/样式变更 → app/README.md + DESIGN.md
    - 管理端业务逻辑 → app/ADMIN_RULES.md
 
@@ -132,7 +141,7 @@
 
 | 规则 | 说明 |
 |------|------|
-| 文件名 | 全大写（根目录规范文档）或全小写+连字符（game-notes） |
+| 文件名 | 根目录保留约定名称；`docs/` 分类目录使用小写加连字符 |
 | 标题层级 | 一级标题仅用于文件标题，内容从二级标题开始 |
 | 表格 | 优先使用表格展示结构化信息 |
 | 代码块 | 命令行用 `bash`，数据结构用 `json`/`sql` |
@@ -148,3 +157,4 @@
 3. **game-notes 只记录游戏设定**：不记录实现细节，实现细节放 ADMIN_RULES.md
 4. **AI Skills 文档**：面向 AI 助手，侧重"如何做"而非"是什么"
 5. **.ai-memory.md**：仅作为历史检索线索；当前状态以 `docs/ai/` 为准，但发现明确漂移或敏感信息时仍需修正
+6. **兼容入口不维护正文**：迁移后的旧路径只保留新位置链接，新的内部引用必须使用权威路径

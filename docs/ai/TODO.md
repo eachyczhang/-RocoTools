@@ -1,7 +1,7 @@
 # RocoTools TODO
 
 > 更新时间：2026-07-24
-> 当前状态：committed
+> 当前状态：working-tree
 > 当前优先级：文档一致性 → 功能实现 → CI / 性能 / 安全专项
 
 ## 已确认的工作原则
@@ -71,8 +71,8 @@
 
 #### 功能与架构文档
 
-- [x] 将 `docs/feedback.md` 更新为 `deployed`，并补充真实入口、API、存储和风险。
-- [x] 更新 `docs/ARCHITECTURE.md` 中的旧统计为当前口径。
+- [x] 将 `docs/features/feedback.md` 更新为 `deployed`，并补充真实入口、API、存储和风险。
+- [x] 更新 `docs/architecture/README.md` 中的旧统计为当前口径。
 - [x] 更新 `app/README.md` 中 `sync_db.js` 的旧行为描述。
 - [x] 更新 `.ai-memory.md` 中的旧统计、部署描述、敏感源站地址和 Service Worker 待办。
 - [x] 保留 CHANGELOG 的历史事实；旧统计标明当时口径，不直接改写历史。
@@ -96,6 +96,17 @@
 - [x] 不包含密码、Token、JWT 密钥、生产数据库或用户隐私数据。
 - [x] 文档修改不触及产品源码、数据库 schema 或运行数据。
 - [x] 提交并推送独立文档分支（实现提交 `7735ecb`）。
+
+### 5. 文档目录整理
+
+- [x] 新增 `docs/README.md` 文档中心。
+- [x] 将架构、独立功能、开发规范和展示标准正文归入分类目录。
+- [x] 为 7 个旧路径保留兼容入口。
+- [x] 更新 README、DOC_RULES、AI memory、开发 Skills 和 AI 上下文中的权威路径。
+- [x] 确认迁移后的 7 份正文内容一致；仅清理架构文档 1 行既有尾随空格。
+- [x] 所有受 Git 管理及本轮新增 Markdown 本地链接存在。
+- [x] 上下文验证、`git diff --check` 和非文档变更检查通过。
+- [ ] 提交并推送文档目录整理。
 
 ## P1：优先实现产品功能
 
