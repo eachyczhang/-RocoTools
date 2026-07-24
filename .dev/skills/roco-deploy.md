@@ -1,222 +1,67 @@
 # Skill: roco-deploy
 
-> RocoTools 部署相关流程和命令。
+> RocoTools 部署相关流程和命令。当前事实以 `docs/operations/DEPLOY.md`、服务器只读证据和实际脚本为准。
 
----
+## 使用顺序
 
-## 服务器信息
+1. 先读 `docs/operations/DEPLOY.md`、`SCRIPTS.md`、`nginx*.conf` 和 `app/server/ecosystem.config.js`。
+2. 旧 AI memory、历史 CodeBuddy 和本文件旧版本只作为检索线索。
+3. 部署前确认目标 commit、工作区、lockfile、构建、数据库边界和回滚方法。
+4. 未经明确授权，不运行 SSH、部署、PM2/Nginx reload、数据库同步、恢复或上传。
+5. 密码、Token、服务器地址、SSH 用户和 `.env` 不写入 Git 或输出。
 
-- 系统：Ubuntu 24.04+
-- 路径：`/var/www/roco`
-- 域名：已备案，base: `/rocotools/`
-- 进程守护：PM2
-- 反向代理：Nginx（HTTP/2 + Brotli + SSL）
+## 当前生产事实（2026-07-24）
 
----
+- 生产目录：`/var/www/roco`。
+- 生产分支：`main`。
+- PM2 仓库配置名：`roco`，配置 2 个 cluster 实例；服务器实际状态仍需只读核验。
+- 服务器 `deploy.sh` 在 Git 外，不会随 `git pull main` 更新。
+- `git push` 只更新远程仓库，不能直接标记为 `deployed`。
 
-## 环境变量
+服务器脚本的已验证行为：
 
-文件位置：`app/server/.env`（不入 git）
+- `git pull origin main`；无新 commit 且非 `--force` 时退出。
+- `app/server/` 有差异时执行 `npm install --production`。
+- `app/client/` 有差异时执行 `npm install` 和 `npm run build`。
+- 有新 commit 时 reload `roco`；进程不存在才从 `ecosystem.config.js` 启动。
+- `nginx/` 有差异时测试并 reload Nginx。
+- 不执行数据库备份、完整性检查、`sync_db.js` 或数据同步。
 
-```env
-ADMIN_PASSWORD=xxx
-ADMIN_SECRET=xxx
-PORT=3000
-```
+完整影响矩阵、只读核验和回滚原则见 `docs/operations/DEPLOY.md`。
 
-示例文件：`app/server/.env.example`
-
----
-
-## 自动部署机制
-
-服务器通过 crontab 定时任务自动拉取代码并部署：
-
-```cron
-0 0 * * * cd /var/www/roco && ./deploy.sh 2 >> /var/log/roco-deploy.log 2>&1
-```
-
-> 每天 00:00 自动执行。日常只需 `git push`，禁止手动在服务器执行部署命令。
-
-### deploy.sh 选项
+## 数据命令边界
 
 ```bash
-bash deploy.sh
-# 选项：
-# 1) 仅上传数据（rsync 增量同步 data/）
-# 2) 仅更新代码（git pull + build + restart）
-# 3) 全量部署（数据 + 代码）
+cd app/server
+node sync_db.js          # 默认：生成图片衍生物 + 建表/补列，不导入 JSON
+node sync_db.js --full   # 完整导入和全部后处理，会修改数据
 ```
 
-### 手动触发部署（紧急情况）
+生产代码部署与生产数据同步是独立流程。`scripts/sync_from_server.sh` 只用于从服务器拉取受控运行数据到本地。
+
+## 前端构建
 
 ```bash
-ssh <用户名>@<服务器IP>
-cd /var/www/roco && ./deploy.sh 2
+cd app/client
+npm install
+npm run build
 ```
 
----
+Vite 的 `outDir` 为 `app/server/public` 且 `emptyOutDir=true`，构建会清空并重建该目录。失败后可能留下空目录或部分产物，需要修复后完整重建。
 
-## 手动部署步骤
-
-### 服务器拉取 + 构建
+## PM2 与 Nginx
 
 ```bash
-cd /var/www/roco
-git pull
-cd app/client && npm install && npm run build
-cd ../server && npm install && node sync_db.js
-pm2 restart roco-server
+# 只读
+pm2 status
+nginx -t
 ```
 
-### sync_db.js 完整流程（10步）
+任何 `pm2 reload/restart`、`systemctl reload nginx` 或配置写入都需要用户明确授权。仓库 Nginx 文件是脱敏模板，不等于生产配置。
 
-```bash
-cd /var/www/roco/app/server
-node sync_db.js
-```
+## 回滚
 
-执行顺序：
-1. 生成缩略图（128px WebP q60，需 sharp）→ 更新 pet_list.json
-2. 生成 WebP 副本（全部图片，需 sharp）
-3. 初始化数据库（建表）
-4. 导入数据（JSON → SQLite）
-5. 迁移 show_shiny 列（默认值1）
-6. 规范化身高体重数据
-7. 清洗技能等级字段
-8. 同步进化链（多路线合并）
-9. 同步最终形态标记
-10. 同步默认图鉴课题
-
-> 如果未安装 `sharp`，步骤 1-2 会自动跳过。
-
-### 首次安装 sharp
-
-```bash
-cd /var/www/roco/app/server
-npm install sharp
-```
-
----
-
-## 后端依赖
-
-关键依赖（`app/server/package.json`）：
-- `better-sqlite3` — SQLite3 数据库驱动
-- `cheerio` — BWIKI HTML 解析（爬取预览功能）
-- `sharp` — 图片处理（缩略图/WebP 生成）
-- `jsonwebtoken` — JWT 鉴权
-- `multer` — 文件上传
-
----
-
-## Python 虚拟环境（爬虫）
-
-Ubuntu 24.04+ 需用 venv：
-
-```bash
-cd /var/www/roco
-source .venv/bin/activate    # 激活
-python crawler/run.py --full # 运行
-deactivate                   # 退出
-```
-
-首次创建：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r crawler/requirements.txt
-```
-
----
-
-## Nginx 配置
-
-- `nginx.conf` 入 git 但使用占位符：`<YOUR_DOMAIN>`、`<PROJECT_DIR>`
-- 部署脚本 `setup-nginx.sh`（不入 git）自动替换占位符并应用
-- 用法：`sudo bash setup-nginx.sh`
-
-特性：
-- HTTP/2 多路复用
-- Brotli 压缩（优先）+ Gzip 备用
-- 静态资源 365 天 immutable 缓存
-- WebP 自动返回（检测浏览器 Accept 头）
-
----
-
-## 重要注意
-
-- `init.js` 不再删除旧数据库（保留 seasons 等手动录入数据）
-- `sync_db.js` 导入时跳过 `manual_edit=1` 的记录
-- 赛季数据只通过管理端配置，sync 不会覆盖
-- `data/uploads/` 存放手动上传图片，爬虫不碰
-- 后端依赖 `cheerio`（BWIKI 爬取），确保 `npm install` 完整执行
-
----
-
-## PM2 常用命令
-
-```bash
-pm2 status              # 查看状态
-pm2 logs roco-server    # 查看日志
-pm2 restart roco-server # 重启
-pm2 reload roco-server  # 零停机重载
-pm2 stop roco-server    # 停止
-```
-
----
-
-## 数据上传（本地 → 服务器）
-
-```bash
-# rsync 增量同步（推荐，支持断点续传）
-rsync -avz --progress --checksum --delete \
-  -e "ssh -o ServerAliveInterval=60" \
-  data/ <用户名>@<服务器IP>:/var/www/roco/data/
-```
-
----
-
-## SSL 证书续期
-
-Let's Encrypt 自动续期，手动检查：
-```bash
-sudo certbot renew --dry-run
-```
-
----
-
-## 排查自动部署问题
-
-```bash
-# 查看部署日志
-tail -50 /var/log/roco-deploy.log
-
-# 检查 git 状态
-cd /var/www/roco && git status
-
-# 如有冲突，强制重置
-git fetch origin && git reset --hard origin/main
-
-# 手动重新构建
-cd app/client && npm install && npm run build
-cd ../server && npm install
-pm2 restart roco-server
-```
-
----
-
-## 备份目录结构
-
-```
-app/server/data/
-├── roco.db              # 当前数据库
-└── backups/
-    ├── *.db             # 临时备份
-    ├── _meta.json       # 备份元数据
-    ├── auto_presync_*.db  # 自动预同步备份（最近5份）
-    ├── seasons/         # 赛季备份（受保护）
-    │   └── season_S1_20260520.db
-    └── snapshots/       # 恢复前快照
-        └── snapshot_S1更新前_20260521_1430.db
-```
+- 代码优先通过 `git revert` 产生新提交并按正常流程发布。
+- 不把服务器 `git reset --hard` 当作常规冲突处理。
+- 数据库恢复、迁移和回滚属于独立高风险操作，必须备份、授权并验证。
+- 服务器出现本地改动时先保存并审查差异，不直接覆盖。

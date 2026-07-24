@@ -17,8 +17,10 @@ python run.py --full
 
 # Step 2: 同步到数据库（含缩略图生成 + 进化链合并）
 cd ../app/server
-node sync_db.js
+node sync_db.js --full
 ```
+
+> `crawler/run.py` 在后端依赖已安装时会先备份并直接执行 init + import；随后运行 `sync_db.js --full` 会再次导入，以补齐图片衍生物和全部后处理。
 
 ### 🆕 增量更新（仅新增/变更精灵）
 
@@ -29,23 +31,23 @@ python run.py --update
 
 # Step 2: 同步到数据库
 cd ../app/server
-node sync_db.js
+node sync_db.js --full
 ```
 
-### 🚀 发布上线
+### 🚀 代码发布
 
 ```bash
-# 构建前端
+# 本地验证前端（有前端改动时）
 cd app/client
 npm run build
 
-# 提交并推送（服务器自动拉取部署）
+# 提交并推送代码
 git add -A
 git commit -m "描述"
 git push
 ```
 
-> ⚠️ 禁止手动执行部署命令或启动后台服务，服务器会自动拉取 git 代码并部署。
+`git push` 只更新远程仓库。当前服务器由 Git 外的独立 `deploy.sh` 在实际执行时拉取 `origin/main`；是否定时触发需以服务器 crontab 为准。服务器脚本行为和只读核验方法见 [`docs/operations/DEPLOY.md`](./docs/operations/DEPLOY.md)。
 
 ---
 
@@ -86,26 +88,23 @@ pip install -r crawler/requirements.txt
 
 | 脚本 | 路径 | 用途 |
 |------|------|------|
-| `sync_db.js` | `app/server/sync_db.js` | 一键同步：缩略图 + WebP + 建表 + 导入 + 进化链合并 |
+| `sync_db.js` | `app/server/sync_db.js` | 默认生成图片衍生物并建表/补列；`--full` 另执行导入和后处理 |
 
 **用法**：
 
 ```bash
 cd app/server
-node sync_db.js
+node sync_db.js          # 安全默认：生成图片衍生物 + 建表/补列，不导入 JSON
+node sync_db.js --full   # 完整流程：导入 JSON，并执行所有迁移与后处理
 ```
 
-**内部执行顺序**：
-1. 生成缩略图 + 更新 pet_list.json（需要 sharp）
-2. 生成 WebP 副本（全部图片，需要 sharp）
-3. 初始化数据库（建表）
-4. 导入数据（JSON → SQLite）
-5. 迁移 show_shiny 列（默认值1）
-6. 规范化身高体重数据
-7. 清洗技能等级字段
-8. 同步进化链（多路线合并）
-9. 同步最终形态标记
-10. 同步默认图鉴课题
+**默认模式**：
+
+1. 检测 `sharp`；可用时生成缩略图和 WebP 衍生物。
+2. 初始化数据库，执行 `CREATE IF NOT EXISTS` 和缺失列迁移。
+3. 跳过 JSON 导入、数据修复、进化链、最终形态和默认课题同步。
+
+**`--full` 模式**：在默认步骤后执行 JSON 导入、show_shiny/身高体重/技能等级处理、进化链、最终形态和默认图鉴课题同步。导入可能更新运行数据，执行前应确认备份和 `manual_edit` 保护范围。
 
 **前置条件**：
 ```bash
@@ -241,7 +240,7 @@ cd app/server
 # 单独建表（通常不需要，sync_db.js 已包含）
 node src/db/init.js
 
-# 单独导入数据（通常不需要，sync_db.js 已包含）
+# 单独导入数据（通常不需要，sync_db.js --full 已包含）
 node src/db/import.js
 ```
 
@@ -351,22 +350,6 @@ node scripts/generate_patch_notes.js \
 
 ---
 
-### 测试/调试脚本
-
-| 脚本 | 路径 | 用途 |
-|------|------|------|
-| `test_api.js` | `app/server/test_api.js` | API 接口测试（开发调试用） |
-
-**用法**：
-
-```bash
-cd app/server
-node test_api.js
-```
-
-> ⚠️ 仅开发环境使用，不要在生产环境执行。
-
----
 
 ## 三、前端构建
 
@@ -406,38 +389,38 @@ npm run dev
 
 以下是各场景下的完整执行顺序：
 
-### 首次部署
+### 首次本地数据准备
 
 ```
 1. pip install -r crawler/requirements.txt
 2. python crawler/run.py --full
 3. cd app/server && npm install
-4. node sync_db.js
+4. node sync_db.js --full
 5. cd ../client && npm install
 6. npm run build
-7. git push（服务器自动部署）
 ```
 
 ### 日常数据更新
 
 ```
 1. python crawler/run.py --update   (或 --full)
-2. cd app/server && node sync_db.js
-3. cd ../client && npm run build
-4. git push
+2. cd app/server && node sync_db.js --full
+3. 按受控流程同步运行数据；数据库和图片不进入 Git
 ```
 
 ### 仅修改前端代码
 
 ```
 1. cd app/client && npm run build
-2. git push
+2. 提交并推送代码
+3. 服务器执行 deploy.sh 后，检测到 app/client/ 差异才会重新构建
 ```
 
 ### 仅修改后端代码
 
 ```
-1. git push（PM2 自动重启）
+1. 运行语法/接口验证后提交并推送代码
+2. 服务器执行 deploy.sh 后安装生产依赖并 reload PM2
 ```
 
 ### 素材库缩略图补全
@@ -460,7 +443,8 @@ npm run dev
 
 1. **所有脚本的工作目录**：必须 `cd` 到对应目录后再执行，脚本内部使用 `__dirname` 定位文件
 2. **sharp 依赖**：图片处理脚本依赖 `sharp` 包，首次安装可能需要编译原生模块
-3. **manual_edit 保护**：`sync_db.js` 导入数据时会跳过 `manual_edit=1` 的记录，手动配置不会被覆盖
-4. **进化链自动同步**：`sync_db.js` 末尾自动执行进化链合并，无需额外手动操作
-5. **发布流程**：只需 `git push`，服务器自动拉取代码并部署，禁止手动执行部署命令
-6. **图标工具**：`scripts/ability-icon-tool/` 和 `scripts/skill-icon-tool/` 的 input/output 目录中的图片文件不跟随 git（已配置 .gitignore），但目录本身保留
+3. **manual_edit 保护**：只有 `node sync_db.js --full` 会导入；导入时跳过 `manual_edit=1` 的记录
+4. **后处理边界**：进化链、最终形态和默认课题同步仅在 `--full` 模式执行
+5. **发布流程**：`git push` 不等于已部署；以服务器实际执行 `deploy.sh` 和只读线上验证为准
+6. **数据库边界**：当前服务器部署脚本不运行备份、完整性检查或 `sync_db.js`
+7. **图标工具**：`scripts/ability-icon-tool/` 和 `scripts/skill-icon-tool/` 的 input/output 目录中的图片文件不跟随 git（已配置 .gitignore），但目录本身保留

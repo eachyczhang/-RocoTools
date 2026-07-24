@@ -20,9 +20,9 @@
 | M-01 | 反馈限流可绕过 | open | 直接读取 `X-Forwarded-For`；内存 Map；PM2 双实例 | 受限 `trust proxy`、`req.ip`、Nginx/共享限流 |
 | M-02 | HTTP 边界不完整 | open | 默认 `cors()`；暴露 `X-Powered-By`；无仓库内 CSP/Permissions-Policy | 收紧 CORS、关闭指纹、增加策略头 |
 | M-03 | 上传校验不统一 | open | 管理上传仍含 MIME 依赖和先落原始文件路径 | 实际解码、像素限制、去元数据、重编码、原子落盘 |
-| M-04 | 生产配置漂移 | needs-verification | 线上有 HSTS；仓库 `nginx.prod.conf` 未配置 HSTS | 获取生产配置差异，回写可公开模板 |
+| M-04 | 生产配置漂移 | needs-verification | 线上有 HSTS；仓库模板未配置；服务器脚本检查 `nginx/`，但模板位于仓库根目录 | 获取生产配置差异；校准脚本监控路径后回写可公开模板 |
 | M-05 | Git hooks 未启用 | open | hook 文件存在但 `core.hooksPath` 为空 | 安装脚本 + CI；不能只依赖本机 hook |
-| M-06 | 同步/部署文档漂移 | open | `sync_db.js` 默认不导入；2026-07-24 审查的服务器 `deploy.sh` 副本不运行 sync，且自 `07f830f` 起不受 Git 跟踪；文档仍称完整同步或自动部署 | 更新 README、SCRIPTS、DEPLOY 和旧 AI memory；建立脱敏、受控的部署脚本规范或校验方式 |
+| M-06 | 同步/部署文档漂移 | mitigated | README、SCRIPTS、app/scripts/crawler README、AI memory、开发 Skill 与新 `docs/operations/DEPLOY.md` 已按当前代码和服务器脚本副本校准 | 剩余生产 SHA、PM2 与真实 Nginx 配置归 M-04/外部核验；功能变更后继续维护文档 |
 
 ## 双库历史风险
 

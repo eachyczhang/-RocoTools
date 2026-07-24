@@ -73,6 +73,7 @@ data/**/_update_filter.json
 # 部署文档（仅本地使用）
 # ============================================================
 DEPLOY.md
+!docs/operations/DEPLOY.md
 deploy.sh
 setup-nginx.sh
 

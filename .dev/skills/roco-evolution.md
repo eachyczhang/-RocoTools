@@ -149,7 +149,7 @@ function formatEvoCondition(cond) {
 - 扫描所有精灵的进化链数据
 - 将分支进化路线合并为完整的二维数组
 - 跳过 `manual_edit=1` 的记录
-- `sync_db.js` 已自动包含此步骤
+- `sync_db.js --full` 已包含此步骤；默认模式不会执行
 
 ---
 

@@ -275,7 +275,7 @@ router.use((req, res, next) => {
 - 同步时跳过当前精灵自身（已保存）和数据库中找不到的精灵
 - 所有路线中的精灵共享**完全相同**的进化链数据
 - 修改任意一只精灵的进化链，整条链上所有精灵都会更新
-- `sync_db.js` 末尾自动执行 `sync-evolution-chains.js`，每次数据导入后自动合并进化链
+- `sync_db.js --full` 才执行 `sync-evolution-chains.js`；默认模式不会合并进化链
 
 #### ⚠️ 风险预防策略
 

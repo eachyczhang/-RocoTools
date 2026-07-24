@@ -49,7 +49,7 @@ python crawler/scrapers/fetch_element_chart.py
 # 属性结构化处理（依赖上一步产出）
 python crawler/scrapers/process_element_chart.py
 
-# 技能列表 + 图标（469+）
+# 技能列表 + 图标（爬虫报告口径；当前数据库为 495）
 python crawler/scrapers/fetch_skill_list.py
 
 # 蛋组归属数据（15组）
@@ -91,7 +91,7 @@ python crawler/scrapers/fetch_pet_detail.py
 
 - 各爬虫运行后自动生成 `*_report.md` 校验报告
 - `run.py` 完成后打印全局数据完整性汇总
-- 检测到 `app/server/node_modules` 存在时，**自动执行 sync_db 同步数据到 SQLite**
+- 检测到 `app/server/node_modules` 存在时，自动备份并直接执行数据库 init + import；不等同于运行 `sync_db.js --full`
 
 ### 限流参数
 
@@ -198,30 +198,17 @@ bash scripts/sync_from_server.sh --all --full
 
 **脚本**：`app/server/sync_db.js`
 
-一键执行完整的本地数据处理流程：生成缩略图 → 建表 → 导入数据 → 迁移 → 同步。
-
-### 命令
+### 命令与边界
 
 ```bash
-cd app/server && node sync_db.js
+cd app/server
+node sync_db.js          # 默认：生成图片衍生物 + 建表/补列，不导入 JSON
+node sync_db.js --full   # 完整导入 + 迁移/清洗 + 进化链/最终形态/默认课题
 ```
 
-### 执行步骤（按顺序）
+默认模式用于安全初始化和 schema 补列。只有显式 `--full` 才会导入爬虫 JSON 并执行会修改数据的后处理。完整导入前应确认备份、输入数据和 `manual_edit` 保护范围。
 
-| # | 步骤 | 需要 sharp |
-|---|------|-----------|
-| 1 | 生成缩略图 + 更新 pet_list.json | ✅ |
-| 2 | 生成 WebP 副本（全部图片） | ✅ |
-| 3 | 初始化数据库（建表） | — |
-| 4 | 导入数据（JSON → SQLite） | — |
-| 5 | 迁移 show_shiny 列 | — |
-| 6 | 规范化身高体重数据 | — |
-| 7 | 清洗技能等级字段 | — |
-| 8 | 同步进化链（多路线合并） | — |
-| 9 | 同步最终形态标记 | — |
-| 10 | 同步默认图鉴课题 | — |
-
-> 如果未安装 `sharp`，步骤 1-2 会自动跳过。
+如果未安装 `sharp`，缩略图与 WebP 生成会跳过；数据库初始化仍会执行。
 
 ### 前置条件
 
@@ -462,7 +449,7 @@ bash scripts/sync_from_server.sh --images      # 增量同步图片
 bash scripts/sync_from_server.sh --all --full  # 全量同步所有数据
 
 # === 本地数据处理（JSON → SQLite + 图片优化） ===
-cd app/server && node sync_db.js               # 一键完整流程
+cd app/server && node sync_db.js --full        # 完整导入流程
 cd app/server && node gen_thumbnails.js        # 仅生成缩略图
 cd app/server && node gen_webp.js              # 仅生成 WebP 副本
 

@@ -10,7 +10,7 @@ Express 后台 + Vue3 前端，service 层独立可复用。
 app/
 ├── server/                     # 后台服务
 │   ├── package.json
-│   ├── sync_db.js              # 一键同步（缩略图 + WebP + 建表 + 导入 + 进化链）
+│   ├── sync_db.js              # 默认图片处理+建表/补列；--full 才导入与后处理
 │   ├── gen_thumbnails.js       # 缩略图生成（128px WebP）
 │   ├── gen_webp.js             # 全量 WebP 副本生成
 │   ├── gen_library_thumbs.js   # 素材库缩略图生成
@@ -110,7 +110,7 @@ app/
 # 终端 1: 后台
 cd app/server
 npm install
-node sync_db.js      # 首次需要：缩略图 + WebP + 建库 + 进化链同步
+node sync_db.js --full # 首次完整导入；默认模式生成图片衍生物并建表/补列
 npm run dev          # http://localhost:3000
 
 # 终端 2: 前端

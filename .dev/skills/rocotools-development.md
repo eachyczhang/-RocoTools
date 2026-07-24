@@ -38,15 +38,15 @@
 │   └── utils/              # 下载工具 + 校验报告
 ├── data/                   # 爬取数据（JSON + 图片，不纳入 git）
 │   ├── elements/           # 属性克制关系（18 种）
-│   ├── skills/             # 技能数据（469+）
+│   ├── skills/             # 当前 SQLite 技能（495）
 │   ├── eggs/               # 蛋组数据（15 组）
-│   ├── pets/               # 精灵数据（466+）
+│   ├── pets/               # 当前 SQLite（374 个编号 / 494 个形态）
 │   └── public/             # 图片静态资源
 ├── app/
 │   ├── server/             # Express 后台（SQLite + RESTful API）
 │   │   ├── src/            # 路由、Service、数据库
 │   │   ├── gen_thumbnails.js  # 缩略图生成
-│   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入）
+│   │   └── sync_db.js      # 默认生成图片衍生物并建表/补列；--full 才完整导入
 │   └── client/             # Vue3 前端（Vite + TailwindCSS）
 │       └── src/
 │           ├── views/user/    # 用户端页面
@@ -64,7 +64,7 @@
 
 ## 核心数据模型
 
-7 层数据：**属性(18) → 技能(469+) → 蛋组(15) → 精灵(466+) → 性格(30) → 赛季 → 活动日历**
+7 层数据：**属性(18) → 技能(495) → 蛋组(15) → 精灵(374个编号 / 494个形态) → 性格(30) → 赛季 → 活动日历**
 
 附加数据：**皮卡月刊**（角色时装，多精灵绑定、男女概念图各一张）、**特性管理**（聚合所有精灵特性）
 
@@ -122,7 +122,7 @@ python crawler/run.py --full
 
 # 同步到数据库
 cd app/server
-node sync_db.js          # 生成缩略图 + WebP + 建库导入
+node sync_db.js --full   # 首次完整导入；默认模式生成图片衍生物并建表/补列
 ```
 
 ### 3. 本地开发
@@ -139,18 +139,7 @@ npm run dev              # http://localhost:5173
 
 ### 4. 生产部署
 
-```bash
-# 构建前端
-cd app/client
-npm run build
-
-# PM2 启动（零停机）
-pm2 start app/server/src/index.js --name roco -i 2
-pm2 save && pm2 startup
-
-# 一键更新
-./deploy.sh
-```
+先阅读 `docs/operations/DEPLOY.md`。`git push` 只更新远程仓库；服务器实际部署、PM2/Nginx 操作和数据同步必须分别验证并获得授权。
 
 ---
 
@@ -169,7 +158,7 @@ pm2 save && pm2 startup
 ### 任务 2：修改数据库表结构
 
 1. 修改 `app/server/src/db/schema.sql`，添加/修改字段
-2. 运行 `node sync_db.js`，自动迁移缺失列（无需删库重建）
+2. 在 `app/server/` 运行 `node sync_db.js`，自动建表/补列（无需完整导入）
 
 ### 任务 3：添加图片预览功能
 
@@ -304,7 +293,7 @@ pm2 save && pm2 startup
 - `md:` (768px) — 导航栏切换
 - `lg:` (1024px) — 平板 → 桌面过渡
 
-详见 [app/client/RESPONSIVE.md](./app/client/RESPONSIVE.md)
+详见 [app/client/RESPONSIVE.md](../../app/client/RESPONSIVE.md)
 
 ---
 
@@ -312,7 +301,7 @@ pm2 save && pm2 startup
 
 ### Q1: 数据库列缺失怎么办？
 
-**A**: 修改 `app/server/src/db/schema.sql`，添加缺失的字段，然后运行 `node sync_db.js` 自动迁移。
+**A**：修改 `app/server/src/db/schema.sql`，然后在 `app/server/` 运行 `node sync_db.js` 建表/补列；无需 `--full`。
 
 ### Q2: 图片不显示怎么办？
 

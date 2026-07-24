@@ -1,7 +1,7 @@
 # RocoTools TODO
 
 > 更新时间：2026-07-24
-> 当前状态：planned
+> 当前状态：working-tree
 > 当前优先级：文档一致性 → 功能实现 → CI / 性能 / 安全专项
 
 ## 已确认的工作原则
@@ -35,67 +35,67 @@
 
 ### 2. 合并可移植工程上下文
 
-- [ ] 审核 `eachzhang/codex/context-handoff`。
-- [ ] 决定是否合并到 `main`。
+- [x] 审核 `eachzhang/codex/context-handoff`。
+- [x] 已决定并 fast-forward 合并到 `main`，远程 `main` 为 `848207a`。
 - [ ] 合并后从新任务验证根目录 `AGENTS.md` 自动生效。
-- [ ] 验证 `$rocotools-context-handoff` 可以从仓库 Skill 列表调用。
+- [x] 验证 `$rocotools-context-handoff` 可以从仓库 Skill 列表调用。
 - [ ] 验证新电脑能按 `docs/ai/START_HERE.md` 恢复上下文。
 
 ### 3. 解决文档漂移
 
 #### README
 
-- [ ] 将当前数据口径统一为 374 个去重精灵、494 个形态、495 个技能、18 个属性、15 个蛋组、30 个性格。
-- [ ] 明确普通 `node sync_db.js` 默认只建表和补列。
-- [ ] 明确只有 `node sync_db.js --full` 才执行完整数据导入和后处理。
-- [ ] 修正 `DEPLOY.md` 被 Git 忽略后产生的无效跨电脑链接。
-- [ ] 区分当前功能、历史版本和未来规划。
+- [x] 将当前数据口径统一为 374 个去重精灵、494 个形态、495 个技能、18 个属性、15 个蛋组、30 个性格。
+- [x] 明确普通 `node sync_db.js` 默认生成图片衍生物并建表/补列，但不导入 JSON。
+- [x] 明确只有 `node sync_db.js --full` 才执行完整数据导入和后处理。
+- [x] 修正被 Git 忽略的旧部署文档所产生的无效跨电脑链接。
+- [x] 区分当前功能、历史版本和未来规划。
 
 #### SCRIPTS.md
 
-- [ ] 先处理当前仅行尾层面的工作区差异，避免混入正文修改。
-- [ ] 删除已于 `b1f2a83` 删除的 `app/server/test_api.js` 说明。
-- [ ] 修正 `sync_db.js` 默认模式和 `--full` 模式。
-- [ ] 区分代码部署、数据同步、完整导入和服务器数据拉取。
-- [ ] 修正“git push 后自动部署”的绝对化描述，以服务器实际部署机制为准。
+- [x] 处理仅行尾层面的工作区差异，确认正文哈希未变化。
+- [x] 删除 `b1f2a83` 已移除的旧 API 测试脚本说明。
+- [x] 修正 `sync_db.js` 默认模式和 `--full` 模式。
+- [x] 区分代码部署、数据同步、完整导入和服务器数据拉取。
+- [x] 修正把 `git push` 等同生产部署的错误描述，以服务器实际部署机制为准。
 
 #### 部署文档
 
-- [ ] 将脱敏后的正式部署说明迁移到受 Git 管理的 `docs/operations/DEPLOY.md`。
-- [ ] 保持真实用户名、服务器地址、密钥、密码和 `.env` 在 Git 外。
-- [ ] 记录服务器实际 `deploy.sh` 行为。
-- [ ] 明确前端构建会覆盖 `app/server/public/`。
-- [ ] 明确什么时候 reload PM2，什么时候不需要 reload。
-- [ ] 明确当前部署是否执行数据库备份、完整性校验或 `sync_db.js`。
-- [ ] README 和工程上下文统一指向新的正式部署文档。
+- [x] 将脱敏后的正式部署说明迁移到受 Git 管理的 `docs/operations/DEPLOY.md`。
+- [x] 保持真实用户名、服务器地址、密钥、密码和 `.env` 在 Git 外。
+- [x] 记录服务器实际 `deploy.sh` 行为。
+- [x] 明确前端构建会覆盖 `app/server/public/`。
+- [x] 明确什么时候 reload PM2，什么时候不需要 reload。
+- [x] 明确当前部署不执行数据库备份、完整性校验或 `sync_db.js`。
+- [x] README 和工程上下文统一指向新的正式部署文档。
 
 #### 功能与架构文档
 
-- [ ] 将 `docs/feedback.md` 从“待开发”改为 `deployed`，并补充真实入口和 API。
-- [ ] 更新 `docs/ARCHITECTURE.md` 中 466+/469+ 等旧统计。
-- [ ] 更新 `app/README.md` 中 `sync_db.js` 的旧行为描述。
-- [ ] 更新 `.ai-memory.md` 中的旧统计、部署描述和 Service Worker 待办。
-- [ ] 保留 CHANGELOG 的历史事实；旧统计需要标明当时口径，不直接改写历史。
-- [ ] 补充 Q 版头像相关 CHANGELOG 记录。
-- [ ] 更新 `DOC_RULES.md` 的正式文档索引。
-- [ ] 全仓搜索并消除冲突的状态、数量、路径和命令。
+- [x] 将 `docs/feedback.md` 更新为 `deployed`，并补充真实入口、API、存储和风险。
+- [x] 更新 `docs/ARCHITECTURE.md` 中的旧统计为当前口径。
+- [x] 更新 `app/README.md` 中 `sync_db.js` 的旧行为描述。
+- [x] 更新 `.ai-memory.md` 中的旧统计、部署描述、敏感源站地址和 Service Worker 待办。
+- [x] 保留 CHANGELOG 的历史事实；旧统计标明当时口径，不直接改写历史。
+- [x] 补充 Q 版头像相关 CHANGELOG 记录。
+- [x] 更新 `DOC_RULES.md` 的正式文档索引。
+- [x] 全仓搜索并消除受维护文档中冲突的状态、数量、路径和命令。
 
 #### AI 状态与风险
 
-- [ ] 文档修复完成后更新 `docs/ai/STATUS.md`。
-- [ ] 更新 `docs/ai/HANDOFF.md` 的分支、commit、验证和下一步。
-- [ ] 只有所有相关文档完成核验后，才将 `RISK_REGISTER.md` 的 M-06 从 `open` 更新为 `mitigated`。
+- [x] 文档修复完成后更新 `docs/ai/STATUS.md`。
+- [x] 更新 `docs/ai/HANDOFF.md` 的分支、基准、验证和下一步。
+- [x] 所有相关文档完成核验后，将 `RISK_REGISTER.md` 的 M-06 更新为 `mitigated`。
 
 ### 4. 文档修复验收
 
-- [ ] `git diff --check` 通过。
-- [ ] 所有 Markdown 本地链接存在。
-- [ ] 全仓不再引用已删除的 `test_api.js`。
-- [ ] 全仓对 `sync_db.js` 默认行为描述一致。
-- [ ] 当前数据统计口径一致。
-- [ ] 不包含密码、Token、JWT 密钥、生产数据库或用户隐私数据。
-- [ ] 文档修改不触及产品源码、数据库 schema 或运行数据。
-- [ ] 提交并推送独立文档分支。
+- [x] `git diff --check` 通过。
+- [x] 所有受 Git 管理的 Markdown 本地链接存在。
+- [x] 受维护文档不再引用已删除的旧 API 测试脚本。
+- [x] 全仓对 `sync_db.js` 默认行为描述一致。
+- [x] 当前数据统计口径一致；CHANGELOG 与爬虫报告保留并标注历史/生成快照口径。
+- [x] 不包含密码、Token、JWT 密钥、生产数据库或用户隐私数据。
+- [x] 文档修改不触及产品源码、数据库 schema 或运行数据。
+- [ ] 提交并推送独立文档分支（完成验证后执行）。
 
 ## P1：优先实现产品功能
 

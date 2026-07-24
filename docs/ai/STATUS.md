@@ -1,8 +1,9 @@
 # RocoTools 功能状态
 
 > 最近核验：2026-07-24
-> 产品基准 main：`419a62a553b2eab1e72bf9348eb140347707a136`
-> 当前上下文提交基准：`df1e51ff7c4ecde4c7d450b8a63d64708d3dee22`（后续提交以 Git 历史为准）
+> 仓库 `main`：`848207a9561c43146c9cf6223c6f4829b22eec88`
+> 产品代码基准：`419a62a553b2eab1e72bf9348eb140347707a136`
+> 当前文档修复分支基准：`848207a9561c43146c9cf6223c6f4829b22eec88`
 > 状态词：`deployed`、`committed`、`working-tree`、`planned`、`deprecated`
 
 ## 已验证状态
@@ -10,27 +11,27 @@
 | 功能/能力 | 状态 | Git 证据 | 验证方式 | 备注 |
 |---|---|---|---|---|
 | V1.0 核心站点 | deployed | `7d867be` | 站点 HTTP 200 | 用户端、管理端、爬虫和单库链路 |
-| 用户反馈 | deployed | `3772d83` 等 | `/api/feedbacks/enabled` HTTP 200 | 文档仍错误标记“待开发” |
-| Service Worker / PWA | deployed | `343b6d1`、`cf0d63e` | `sw.js`、manifest HTTP 200 | AI memory 待办已过期 |
+| 用户反馈 | deployed | `b5234ca` 等 | `/api/feedbacks/enabled` HTTP 200 | 实现文档已按当前代码修正 |
+| Service Worker / PWA | deployed | `343b6d1`、`cf0d63e` | `sw.js`、manifest HTTP 200 | AI memory 已修正 |
 | BWIKI 新版适配 | committed | `dd4faea` | Git 与代码 | 线上构建日期匹配，但无生产 SHA |
 | 命定花种增强 | committed | `15fc601` | Git 与代码 | 线上页面可访问，未做管理操作 |
 | 技能课题抓取 | committed | `b51f526` | Git 与脚本 | 独立两阶段脚本 |
 | Q 版头像 | deployed | `419a62a` | 线上邻居 API 返回 `avatar_url`，线上精灵详情构建包含该字段 | 生产 SHA 仍未知 |
 | 管理端 Excel 整库导出 | committed | `550eb4a` | 路由与前端代码 | 不等于用户端报告导出 |
-| 可移植 Agent 与上下文交接 Skill | committed | `a5f2ba4` | Agent/Skill 校验、客户端构建、后端语法、SQLite 核验 | 位于功能分支，未合并或部署 |
+| 可移植 Agent 与上下文交接 Skill | committed | `a5f2ba4`～`848207a` | 已合并并推送到 `main`，上下文校验通过 | 尚未通过服务器 SHA 证明部署 |
 | 双库隔离与发布 | planned | 无 | 全仓与全 Git 历史无相关符号 | 旧安全报告中的未提交实现不在当前仓库 |
 | 精灵对比 | planned | 无 | README/AI memory 待办 | 范围待定义 |
 | 用户端 Excel/PDF 报告 | planned | 无 | 待办与现代码对比 | 与管理端整库导出区分 |
+| 文档一致性修复 | working-tree | `eachzhang/codex/docs-drift` | 链接、命令、统计、状态和敏感信息扫描 | 待提交推送 |
 
 ## 当前仓库状态基线
 
-- 产品基准分支：`main`，本地 `main` 与 `origin/main` 均为 `419a62a`。
-- 当前工作分支：`eachzhang/codex/context-handoff`，HEAD 为 `df1e51f`，相对 `main` 领先 3 个同组 Codex 上下文提交。
-- TODO 及生产事实文档已整理到 `eachzhang/codex/context-handoff`，状态为 `committed`。
-- 2026-07-23 上下文核验开始时工作区干净；当前 `SCRIPTS.md` 仍有既有行尾状态。
-- 没有 stash。
-- 没有包含双库实现的其他可见分支。
-- “可移植 Agent 与上下文交接 Skill”位于当前功能分支，状态为 `committed`；尚未合并或部署。
+- `main` 与 `origin/main` 均为 `848207a`；产品代码最新提交仍为 `419a62a`。
+- 当前工作分支：`eachzhang/codex/docs-drift`，从 `848207a` 创建。
+- 文档一致性修复当前为 `working-tree`，不含产品源码、schema 或运行数据。
+- `SCRIPTS.md` 原行尾状态已通过工作区/索引哈希一致性确认并清除。
+- 没有 stash；没有包含双库实现的其他可见分支。
+- 可移植 Agent 与上下文交接 Skill 已合并并推送到 `main`，状态为 `committed`；生产部署仍未通过服务器 SHA 验证。
 
 ## 线上只读证据
 

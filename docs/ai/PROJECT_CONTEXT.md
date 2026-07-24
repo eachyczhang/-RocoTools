@@ -1,7 +1,7 @@
 # RocoTools 工程上下文
 
-> 最近核验：2026-07-23
-> 基准提交：`419a62a553b2eab1e72bf9348eb140347707a136`
+> 最近核验：2026-07-24
+> 仓库基准提交：`848207a9561c43146c9cf6223c6f4829b22eec88`（产品代码基准仍为 `419a62a`）
 
 ## 项目定位
 
@@ -30,7 +30,7 @@ BWIKI
 | 后端服务 | `app/server/src/` | 公开 API、服务层、缓存、鉴权和静态资源 fallback |
 | 管理路由 | `app/server/src/routes/admin/` | CRUD、上传、素材、反馈、备份、Excel、爬取预览 |
 | 前端 | `app/client/src/` | 13 个用户路由、登录及 17 个管理业务页面 |
-| 运维 | `deploy.sh`、`nginx*.conf`、`ecosystem.config.js` | 构建、Nginx、PM2 双实例和发布 |
+| 运维 | `docs/operations/DEPLOY.md`、`nginx*.conf`、`ecosystem.config.js` | 脱敏部署说明、Nginx、PM2 双实例；服务器 `deploy.sh` 在 Git 外 |
 | 工程规则 | `AGENTS.md`、`docs/ai/`、`.agents/skills/` | Agent 行为、状态、风险与跨电脑交接 |
 
 ## 核心数据
@@ -75,7 +75,7 @@ BWIKI
 
 - 单一数据库入口为 `app/server/src/db/connection.js`。
 - schema 变更先更新 `app/server/src/db/schema.sql`。
-- 普通 `node sync_db.js` 默认只建表/补列；`--full` 才执行完整导入。
+- 普通 `node sync_db.js` 默认生成图片衍生物并建表/补列，但不导入 JSON；`--full` 才执行完整导入和后处理。
 - 赛季、活动和运营数据由管理端维护。
 - `.env`、数据库、上传素材、用户反馈和生产数据不得提交。
 - 未经授权不执行生产部署、迁移、恢复、删除、密钥轮换或全量同步。
@@ -89,5 +89,5 @@ BWIKI
 - `data/FIELDS.md`
 - `data/STRUCTURE_RULES.md`
 - `SCRIPTS.md`
-- `DEPLOY.md`
+- `docs/operations/DEPLOY.md`
 - `CHANGELOG.md`

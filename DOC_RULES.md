@@ -7,7 +7,7 @@
 
 ## 上次整理时间
 
-**2026-05-31 22:50 CST**
+**2026-07-24 CST**
 
 ---
 
@@ -18,10 +18,12 @@
 | 文件 | 用途 | 整理规则 |
 |------|------|----------|
 | [README.md](./README.md) | 项目总览（功能/技术栈/结构/API/快速开始） | 新增页面/API/核心特性时更新；保持文档索引表完整 |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志（V1.0起，按模块分类记录变更） | 每次发布新版本时更新；按版本号规范记录 |
-| [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（用途/参数/顺序/注意事项） | 新增脚本或修改 sync_db 流程时更新；保持执行顺序速查表准确 |
-| [DEPLOY.md](./DEPLOY.md) | 服务器部署指南（环境/构建/Nginx/自动部署/排查） | 部署流程或服务器环境变更时更新；禁止包含真实IP/密码 |
-| [DOC_RULES.md](./DOC_RULES.md) | 本文件 — 文档整理规则与记录 | 每次整理文档后更新"上次整理时间"；新增 md 文件时补充到清单 |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志（V1.0 起，按模块分类记录变更） | 保留历史事实；发布新版本或补充遗漏记录时更新 |
+| [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（用途/参数/顺序/注意事项） | 新增脚本或修改同步流程时更新；与 `scripts/README.md` 对齐 |
+| [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南 | 部署事实变化时更新；禁止包含真实主机、用户、密码或密钥 |
+| [DOC_RULES.md](./DOC_RULES.md) | 本文件：文档整理规则与记录 | 每次系统性整理文档后更新时间和索引 |
+| [AGENTS.md](./AGENTS.md) | RocoTools 仓库级 Agent 行为与交接规则 | 工程级工作流或权限边界变化时更新 |
+| [.ai-memory.md](./.ai-memory.md) | 历史工程记忆和检索线索 | 不作为当前状态真相；发现明确漂移或敏感信息时修正 |
 
 ### scripts/
 
@@ -56,6 +58,14 @@
 | [docs/PATCH_NOTES_TABLE_RULES.md](./docs/PATCH_NOTES_TABLE_RULES.md) | 公告表格展示规范（列数/排序/图标/样式/各模块格式） | 公告脚本表格格式变更时更新 |
 | [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（属性色号/关键词映射） | 新增高亮关键词或修改颜色时更新 |
 | [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Git 提交规范（commit message 格式/pre-commit 检查项/绕过方式） | Git hooks 规则变更时更新 |
+| [docs/feedback.md](./docs/feedback.md) | 已上线用户反馈模块的实现、API、附件边界和风险 | 反馈入口、接口、存储或状态变化时更新 |
+| [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南 | 部署脚本、PM2、Nginx 或发布边界变化时更新 |
+| [docs/ai/START_HERE.md](./docs/ai/START_HERE.md) | AI 工程上下文入口 | 启动顺序和交接规则变化时更新 |
+| [docs/ai/PROJECT_CONTEXT.md](./docs/ai/PROJECT_CONTEXT.md) | 当前架构、术语和数据口径 | 稳定工程事实变化时更新 |
+| [docs/ai/STATUS.md](./docs/ai/STATUS.md) | deployed/committed/working-tree/planned 状态 | 功能状态或验证证据变化时更新 |
+| [docs/ai/RISK_REGISTER.md](./docs/ai/RISK_REGISTER.md) | 风险、证据和剩余事项 | 风险状态或证据变化时更新 |
+| [docs/ai/TODO.md](./docs/ai/TODO.md) | 当前优先级与完成定义 | 优先级、范围或完成状态变化时更新 |
+| [docs/ai/HANDOFF.md](./docs/ai/HANDOFF.md) | 当前分支、验证、下一步和阻塞项 | 每次工程任务结束前更新 |
 
 ### docs/game-notes/
 
@@ -137,4 +147,4 @@
 2. **保持一致性**：SCRIPTS.md 和 scripts/README.md 内容应一致（后者更详细）
 3. **game-notes 只记录游戏设定**：不记录实现细节，实现细节放 ADMIN_RULES.md
 4. **AI Skills 文档**：面向 AI 助手，侧重"如何做"而非"是什么"
-5. **.ai-memory.md**：由 AI 自动维护，不纳入本规则管理范围
+5. **.ai-memory.md**：仅作为历史检索线索；当前状态以 `docs/ai/` 为准，但发现明确漂移或敏感信息时仍需修正

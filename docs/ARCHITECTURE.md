@@ -1,6 +1,6 @@
 # RocoTools 工程架构设计图
 
-> 最后更新：2026-05-24
+> 最后核验：2026-07-24
 > 本文档使用 Mermaid 语法，可在 GitHub / VS Code / 任何支持 Mermaid 的 Markdown 渲染器中查看。
 
 ---
@@ -33,7 +33,7 @@ graph TB
     Crawler -->|"JSON/图片"| Backend
     Backend -->|"PM2 部署"| TencentCloud
     Frontend -->|"Nginx 托管"| TencentCloud
-    RocoTools -->|"git push"| GitHub
+    RocoTools -->|"git push（仅更新远程仓库）"| GitHub
 ```
 
 ---
@@ -554,8 +554,8 @@ flowchart TD
 graph TD
     subgraph Core["核心数据实体"]
         Element["🔥 属性 (18)"]
-        Skill["⚡ 技能 (469+)"]
-        Pet["🐾 精灵 (466+)"]
+        Skill["⚡ 技能 (495)"]
+        Pet["🐾 精灵 (374编号 / 494形态)"]
         EggGroup["🥚 蛋组 (15)"]
         Nature["💫 性格 (30)"]
     end

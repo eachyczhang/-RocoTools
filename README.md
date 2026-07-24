@@ -56,20 +56,20 @@
 │   └── utils/              # 下载工具 + 校验报告
 ├── data/                   # 爬取数据（JSON + 图片，不纳入 git）
 │   ├── elements/           # 属性克制关系（18 种）
-│   ├── skills/             # 技能数据（469+）
+│   ├── skills/             # 技能数据（当前数据库 495）
 │   ├── eggs/               # 蛋组数据（15 组）
-│   ├── pets/               # 精灵数据（466+）
+│   ├── pets/               # 精灵数据（374 个编号 / 494 个形态）
 │   └── public/             # 图片静态资源
 ├── app/
 │   ├── server/             # Express 后台（SQLite + RESTful API）
-│   ├── src/
-│   │   ├── routes/     # API 路由
-│   │   │   └── admin/  # 管理端（模块化：14 个子文件）│   │   │   ├── services/   # 数据查询层
+│   │   ├── src/
+│   │   │   ├── routes/     # API 路由（含模块化 admin/）
+│   │   │   ├── services/   # 数据查询层
 │   │   │   └── db/         # 数据库管理
 │   │   ├── scripts/        # 工具脚本（进化链同步等）
 │   │   ├── gen_thumbnails.js  # 缩略图生成
 │   │   ├── gen_webp.js     # WebP 批量转换
-│   │   └── sync_db.js      # 一键同步（缩略图+WebP+建表+导入+进化链）
+│   │   └── sync_db.js      # 默认图片处理+建表/补列；--full 才完整导入
 │   └── client/             # Vue3 前端（Vite + TailwindCSS）
 │       ├── RESPONSIVE.md   # 响应式适配规范
 │       └── DESIGN.md       # 视觉设计规范
@@ -79,7 +79,7 @@
 │   └── game-notes/         # 游戏设定笔记
 ├── .dev/skills/            # AI Skills（开发参考）
 ├── nginx.conf              # Nginx 站点配置（Brotli + 长缓存）
-└── deploy.sh               # 一键部署脚本
+└── docs/operations/DEPLOY.md # 脱敏、受 Git 管理的部署说明
 ```
 
 ---
@@ -106,7 +106,7 @@ python crawler/run.py --full
 # 3. 初始化后台
 cd app/server
 npm install
-node sync_db.js          # 生成缩略图 + WebP + 建库导入 + 进化链同步
+node sync_db.js --full   # 首次完整导入；默认模式生成图片衍生物并建表/补列
 
 # 4. 启动后台
 npm run dev              # http://localhost:3000
@@ -119,18 +119,19 @@ npm run dev              # http://localhost:5173
 
 ### 生产部署
 
+首次部署或人工验证可执行：
+
 ```bash
-# 构建前端
-cd app/client && npm run build
+# 构建前端；输出会清空并重建 app/server/public/
+cd app/client && npm install && npm run build
 
-# PM2 启动（零停机，含日志管理）
-cd app/server && pm2 start ecosystem.config.js
-pm2 save && pm2 startup
-pm2 install pm2-logrotate   # 日志轮转插件（首次部署执行一次）
-
-# 一键更新
-./deploy.sh
+# 首次启动 PM2
+cd ../server && npm install --production
+pm2 start ecosystem.config.js
+pm2 save
 ```
+
+当前服务器使用 Git 外的独立 `deploy.sh` 拉取 `origin/main` 并按目录差异构建。`git push` 只更新远程仓库，不代表服务器已经部署。完整行为、验证与回滚边界见 [部署与运维指南](./docs/operations/DEPLOY.md)。
 
 ---
 
@@ -204,7 +205,7 @@ BWIKI → crawler(采集+清洗) → data/(JSON+图片) → sync_db.js → SQLit
 |------|------|
 | [DOC_RULES.md](./DOC_RULES.md) | 文档整理规则（所有 md 文件清单、维护规则、整理记录） |
 | [SCRIPTS.md](./SCRIPTS.md) | 脚本执行手册（爬虫/同步/图片/构建的用途、参数和顺序） |
-| [DEPLOY.md](./DEPLOY.md) | 服务器部署指南（环境安装/构建/Nginx/自动部署/排查） |
+| [docs/operations/DEPLOY.md](./docs/operations/DEPLOY.md) | 脱敏部署与运维指南（构建、PM2、Nginx、服务器脚本边界） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 工程架构设计图（12张 Mermaid 图：系统架构/数据流/ER图/路由/部署等） |
 | [docs/TEXT_HIGHLIGHT_COLORS.md](./docs/TEXT_HIGHLIGHT_COLORS.md) | 文本高亮颜色规范（18属性色号+关键词映射表） |
 | [app/ADMIN_RULES.md](./app/ADMIN_RULES.md) | 管理端业务规则（缓存/命名/校验/图片/进化条件/Nginx等） |

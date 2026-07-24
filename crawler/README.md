@@ -47,7 +47,7 @@ python crawler/scrapers/fetch_pet_detail.py
 |------|------|------|
 | 1 | fetch_element_chart.py | 属性克制关系（18 种） |
 | 2 | process_element_chart.py | 属性结构化 + 图标本地化 |
-| 3 | fetch_skill_list.py | 技能列表 + 图标（469+） |
+| 3 | fetch_skill_list.py | 技能列表 + 图标（生成报告为爬虫快照；当前 SQLite 为 495） |
 | 4 | fetch_egg_group.py | 蛋组归属数据（15 组） |
 | 5 | fetch_pet_list.py | 精灵列表 + 注入 egg_groups |
 | 6 | fetch_pet_detail.py | 精灵详情 + 立绘 + 映射刷新 |
@@ -69,7 +69,7 @@ python crawler/scrapers/fetch_pet_detail.py
 
 1. 各爬虫脚本运行后自动生成 `*_report.md` 校验报告
 2. `run.py` 完成后打印全局数据完整性汇总
-3. 检测到 `app/server/node_modules` 存在时，自动同步数据到 SQLite（含进化链同步）
+3. 检测到 `app/server/node_modules` 存在时，先自动备份，再直接运行数据库 init + import；不会执行 `sync_db.js --full` 的进化链、最终形态和默认课题等全部后处理
 
 ## 数据产出
 
