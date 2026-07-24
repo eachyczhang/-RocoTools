@@ -22,13 +22,13 @@
 | 双库隔离与发布 | planned | 无 | 全仓与全 Git 历史无相关符号 | 旧安全报告中的未提交实现不在当前仓库 |
 | 精灵对比 | planned | 无 | README/AI memory 待办 | 范围待定义 |
 | 用户端 Excel/PDF 报告 | planned | 无 | 待办与现代码对比 | 与管理端整库导出区分 |
-| 文档一致性修复 | working-tree | `eachzhang/codex/docs-drift` | 链接、命令、统计、状态和敏感信息扫描 | 待提交推送 |
+| 文档一致性修复 | committed | `7735ecb` | 链接、命令、统计、状态和敏感信息扫描通过 | 独立分支，尚未合并 `main` |
 
 ## 当前仓库状态基线
 
 - `main` 与 `origin/main` 均为 `848207a`；产品代码最新提交仍为 `419a62a`。
 - 当前工作分支：`eachzhang/codex/docs-drift`，从 `848207a` 创建。
-- 文档一致性修复当前为 `working-tree`，不含产品源码、schema 或运行数据。
+- 文档一致性修复已提交到 `eachzhang/codex/docs-drift`，不含产品源码、schema 或运行数据。
 - `SCRIPTS.md` 原行尾状态已通过工作区/索引哈希一致性确认并清除。
 - 没有 stash；没有包含双库实现的其他可见分支。
 - 可移植 Agent 与上下文交接 Skill 已合并并推送到 `main`，状态为 `committed`；生产部署仍未通过服务器 SHA 验证。
