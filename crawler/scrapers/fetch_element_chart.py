@@ -15,7 +15,6 @@ import os
 import re
 import sys
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -26,15 +25,15 @@ API_URL = "https://wiki.biligame.com/rocom/api.php"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+UTILS_DIR = os.path.join(PROJECT_ROOT, "crawler", "utils")
+sys.path.insert(0, UTILS_DIR)
+_session = None
+
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data")
 
 CSV_OUTPUT = os.path.join(OUTPUT_DIR, "elements", "element_chart.csv")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "elements", "element_chart.json")
 ICON_DIR = os.path.join(OUTPUT_DIR, "public", "elements", "icons")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
 
 # 全部 18 种属性
 ALL_ELEMENTS = [
@@ -247,6 +246,10 @@ def build_element_data() -> list[dict]:
 def verify_from_wiki():
     """可选：从 BWIKI 克制计算器页面验证数据（当前数据已从页面提取确认）"""
     print("[INFO] 正在从 BWIKI 克制计算器验证属性数据...")
+    global _session
+    from polite_request import create_session, fetch_json
+
+    _session = _session or create_session()
     params = {
         "action": "parse",
         "page": "克制计算器",
@@ -255,9 +258,7 @@ def verify_from_wiki():
         "utf8": 1,
     }
     try:
-        resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
+        data = fetch_json(_session, API_URL, params=params)
         html = data["parse"]["text"]["*"]
         soup = BeautifulSoup(html, "lxml")
 

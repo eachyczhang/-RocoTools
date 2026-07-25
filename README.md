@@ -122,6 +122,17 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
+前后端依赖均已安装后，也可以从仓库根目录一键启动：
+
+```bash
+npm run dev
+npm run dev:check        # 只检查依赖与启动条件
+```
+
+入口会同时启动 Express API（`http://localhost:3000/api`）和 Vite 前端（`http://localhost:5173/rocotools/`），按 `Ctrl+C` 会同时停止两个进程。首次使用仍需分别安装 `app/server` 与 `app/client` 的依赖。
+
+S3 等赛季数据需要在保留人工编辑的前提下更新时，使用 [BWIKI 逐实体暂存与 JSON 导入](./docs/features/wiki-staging-import.md)，不要直接用全量导入覆盖本地库。
+
 ### 生产部署
 
 首次部署或人工验证可执行：

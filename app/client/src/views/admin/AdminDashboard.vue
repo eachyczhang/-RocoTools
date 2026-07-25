@@ -196,6 +196,7 @@ const navCards = [
   { path: '/admin/nav-tabs', title: '导航标签', desc: '管理用户端顶部导航栏标签显示' },
   { path: '/admin/feedbacks', title: '用户反馈', desc: '查看和管理用户提交的反馈建议' },
   { path: '/admin/conflicts', title: '数据审查', desc: '处理爬虫与手动编辑的数据冲突' },
+  { path: '/admin/wiki-review', title: 'BWIKI Diff 审核', desc: '按技能、特性、精灵顺序逐个确认暂存差异' },
 ]
 
 // 备份

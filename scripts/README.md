@@ -97,9 +97,9 @@ python crawler/scrapers/fetch_pet_detail.py
 
 | 参数 | 值 |
 |------|------|
-| 详情页并发 | 5 线程，0.5s/线程间隔 |
+| 详情页并发 | 1；基础批次使用精灵筛选页，不逐个请求详情 |
 | 图片下载并发 | 10 线程，0.1s/线程间隔 |
-| 限流重试 | 60s × 次数（遇到 567/429） |
+| 限流处理 | 403/429/567 立即停止；瞬时网络错误有限退避 |
 | 步骤间冷却 | 2s |
 
 ### 故障恢复
@@ -439,6 +439,21 @@ node scripts/generate_patch_notes.js \
 ## 快速参考
 
 ```bash
+# === 本地开发 ===
+npm run dev
+npm run dev:check
+
+# === BWIKI 隔离式逐实体更新 ===
+python scripts/wiki_staging.py package  # 审核完成后生成仅含确认差异的线上发布包
+python scripts/wiki_staging.py clean    # 仅预览暂存清理；实际清理需 --apply --confirm CLEAN
+python scripts/wiki_staging.py fetch --all
+python scripts/wiki_staging.py fetch --all-pets  # 一次请求精灵筛选页，只暂存精灵基础字段
+python scripts/wiki_staging.py fetch --all-skills  # 只暂存全部技能，不下载图标
+python scripts/wiki_staging.py fetch-html --all --pet-list-html wiki-input/精灵筛选.html --skill-list-html wiki-input/技能查询.html  # 从浏览器保存文件离线暂存
+python scripts/wiki_staging.py compare         # 重新生成本地快照与逐字段差异
+python scripts/wiki_staging.py import          # dry-run
+python scripts/wiki_staging.py import --apply  # 备份后写入
+
 # === 爬虫（获取最新游戏数据） ===
 python crawler/run.py --full                   # 全量爬取（首次）
 python crawler/run.py --update                 # 增量更新（日常）

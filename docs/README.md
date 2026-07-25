@@ -13,6 +13,9 @@
 | 查看风险 | [风险登记](./ai/RISK_REGISTER.md) |
 | 查看待办 | [TODO](./ai/TODO.md) |
 | 查看部署边界 | [部署与运维](./operations/DEPLOY.md) |
+| 执行 BWIKI 版本更新 | [BWIKI 版本更新与服务器同步 SOP](./operations/BWIKI_VERSION_UPDATE.md) |
+| Dev 环境 BWIKI 比对与打包 | [BWIKI Dev Diff SOP](./operations/BWIKI_DEV_DIFF_SOP.md) |
+| 服务器 BWIKI 部署与回滚 | [BWIKI Server Deploy SOP](./operations/BWIKI_SERVER_DEPLOY_SOP.md) |
 
 ## 文档分类
 
@@ -25,6 +28,7 @@
 - [反制推荐](./features/counter-picks.md)：算法、评分、标签和接口。
 - [用户反馈](./features/feedback.md)：前后端入口、API、附件和风险。
 - [图鉴课题批量管理](./features/admin-achievements-batch.md)：页面、交互、API 和导航设计。
+- [BWIKI 逐实体暂存与 JSON 导入](./features/wiki-staging-import.md)：S3 数据抓取、逐字段审阅、备份与本地导入。
 
 ### 开发规范
 
@@ -51,6 +55,7 @@
 
 - [游戏规则索引](./game-notes/README.md)
 - [部署与运维](./operations/DEPLOY.md)
+- [BWIKI 版本更新与服务器同步 SOP](./operations/BWIKI_VERSION_UPDATE.md)：线上基线回拉、分版本审核、增量包发布、图片上传、验证与清理。
 
 ## 兼容入口
 

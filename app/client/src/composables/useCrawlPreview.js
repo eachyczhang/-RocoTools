@@ -22,9 +22,9 @@ export function useCrawlPreview() {
     crawlPreview.value = data
     crawlActiveVariant.value = 0
     isMinimized.value = false
-    // Initialize selections (all checked by default)
+    // 基础种族值先走精灵筛选 Diff；单精灵详情默认只选择描述、详情和技能。
     crawlSelections.value = data.crawled.map(c => ({
-      stats: !!(c.hp || c.atk || c.matk || c.def || c.mdef || c.speed),
+      stats: false,
       ability: !!c.ability_name,
       detail: !!(c.height || c.weight),
       skills: !!(c.skills && c.skills.length),

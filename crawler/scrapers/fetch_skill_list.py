@@ -1,7 +1,7 @@
 """
-洛克王国世界 BWIKI 技能筛选列表爬取
+洛克王国世界 BWIKI 技能查询列表爬取
 
-数据来源：https://wiki.biligame.com/rocom/技能筛选
+数据来源：https://wiki.biligame.com/rocom/技能查询
 爬取所有技能的图标、属性、分类、能耗、威力、效果等信息。
 
 输出：
@@ -16,7 +16,6 @@ import os
 import re
 import sys
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -27,16 +26,16 @@ API_URL = "https://wiki.biligame.com/rocom/api.php"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+UTILS_DIR = os.path.join(PROJECT_ROOT, "crawler", "utils")
+sys.path.insert(0, UTILS_DIR)
+_session = None
+
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "skills")
 ICON_DIR = os.path.join(PROJECT_ROOT, "data", "public", "skills", "icons")
 ELEMENT_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "elements", "element_chart_structured.json")
 
 CSV_OUTPUT = os.path.join(OUTPUT_DIR, "skill_list.csv")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "skill_list.json")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
 
 CSV_FIELDS = [
     "uid", "name", "element", "category", "cost", "power", "description", "version", "icon_url",
@@ -48,7 +47,10 @@ CSV_FIELDS = [
 # ============================================================
 
 def fetch_page_html(page_title: str) -> str:
-    import time
+    global _session
+    from polite_request import create_session, fetch_json
+
+    _session = _session or create_session()
     params = {
         "action": "parse",
         "page": page_title,
@@ -57,23 +59,14 @@ def fetch_page_html(page_title: str) -> str:
         "utf8": 1,
     }
     print(f"[INFO] 正在获取页面: {page_title}")
-    for attempt in range(1, 4):
-        resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-        if resp.status_code in (567, 429):
-            wait = 30 * attempt
-            print(f"  [RATE] 被限流({resp.status_code})，等待 {wait}s 后重试 ({attempt}/3)")
-            time.sleep(wait)
-            continue
-        resp.raise_for_status()
-        break
-    data = resp.json()
+    data = fetch_json(_session, API_URL, params=params)
     if "error" in data:
         raise RuntimeError(f"API error: {data['error']}")
     return data["parse"]["text"]["*"]
 
 
 def parse_skill_list(html: str) -> list[dict]:
-    """解析技能筛选页面表格"""
+    """解析技能查询页面表格"""
     soup = BeautifulSoup(html, "lxml")
 
     # 找目标表格
@@ -99,7 +92,10 @@ def parse_skill_list(html: str) -> list[dict]:
         # col[0]: 技能图标
         img_el = cells[0].find("img")
         icon_url = ""
+        source_id = None
         if img_el:
+            source_match = re.search(r"Skill[ _](\d+)", img_el.get("alt", ""), re.IGNORECASE)
+            source_id = source_match.group(1) if source_match else None
             src = img_el.get("src", "")
             # 去掉 thumb 尺寸后缀，获取原图
             if "/thumb/" in src:
@@ -116,6 +112,8 @@ def parse_skill_list(html: str) -> list[dict]:
             match = re.search(r"属性\s+(.+?)\.png", attr_img.get("alt", ""))
             if match:
                 element = match.group(1).strip()
+        if not element:
+            element = cells[2].get_text(strip=True)
 
         # col[3]: 技能分类（从 img alt）
         type_img = cells[3].find("img")
@@ -124,6 +122,8 @@ def parse_skill_list(html: str) -> list[dict]:
             match = re.search(r"技能分类\s+(.+?)\.png", type_img.get("alt", ""))
             if match:
                 category = match.group(1).strip()
+        if not category:
+            category = cells[3].get_text(strip=True)
 
         # col[4]: 能耗
         cost = _safe_int(cells[4].get_text(strip=True))
@@ -147,6 +147,7 @@ def parse_skill_list(html: str) -> list[dict]:
                 "description": description,
                 "version": version,
                 "icon_url": icon_url,
+                "source_id": source_id,
             })
 
     return skills
@@ -208,11 +209,11 @@ def save_json(skills: list[dict], filepath: str):
 
 def main():
     print("=" * 60)
-    print("洛克王国世界 BWIKI 技能筛选列表爬取")
+    print("洛克王国世界 BWIKI 技能查询列表爬取")
     print("=" * 60)
     print()
 
-    html = fetch_page_html("技能筛选")
+    html = fetch_page_html("技能查询")
     skills = parse_skill_list(html)
 
     if not skills:
@@ -290,8 +291,8 @@ def main():
     generate_report(
         output_dir=OUTPUT_DIR,
         report_name="skill_list_report.md",
-        title="技能筛选列表 - 完整性校验报告",
-        source="https://wiki.biligame.com/rocom/技能筛选",
+        title="技能查询列表 - 完整性校验报告",
+        source="https://wiki.biligame.com/rocom/技能查询",
         total=total,
         field_checks=field_checks,
     )

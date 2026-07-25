@@ -185,6 +185,24 @@ export const adminApi = {
   acceptAllConflicts: () => adminRequest('/conflicts/accept-all', { method: 'POST' }),
   rejectAllConflicts: () => adminRequest('/conflicts/reject-all', { method: 'POST' }),
 
+  // BWIKI staged diff review
+  wikiReviews: (view = 'differences', entity = 'skill', page = 1, pageSize = 1, refresh = false) => adminRequest(`/wiki-review?view=${encodeURIComponent(view)}&entity=${encodeURIComponent(entity)}&page=${encodeURIComponent(page)}&pageSize=${encodeURIComponent(pageSize)}${refresh ? '&refresh=1' : ''}`),
+  decideWikiReview: (entity, folderId, decision, fields = []) => adminRequest(`/wiki-review/${encodeURIComponent(entity)}/${encodeURIComponent(folderId)}/decision`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, fields }),
+  }),
+  associateWikiReviewPet: (folderId, localUid) => adminRequest(`/wiki-review/pet/${encodeURIComponent(folderId)}/decision`, {
+    method: 'POST',
+    body: JSON.stringify({ decision: 'associate-local-pet', local_uid: localUid }),
+  }),
+  wikiReviewAsset: (entity, folderId, assetKey) => {
+    const token = getToken()
+    return fetch(`${BASE}/wiki-review/${encodeURIComponent(entity)}/${encodeURIComponent(folderId)}/assets/${encodeURIComponent(assetKey)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).then(async res => {
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Asset request failed') }
+      return res.blob()
+    })
+  },
+
   // 批量更新
   batchUpdate: (table, updates) => adminRequest(`/data/${table}/batch`, {
     method: 'POST',

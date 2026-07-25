@@ -29,6 +29,7 @@ const crudRouter = require('./crud');
 const pikaRouter = require('./pika');
 const uploadRouter = require('./upload');
 const conflictsRouter = require('./conflicts');
+const wikiReviewRouter = require('./wikiReview');
 const backupRouter = require('./backup');
 const libraryRouter = require('./library');
 const mediaRouter = require('./media');
@@ -101,6 +102,9 @@ router.use(uploadRouter);
 
 // 数据审查（冲突处理）
 router.use(conflictsRouter);
+
+// BWIKI 暂存 Diff 审核
+router.use(wikiReviewRouter);
 
 // 数据库备份 / 恢复
 router.use(backupRouter);
