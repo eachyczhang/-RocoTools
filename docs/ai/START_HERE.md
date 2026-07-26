@@ -2,9 +2,18 @@
 
 此目录是受 Git 管理、可跨电脑携带的工程上下文。它替代仅存在于单机 `.codex/` 中的启动资料。
 
+完整启动只在新任务、恢复/交接、分支或外部状态变化以及高风险任务中执行。同一 Codex 任务内的连续追问和小范围修改复用最近一次验证结果，不重复启动话术、本文档链和 `verify-context.ps1`。
+
+快速通道下：
+
+- 普通问答直接回答；
+- 小改动只读相关文件并做一次定向验证；
+- 不重复全量 Git 状态、构建和 AI 文档更新；
+- 用户未要求时不 commit 或 push。
+
 ## 启动话术
 
-开始任何 RocoTools 任务时，第一条进度明确指向：
+需要完整启动时，第一条进度明确指向：
 
 > RocoTools 启动指向：`docs/ai/START_HERE.md` → `PROJECT_CONTEXT.md` → `STATUS.md` → `RISK_REGISTER.md` → `HANDOFF.md`。当前先验证上下文，尚未修改代码。
 
@@ -52,18 +61,18 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-context.ps1
 ## 结束流程
 
 1. 运行相关测试、构建或只读检查。
-2. 检查 `git status --short` 和变更范围。
-3. 更新 `HANDOFF.md`；优先级变化时同步更新 `TODO.md`，事实或风险变化时同步更新 `STATUS.md`、`RISK_REGISTER.md`。
-4. 记录基准 commit、分支、改动、验证、未验证、下一步和阻塞项。
-5. 最终答复明确指向：
+2. 完整开发、审查、发布或交接任务检查 `git status --short` 和变更范围；连续追问不重复检查。
+3. 只有产生需跨任务恢复的重要状态、事实、风险或明确交接点时更新 AI 文档。
+4. 必要时记录基准 commit、分支、改动、验证、未验证、下一步和阻塞项。
+5. 完整任务的最终答复明确指向：
 
 > RocoTools 结束指向：`docs/ai/HANDOFF.md`（下一步）→ `docs/ai/STATUS.md`（功能状态）→ `docs/ai/RISK_REGISTER.md`（风险与剩余事项）。
 
-如果任务没有改变工程状态，也必须说明上述文件“本次无需更新”，不得假称已经写入。
+普通问答、连续追问和未改变工程事实的小改动无需更新上述文件。
 
 ## 跨电脑要求
 
 - 稳定工作从 `main` 拉取。
-- 未完成工作必须使用功能分支、commit 和 push；stash 与未提交文件不会跨电脑。
+- 只有需要跨电脑恢复的未完成工作才必须使用功能分支、commit 和 push；stash 与未提交文件不会跨电脑。
 - `.env`、数据库、上传素材和用户数据不得进入 Git，按受控同步流程单独获取。
 - 在新电脑从仓库根目录启动 Codex，使根目录 `AGENTS.md` 自动生效。

@@ -72,6 +72,7 @@ data/**/_update_filter.json
 # ============================================================
 # 部署文档（仅本地使用）
 # ============================================================
+/wiki-input/
 DEPLOY.md
 !docs/operations/DEPLOY.md
 deploy.sh
@@ -85,6 +86,9 @@ app/server/root-static/*
 # 临时数据（本地使用，不入版本控制）
 # ============================================================
 temp/
+/tmp/
+data/wiki-staging/
+data/wiki-releases/
 scripts/.last_image_sync
 app/server/scripts/_cache_*
 scripts/ability-icon-tool/input/*

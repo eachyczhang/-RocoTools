@@ -17,7 +17,6 @@ import os
 import re
 import sys
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -28,12 +27,12 @@ API_URL = "https://wiki.biligame.com/rocom/api.php"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+UTILS_DIR = os.path.join(PROJECT_ROOT, "crawler", "utils")
+sys.path.insert(0, UTILS_DIR)
+_session = None
+
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "eggs")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "egg_group.json")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
 
 # 蛋组 ID 映射（与页面中 data-type 对应）
 EGG_GROUP_NAMES = [
@@ -60,7 +59,10 @@ EGG_GROUP_NAMES = [
 # ============================================================
 
 def fetch_page_html(page_title: str) -> str:
-    import time
+    global _session
+    from polite_request import create_session, fetch_json
+
+    _session = _session or create_session()
     params = {
         "action": "parse",
         "page": page_title,
@@ -69,16 +71,7 @@ def fetch_page_html(page_title: str) -> str:
         "utf8": 1,
     }
     print(f"[INFO] 正在获取页面: {page_title}")
-    for attempt in range(1, 4):
-        resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-        if resp.status_code in (567, 429):
-            wait = 30 * attempt
-            print(f"  [RATE] 被限流({resp.status_code})，等待 {wait}s 后重试 ({attempt}/3)")
-            time.sleep(wait)
-            continue
-        resp.raise_for_status()
-        break
-    data = resp.json()
+    data = fetch_json(_session, API_URL, params=params)
     if "error" in data:
         raise RuntimeError(f"API error: {data['error']}")
     return data["parse"]["text"]["*"]

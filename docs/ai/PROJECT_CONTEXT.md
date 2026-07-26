@@ -32,6 +32,7 @@ BWIKI
 | 前端 | `app/client/src/` | 13 个用户路由、登录及 17 个管理业务页面 |
 | 运维 | `docs/operations/DEPLOY.md`、`nginx*.conf`、`ecosystem.config.js` | 脱敏部署说明、Nginx、PM2 双实例；服务器 `deploy.sh` 在 Git 外 |
 | 工程规则 | `AGENTS.md`、`docs/ai/`、`.agents/skills/` | Agent 行为、状态、风险与跨电脑交接 |
+| BWIKI 暂存导入 | `scripts/wiki_staging.py`、`data/wiki-staging/`、`/admin/wiki-review` | 支持在线抓取或从浏览器 HTML/MediaWiki parse JSON 离线生成逐实体远程快照；按技能 → 特性 → 精灵分 Tab、逐条且阶段锁定审核；审核完成后可生成仅含确认差异、素材和 SHA-256 的独立线上发布包；受控清理命令默认预览、保护 pending 并保留发布包；备份后本地或服务器增量导入；仅确认新增实体后下载可用素材到暂存目录，并在审核卡片预览 |
 
 ## 核心数据
 

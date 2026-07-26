@@ -1,11 +1,8 @@
 """
-统一请求工具
+旧请求工具兼容入口。
 
-集中管理请求策略，防止被限流：
-- 模拟浏览器 User-Agent（随机轮换）
-- 随机请求间隔（2~5秒）
-- 限流自动重试（指数退避）
-- 统一 session 管理
+实际策略由 polite_request 提供：稳定项目标识、串行节流、有限退避，
+并在 403/429/567 或验证页出现时停止。保留本文件是为了兼容旧导入路径。
 """
 
 import random
@@ -107,3 +104,11 @@ def fetch_json(session: requests.Session, url: str, params: dict = None, **kwarg
     resp = request_with_retry(session, url, params=params, **kwargs)
     resp.raise_for_status()
     return resp.json()
+
+# 兼容旧的 ``from request import ...``；下列安全实现覆盖上方历史定义。
+from polite_request import (  # noqa: E402,F401
+    AccessBlockedError,
+    create_session,
+    fetch_json,
+    request_with_retry,
+)

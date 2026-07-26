@@ -1,12 +1,12 @@
 /**
  * Season Patch Notes Generator
- * 
+ *
  * Compare two season database snapshots and generate a formatted patch notes document.
  * Focuses on gameplay-relevant changes: skill balance, pet stats, abilities, new content.
- * 
+ *
  * Usage:
  *   node scripts/generate_patch_notes.js <old_db_path> <new_db_path> [--output <path>]
- * 
+ *
  * Example:
  *   node scripts/generate_patch_notes.js temp/seasons/season_S1_20260521.db temp/seasons/season_S2_20260524.db
  *   node scripts/generate_patch_notes.js temp/seasons/season_S1_20260521.db temp/seasons/season_S2_20260524.db --output temp/patch_S2.md
@@ -30,6 +30,7 @@ if (args.length < 2) {
 const oldDbPath = path.resolve(PROJECT_ROOT, args[0]);
 const newDbPath = path.resolve(PROJECT_ROOT, args[1]);
 const outputIdx = args.indexOf('--output');
+const stdoutOnly = args.includes('--stdout');
 const outputPath = outputIdx !== -1 && args[outputIdx + 1]
   ? path.resolve(PROJECT_ROOT, args[outputIdx + 1])
   : path.resolve(PROJECT_ROOT, 'temp', `patch_notes_${path.basename(newDbPath, '.db')}.md`);
@@ -121,6 +122,21 @@ try {
 // Pet thumb lookup
 const petThumbs = {};
 db2.prepare('SELECT uid, thumb_url FROM pets WHERE thumb_url IS NOT NULL').all().forEach(r => { petThumbs[r.uid] = r.thumb_url; });
+
+// Pet artwork lookup. Prefer paths recorded in the compared database because
+// imported BWIKI originals may exist before thumbnail/WebP derivatives.
+const petArtwork = {};
+try {
+  db2.prepare('SELECT pet_uid, image_default, image_shiny FROM pet_details').all()
+    .forEach(r => { petArtwork[r.pet_uid] = r; });
+} catch {}
+
+function petArtworkMd(uid, { shinyOnly = false } = {}) {
+  const artwork = petArtwork[uid] || {};
+  if (shinyOnly && artwork.image_shiny) return `![img:${artwork.image_shiny}]`;
+  const defaultUrl = artwork.image_default || petThumbs[uid];
+  return defaultUrl ? `![img:${defaultUrl}]` : `![pet:${uid}]`;
+}
 
 // --- Skills ---
 const skills1 = getRows(db1, 'skills', ['uid']);
@@ -280,17 +296,18 @@ w(`## 📊 更新概览`);
 w();
 w(`| 类别 | 数量 |`);
 w(`|------|------|`);
-w(`| 新增精灵 | ${newPets.length} 只 |`);
+if (newPets.length > 0) w(`| 新增精灵 | ${newPets.length} 只 |`);
 if (_summaryLegend > 0) w(`| 　传说精灵 | ${_summaryLegend} 只 |`);
 if (_summaryPass > 0) w(`| 　通行证精灵 | ${_summaryPass} 只 |`);
 if (_summarySeason > 0) w(`| 　赛季奇遇精灵 | ${_summarySeason} 只 |`);
 if (newShinyOnlyIds.length > 0) w(`| 　赛季奇遇异色精灵 | ${newShinyOnlyIds.length} 只 |`);
 if (newSkills.length > 0) w(`| 新增技能 | ${newSkills.length} 个 |`);
-w(`| 技能调整 | ${modifiedSkills.length} 个 |`);
-w(`| 精灵数值调整 | ${statChangedPets.length} 只 |`);
-if (statSupplementedPets.length > 0) w(`| 精灵个体值补充 | ${statSupplementedPets.length} 只 |`);
-w(`| 精灵特性调整 | ${abilityChangedPets.length} 只 |`);
-if (skillLearningAffectedUids.size > 0) {
+if (modifiedSkills.length > 0) w(`| 技能调整 | ${modifiedSkills.length} 个 |`);
+if (statChangedPets.length > 0) w(`| 精灵数值调整 | ${statChangedPets.length} 只 |`);
+if (abilityChangedPets.length > 0) w(`| 精灵特性调整 | ${abilityChangedPets.length} 只 |`);
+const SKILL_LEARNING_DETAIL_LIMIT = 80;
+const includeSkillLearningDetails = skillsAdded.length + skillsRemoved.length <= SKILL_LEARNING_DETAIL_LIMIT;
+if (skillLearningAffectedUids.size > 0 && includeSkillLearningDetails) {
   const addedUids = new Set(skillsAdded.map(r => r.pet_uid));
   const removedUids = new Set(skillsRemoved.map(r => r.pet_uid));
   w(`| 技能学习面变动 | ${skillLearningAffectedUids.size} 只（新增 ${addedUids.size} / 减少 ${removedUids.size}）|`);
@@ -332,8 +349,7 @@ function renderNewPetSection(groups, tag) {
     const statsStr = `HP **${finalForm.hp}** / 速度 **${finalForm.speed}** / 物攻 **${finalForm.atk}** / 魔攻 **${finalForm.matk}** / 物防 **${finalForm.def}** / 魔防 **${finalForm.mdef}** 　总计 **${finalForm.total}**`;
 
     // 图鉴图（常规 + 异色，同一行）
-    const defaultThumb = petThumbs[finalForm.uid] || `/public/pets/thumbs/${finalForm.uid}_default.webp`;
-    const thumbCell = `![img:${defaultThumb}] ![shiny:${finalForm.uid}]`;
+    const thumbCell = petArtworkMd(finalForm.uid);
 
     // 信息列：名称行 + 特性行 + 数值行（用 <br> 换行）
     const nameRow = `${chain}（${elemDisplay}系）${tagStr}`;
@@ -418,7 +434,6 @@ if (newShinyOnlyIds.length > 0) {
     const elemDisplay2 = subElemName
       ? `${elemIcon2}${elemName} / ${subElemIcon2}${subElemName}`
       : `${elemIcon2}${elemName}`;
-    const defaultThumb2 = petThumbs[pet.uid] || `/public/pets/thumbs/${pet.uid}_default.webp`;
     let abilityStr2 = '';
     if (pet.ability_name) {
       const abilityIconStr = abilityIcons[pet.uid] ? `![ability:${abilityIcons[pet.uid]}]` : '';
@@ -430,7 +445,7 @@ if (newShinyOnlyIds.length > 0) {
     if (abilityStr2) infoLines2.push(abilityStr2);
     infoLines2.push(statsStr2);
     // 图鉴列统一格式：常规图 + 异色图（同一行），与其他表格对齐
-    const thumbCell2 = `![img:${defaultThumb2}] ![shiny:${pet.uid}]`;
+    const thumbCell2 = petArtworkMd(pet.uid, { shinyOnly: true });
     if (!_shinyTableStarted) {
       w(`| <div style="min-width:130px;display:inline-block">图鉴</div> | <div style="min-width:360px;display:inline-block">精灵信息</div> |`);
       w(`|------|---------|`);
@@ -440,41 +455,24 @@ if (newShinyOnlyIds.length > 0) {
   }
 }
 
-// --- 全部新增精灵
-// --- 全部新增精灵（表格形式，每行3只，头像+名称+属性图标）---
-w(`## 📋 全部新增精灵（${newPets.length} 只）`);
-w();
-// Sort by pet_id then uid for consistent ordering
-const sortedNewPets = [...newPets].sort((a, b) => {
-  if (a.pet_id < b.pet_id) return -1;
-  if (a.pet_id > b.pet_id) return 1;
-  return a.uid < b.uid ? -1 : 1;
-});
-const ALL_PET_COLS = 3;
-// Build cells
-const allPetCells = sortedNewPets.map(p => {
-  const elemIcon = p.element_id && elementIcons[p.element_id] ? `![element:${elementIcons[p.element_id]}]` : '';
-  const subElemIcon = p.sub_element_id && elementIcons[p.sub_element_id] ? `![element:${elementIcons[p.sub_element_id]}]` : '';
-  const elemStr = subElemIcon ? `${elemIcon}${subElemIcon}` : elemIcon;
-  const tags = [];
-  if (groupMatchesSet([p], s2LegendIds)) tags.push('传说');
-  else if (groupMatchesSet([p], s2PassIds)) tags.push('通行证');
-  else if (groupMatchesSet([p], s2SeasonIds)) tags.push('赛季奇遇');
-  const tagStr = tags.length ? ` \`${tags[0]}\`` : '';
-  return `![pet:${p.uid}] **${p.name}** ${elemStr}${tagStr}`;
-});
-// Table header
-w(`|` + ' 精灵 |'.repeat(ALL_PET_COLS));
-w(`|` + '------|'.repeat(ALL_PET_COLS));
-// Table rows
-for (let i = 0; i < allPetCells.length; i += ALL_PET_COLS) {
-  const row = [];
-  for (let j = 0; j < ALL_PET_COLS; j++) {
-    row.push(allPetCells[i + j] || '');
+// 分类详情已经展示过的进化线不再重复；其余新增精灵只保留文字清单。
+const featuredGroups = new Set([...legendGroups, ...passGroups, ...seasonGroups].map(group => group[0].pet_id));
+const otherGroups = Object.values(newPetGroups)
+  .filter(group => !featuredGroups.has(group[0].pet_id))
+  .sort(sortByPetId);
+if (otherGroups.length > 0) {
+  w(`## 📋 其他新增精灵（${otherGroups.length} 条进化线）`);
+  w();
+  w(`| 编号 | 进化线 | 属性 |`);
+  w(`|------|--------|------|`);
+  for (const group of otherGroups) {
+    const first = group[0];
+    const chain = group.map(p => p.name).join(' → ');
+    const elements = [elementNames[first.element_id], elementNames[first.sub_element_id]].filter(Boolean).join(' / ') || '-';
+    w(`| ${first.pet_id} | ${chain} | ${elements} |`);
   }
-  w(`| ${row.join(' | ')} |`);
+  w();
 }
-w();
 
 // --- New Skills ---
 if (newSkills.length > 0) {
@@ -494,9 +492,9 @@ if (newSkills.length > 0) {
   w(`| 技能名 | 属性 | 类型 | 能耗 | 威力 | 描述 |`);
   w(`|--------|------|------|------|------|------|`);
   for (const s of newSkills) {
-    const elemIcon = s.element_id && elementIcons[s.element_id] ? `![element:${elementIcons[s.element_id]}]` : '-';
+    const elemName = elementNames[s.element_id] || '-';
     const catName = s.category || '-';
-    w(`| ${skillIconMd(s.uid, s.element_id)} ${s.name} | ${elemIcon} | ${catName} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
+    w(`| ${s.name} | ${elemName} | ${catName} | ${s.cost ?? '-'} | ${s.power ?? '-'} | ${(s.description || '').replace(/\n/g, ' ').substring(0, 60)} |`);
   }
   w();
 }
@@ -518,37 +516,17 @@ if (statChangedPets.length > 0) {
       const diff = n - o;
       return `${o}→${n}(${diff > 0 ? '+' : ''}${diff})`;
     };
-    w(`| ![pet:${pet.uid}] ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
+    w(`| ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
   }
   w();
 }
 
-// --- Stat Supplemented Pets ---
-if (statSupplementedPets.length > 0) {
-  statSupplementedPets.sort((a, b) => (a.pet.pet_id || 0) - (b.pet.pet_id || 0));
-  w(`## 📋 精灵个体值补充（${statSupplementedPets.length} 只）`);
-  w();
-  w(`> 以下精灵为本次补充录入个体值，数据来源于游戏实际情况，如有出入以官方为准。`);
-  w();
-  w(`| 精灵 | HP | 速度 | 物攻 | 魔攻 | 物防 | 魔防 | 总计 |`);
-  w(`|------|----|----|----|----|----|----|------|`);
-  for (const { pet, changes } of statSupplementedPets) {
-    const fmt = (field) => {
-      if (!changes[field]) return String(pet[field] ?? '-');
-      return String(changes[field].new ?? '-');
-    };
-    w(`| ![pet:${pet.uid}] ${pet.name} | ${fmt('hp')} | ${fmt('speed')} | ${fmt('atk')} | ${fmt('matk')} | ${fmt('def')} | ${fmt('mdef')} | ${fmt('total')} |`);
-  }
-  w();
-}
+// 从空值补齐的个体值属于数据维护，不进入面向用户的更新公告。
 
 // --- Skill Learning Changes ---
-if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
+if ((skillsAdded.length > 0 || skillsRemoved.length > 0) && includeSkillLearningDetails) {
   w(`## 📚 技能学习面变动`);
   w();
-  w(`> 以下变动可能包含前赛季遗漏的技能学习面补充，已与游戏实际情况比对，如有出入以官方为准。`);
-  w();
-
   // Skill detail lookup by name
   const skillDetailByName = {};
   db2.prepare('SELECT * FROM skills').all().forEach(r => { skillDetailByName[r.name] = r; });
@@ -583,18 +561,14 @@ if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
   // Render one skill-group block
   function renderSkillLearningGroup(skillName, records, petNamesFn) {
     const skill = skillDetailByName[skillName];
-    const skillUid = skill?.uid || '';
     const elemId = skill?.element_id;
-    const elemIcon = elemId && elementIcons[elemId] ? `![element:${elementIcons[elemId]}]` : '';
     const elemName = elemId ? (elementNames[elemId] || '') : '';
     const catName = skill?.category || '-';
     const cost = skill?.cost ?? '-';
     const power = skill?.power ?? '-';
     const desc = (skill?.description || '').replace(/\n/g, ' ');
-    const iconMd = skillIconMd(skillUid, elemId);
-
-    // Table row: skill icon+name | element | type | cost | power | desc
-    w(`| ${iconMd} **${skillName}** | ${elemIcon} | ${catName} | ${cost} | ${power} | ${desc} |`);
+    // 批量学习面不重复嵌入技能图标，保留文字和数值即可。
+    w(`| **${skillName}** | ${elemName || '-'} | ${catName} | ${cost} | ${power} | ${desc} |`);
 
     // Group pets by skill_type, sort pets by uid numeric
     const byType = {};
@@ -618,7 +592,7 @@ if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
       const petCells = sorted.map(r => {
         const name = petNamesFn(r.pet_uid);
         const lvStr = (type === 'skills' && r.level != null) ? `(Lv${r.level})` : '';
-        return `![pet:${r.pet_uid}] ${name}${lvStr}`;
+        return `${name}${lvStr}`;
       });
       for (let i = 0; i < petCells.length; i += COLS) {
         const chunk = petCells.slice(i, i + COLS).join('\u3000\u3000');
@@ -656,6 +630,7 @@ if (skillsAdded.length > 0 || skillsRemoved.length > 0) {
 
 // --- Skill Balance (6-column table) ---
 // Sort by element order → skill ID
+if (modifiedSkills.length > 0) {
 modifiedSkills.sort((a, b) => {
   const elemA = ELEMENT_SORT_ORDER[a.skill.element_id] || 99;
   const elemB = ELEMENT_SORT_ORDER[b.skill.element_id] || 99;
@@ -666,12 +641,10 @@ modifiedSkills.sort((a, b) => {
 });
 w(`## ⚔️ 技能调整（${modifiedSkills.length} 个）`);
 w();
-w(`> 以下调整可能包含前赛季遗漏的技能修正，已与游戏实际情况比对，如有出入以官方为准。`);
-w();
 w(`| 技能 | 属性 | 类型 | 能耗 | 威力 | 调整内容 |`);
 w(`|------|------|------|------|------|----------|`);
 for (const { skill, changes, relevantFields } of modifiedSkills) {
-  const elemIcon = skill.element_id && elementIcons[skill.element_id] ? `![element:${elementIcons[skill.element_id]}]` : '';
+  const elemName = elementNames[skill.element_id] || '-';
   const catName = skill.category || '-';
   // Cost/Power columns: show change or current value
   const costCell = changes.cost ? `${changes.cost.old}→${changes.cost.new}` : String(skill.cost ?? '-');
@@ -698,17 +671,16 @@ for (const { skill, changes, relevantFields } of modifiedSkills) {
     }
   }
   const adjustCell = adjustParts.join('<br>') || '-';
-  w(`| ${skillIconMd(skill.uid, skill.element_id)} **${skill.name}** | ${elemIcon} | ${catName} | ${costCell} | ${powerCell} | ${adjustCell} |`);
+  w(`| **${skill.name}** | ${elemName} | ${catName} | ${costCell} | ${powerCell} | ${adjustCell} |`);
 }
 w();
+}
 
 // --- Pet Ability Changes (2-column table) ---
 if (abilityChangedPets.length > 0) {
   // Sort by pet_id (numeric)
   abilityChangedPets.sort((a, b) => (a.pet.pet_id || 0) - (b.pet.pet_id || 0));
   w(`## 🔮 精灵特性调整（${abilityChangedPets.length} 只）`);
-  w();
-  w(`> 以下调整可能包含前赛季遗漏的特性修正，已与游戏实际情况比对，如有出入以官方为准。`);
   w();
   w(`| 精灵 | 特性调整 |`);
   w(`|------|----------|`);
@@ -729,22 +701,16 @@ if (abilityChangedPets.length > 0) {
   // Render name-only changes first
   for (const { pet, changes } of abilityNameOnlyChanges) {
     const abilIcon = abilityIcons[pet.uid] ? `![ability:${abilityIcons[pet.uid]}]` : '';
-    w(`| ![pet:${pet.uid}] | ${abilIcon} 特性名：${changes.ability_name.old} → ${changes.ability_name.new} |`);
+    w(`| ${pet.name} | ${abilIcon} 特性名：${changes.ability_name.old} → ${changes.ability_name.new} |`);
   }
   // Render grouped desc changes
   for (const group of Object.values(abilityGroups)) {
-    // Show all pet icons, 3 per line
-    const allIcons = group.petUids.map(uid => `![pet:${uid}]`);
-    const iconLines = [];
-    for (let i = 0; i < allIcons.length; i += 3) {
-      iconLines.push(allIcons.slice(i, i + 3).join(' '));
-    }
-    const icons = iconLines.join('<br>');
+    const petList = group.pets.join('、');
     // Use first pet's ability icon
     const firstUid = group.petUids[0];
     const abilIcon = abilityIcons[firstUid] ? `![ability:${abilityIcons[firstUid]}]` : '';
     const abilityNameStr = group.abilityName ? `**「${group.abilityName}」** ` : '';
-    w(`| ${icons} | ${abilIcon} ${abilityNameStr}${group.old}<br>→ ${group.new} |`);
+    w(`| ${petList} | ${abilIcon} ${abilityNameStr}${group.old}<br>→ ${group.new} |`);
   }
   w();
 }
@@ -755,10 +721,14 @@ w();
 w(`**本公告数据来源于 BWIKI、游戏官网及人工补充，通过赛季数据比对脚本自动生成。如有内容与游戏实际不符，一切以游戏内为准。**`);
 
 // ============ Output ============
-fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-fs.writeFileSync(outputPath, md, 'utf-8');
-console.log(`✅ 公告已生成: ${outputPath}`);
-console.log(`   文件大小: ${(Buffer.byteLength(md) / 1024).toFixed(1)} KB`);
+if (stdoutOnly) {
+  process.stdout.write(md);
+} else {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, md, 'utf-8');
+  console.log(`公告已生成: ${outputPath}`);
+  console.log(`文件大小: ${(Buffer.byteLength(md) / 1024).toFixed(1)} KB`);
+}
 
 db1.close();
 db2.close();

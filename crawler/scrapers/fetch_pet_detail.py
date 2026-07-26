@@ -27,10 +27,10 @@ uid 规则：
 import json
 import os
 import re
+from urllib.parse import unquote
 import sys
 import time
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -58,27 +58,25 @@ IMG_DIRS = {
 }
 ABILITY_ICON_DIR = os.path.join(PUBLIC_DIR, "abilities")
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
-
-REQUEST_DELAY = (2.0, 5.0)  # 随机间隔范围
-MAX_RETRIES = 5
-RETRY_WAIT = 60
-CONCURRENCY = 2  # 并发线程数
+REQUEST_DELAY = (4.0, 8.0)  # 由统一请求工具在请求前执行
+MAX_RETRIES = 3
+RETRY_WAIT = 5
+CONCURRENCY = 1  # 保守串行，避免详情页突发请求
 
 # 使用统一请求工具
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "utils"))
-from request import create_session, random_delay, fetch_json
-
-session = create_session()
-
+_session = None
 
 # ============================================================
 # 网络请求
 # ============================================================
 
 def fetch_page_html(page_title: str) -> str:
+    global _session
+    from polite_request import create_session, fetch_json
+
+    if _session is None:
+        _session = create_session()
     params = {
         "action": "parse",
         "page": page_title,
@@ -86,7 +84,7 @@ def fetch_page_html(page_title: str) -> str:
         "format": "json",
         "utf8": 1,
     }
-    data = fetch_json(session, API_URL, params=params, max_retries=MAX_RETRIES, retry_base_wait=RETRY_WAIT)
+    data = fetch_json(_session, API_URL, params=params, max_retries=MAX_RETRIES, retry_base_wait=RETRY_WAIT)
     if "error" in data:
         raise RuntimeError(f"API error: {data['error']}")
     return data["parse"]["text"]["*"]
@@ -205,6 +203,14 @@ def parse_detail(html: str) -> dict:
                 raw_text = attr_el.get_text(strip=True)
                 detail["element"], detail["sub_element"] = _split_elements(raw_text)
 
+    # ── 特性名称与描述（2026+ 页面）──
+    trait_name_el = soup.select_one(".sprite-trait-name")
+    trait_desc_el = soup.select_one(".sprite-trait-desc")
+    if trait_name_el:
+        detail["ability_name"] = trait_name_el.get_text(" ", strip=True)
+    if trait_desc_el:
+        detail["ability_desc"] = trait_desc_el.get_text(" ", strip=True)
+
     # ── 特性图标 ──
     # 新版：.sprite-trait-icon img
     trait_icon_el = soup.select_one(".sprite-trait-icon img")
@@ -221,31 +227,74 @@ def parse_detail(html: str) -> dict:
             detail["ability_icon"] = None
 
     # ── 立绘图片 ──
-    # 新版：.allImgTab 内的 img 或 .imgAll-sprite-img
+    # 新版优先读取真正的内容图；标签图标不能按出现顺序占用异色等正式槽位。
+    image_keys = ("image_default", "image_shiny", "image_fruit", "image_egg")
+    for key in image_keys:
+        detail[key] = None
+
+    def image_hint(image):
+        container = image.find_parent(
+            ["li", "div"],
+            attrs={"data-type": True},
+        ) or image.find_parent(["li", "div"])
+        values = [
+            image.get("alt"),
+            image.get("title"),
+            " ".join(image.get("class", [])),
+            image.get("data-type"),
+            image.get("data-tab"),
+            image.get("data-key"),
+            image.get("data-src"),
+            image.get("src"),
+        ]
+        if container:
+            values.extend([
+                container.get("data-type"),
+                container.get("data-tab"),
+                container.get("data-key"),
+                container.get("aria-label"),
+                container.get_text(" ", strip=True),
+            ])
+        return unquote(" ".join(str(value) for value in values if value)).lower()
+
+    def image_slot(hint):
+        if re.search(r"果实|fruit", hint):
+            return "image_fruit"
+        if re.search(r"精灵蛋|宠物蛋|蛋图|egg", hint):
+            return "image_egg"
+        if re.search(r"异色|闪光|shiny|(^|[/_.-])yise([/_.-]|$)", hint):
+            return "image_shiny"
+        if re.search(r"本体|立绘|原图|default|(^|[/_.-])jl([/_.-]|$)", hint):
+            return "image_default"
+        return None
+
     img_section = soup.select_one(".allImgTab")
-    if img_section:
-        # 新版用 tab 切换：本体/蛋/果实，查找所有 img
-        all_imgs = img_section.select("img.imgAll-sprite-img, img")
-        img_keys = ["image_default", "image_shiny", "image_fruit", "image_egg"]
-        for i, key in enumerate(img_keys):
-            if i < len(all_imgs):
-                src = all_imgs[i].get("src", "")
-                detail[key] = _fix_url(src) if src else None
-            else:
-                detail[key] = None
-    else:
-        # Fallback：旧版 .rocom_sprite_grament_img
-        old_img_section = soup.select_one(".rocom_sprite_grament_img")
-        if old_img_section:
-            items = old_img_section.find_all("li")
-            img_keys = ["image_default", "image_shiny", "image_fruit", "image_egg"]
-            for i, key in enumerate(img_keys):
-                if i < len(items):
-                    img = items[i].find("img")
-                    src = img.get("src", "") if img else ""
-                    detail[key] = _fix_url(src) if src else None
-                else:
-                    detail[key] = None
+    images = img_section.select("img.imgAll-sprite-img") if img_section else []
+    images = [
+        image for image in images
+        if not re.search(r"界面[\s_-]*宠物[\s_-]*(本体|宠物蛋|果实)|icon[\s_-]*异色", image_hint(image))
+    ]
+    if img_section and not images:
+        images = [
+            image for image in img_section.select("img")
+            if not re.search(r"界面[\s_-]*宠物|icon[\s_-]*异色|按钮|icon-nav|\btab\b", image_hint(image))
+        ]
+    if not images:
+        images = soup.select(".rocom_sprite_grament_img li img")
+
+    unresolved = []
+    for image in images:
+        src = image.get("data-src") or image.get("src", "")
+        if not src:
+            continue
+        url = _fix_url(src)
+        slot = image_slot(image_hint(image))
+        if slot and not detail[slot]:
+            detail[slot] = url
+        elif not slot:
+            unresolved.append(url)
+    if not detail["image_default"] and unresolved:
+        detail["image_default"] = unresolved[0]
 
     # ── 身高/体重 ──
     # 新版：.sprite-info-attrother .imgtext-row，通过 img alt 区分身高/体重
@@ -728,10 +777,8 @@ def main():
         try:
             html = fetch_page_html(name)
             detail = parse_detail(html)
-            random_delay(REQUEST_DELAY)
             return name, detail
         except Exception as e:
-            random_delay(REQUEST_DELAY)
             return name, {"_error": str(e)}
 
     # 并发爬取

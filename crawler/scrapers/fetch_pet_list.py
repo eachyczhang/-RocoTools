@@ -15,7 +15,6 @@ import os
 import re
 import sys
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -26,16 +25,16 @@ API_URL = "https://wiki.biligame.com/rocom/api.php"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+UTILS_DIR = os.path.join(PROJECT_ROOT, "crawler", "utils")
+sys.path.insert(0, UTILS_DIR)
+_session = None
+
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "pets")
 
 CSV_OUTPUT = os.path.join(OUTPUT_DIR, "pet_list.csv")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "pet_list.json")
 THUMB_DIR = os.path.join(PROJECT_ROOT, "data", "public", "pets", "thumbnails")
 ELEMENT_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "elements", "element_chart_structured.json")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
 
 CSV_FIELDS = [
     "uid", "pet_id", "name", "element", "ability_name", "ability_desc",
@@ -50,7 +49,10 @@ CSV_FIELDS = [
 
 def fetch_page_html(page_title: str) -> str:
     """通过 MediaWiki API 获取页面解析后的 HTML"""
-    import time
+    global _session
+    from polite_request import create_session, fetch_json
+
+    _session = _session or create_session()
     params = {
         "action": "parse",
         "page": page_title,
@@ -59,16 +61,7 @@ def fetch_page_html(page_title: str) -> str:
         "utf8": 1,
     }
     print(f"[INFO] 正在获取页面: {page_title}")
-    for attempt in range(1, 4):
-        resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-        if resp.status_code in (567, 429):
-            wait = 30 * attempt
-            print(f"  [RATE] 被限流({resp.status_code})，等待 {wait}s 后重试 ({attempt}/3)")
-            time.sleep(wait)
-            continue
-        resp.raise_for_status()
-        break
-    data = resp.json()
+    data = fetch_json(_session, API_URL, params=params)
     if "error" in data:
         raise RuntimeError(f"API error: {data['error']}")
     return data["parse"]["text"]["*"]
@@ -95,21 +88,37 @@ def parse_pet_list(html: str) -> list[dict]:
 
     for row in rows:
         cells = row.find_all("td")
-        if len(cells) < 13:
+        if len(cells) < 12:
             continue
 
-        # col[0]: 精灵图片 + 链接
-        img_el = cells[0].find("img")
-        image_url = _fix_url(img_el.get("src", "")) if img_el else ""
+        # 2026+ dex-pet-table: 编号、头像、名称、属性、特性、六维、总值（无版本列）
+        is_dex_layout = "dex-pet-number" in (cells[0].get("class") or [])
+        if is_dex_layout:
+            pet_id = cells[0].get_text(strip=True)
+            image_cell = cells[1]
+            name_cell = cells[2]
+            element_cell = cells[3]
+            ability_cell = cells[4]
+            stat_start = 5
+            version = None
+        else:
+            if len(cells) < 13:
+                continue
+            image_cell = cells[0]
+            name_cell = cells[1]
+            element_cell = cells[2]
+            pet_id = cells[3].get_text(strip=True)
+            ability_cell = cells[4]
+            stat_start = 5
+            version = cells[12].get_text(strip=True) or None
 
-        link_el = cells[0].find("a")
+        img_el = image_cell.find("img")
+        image_url = _fix_url((img_el.get("data-src") or img_el.get("src") or "")) if img_el else ""
+        link_el = name_cell.find("a") or image_cell.find("a")
         name_from_link = link_el.get("title", "").strip() if link_el else ""
+        name = name_cell.get_text(strip=True) or name_from_link
 
-        # col[1]: 精灵名称
-        name = cells[1].get_text(strip=True) or name_from_link
-
-        # col[2]: 属性（从 img alt 提取，支持多属性）
-        attr_imgs = cells[2].find_all("img")
+        attr_imgs = element_cell.find_all("img")
         elements_raw = []
         for attr_img in attr_imgs:
             alt = attr_img.get("alt", "")
@@ -119,32 +128,25 @@ def parse_pet_list(html: str) -> list[dict]:
         element = elements_raw[0] if elements_raw else ""
         sub_element = elements_raw[1] if len(elements_raw) > 1 else None
 
-        # col[3]: 精灵编号
-        pet_id = cells[3].get_text(strip=True)
-
-        # col[4]: 特性
-        ability_full = cells[4].get_text(strip=True)
+        ability_full = ability_cell.get_text(strip=True)
         ability_name, ability_desc = _split_ability(ability_full)
+        ability_img = ability_cell.find("img")
+        ability_icon = _fix_url((ability_img.get("data-src") or ability_img.get("src") or "")) if ability_img else ""
 
-        # col[5-11]: 六维 + 总种族值
-        hp = _safe_int(cells[5].get_text(strip=True))
-        speed = _safe_int(cells[6].get_text(strip=True))
-        atk = _safe_int(cells[7].get_text(strip=True))
-        matk = _safe_int(cells[8].get_text(strip=True))
-        def_ = _safe_int(cells[9].get_text(strip=True))
-        mdef = _safe_int(cells[10].get_text(strip=True))
-        total = _safe_int(cells[11].get_text(strip=True))
+        hp = _safe_int(cells[stat_start].get_text(strip=True))
+        speed = _safe_int(cells[stat_start + 1].get_text(strip=True))
+        atk = _safe_int(cells[stat_start + 2].get_text(strip=True))
+        matk = _safe_int(cells[stat_start + 3].get_text(strip=True))
+        def_ = _safe_int(cells[stat_start + 4].get_text(strip=True))
+        mdef = _safe_int(cells[stat_start + 5].get_text(strip=True))
+        total = _safe_int(cells[stat_start + 6].get_text(strip=True))
 
-        # col[12]: 更新版本
-        version = cells[12].get_text(strip=True)
-
-        pets.append({
+        pet = {
             "pet_id": pet_id,
             "name": name,
             "element": element,
             "sub_element": sub_element,
             "ability_name": ability_name,
-            "ability_desc": ability_desc,
             "hp": hp,
             "speed": speed,
             "atk": atk,
@@ -153,8 +155,13 @@ def parse_pet_list(html: str) -> list[dict]:
             "mdef": mdef,
             "total": total,
             "version": version,
-            "image_url": image_url,
-        })
+            # 精灵筛选页只提供列表缩略图，不是详情页正式立绘/特性图标。
+            "review_avatar_url": image_url,
+            "review_ability_icon_url": ability_icon,
+        }
+        if ability_desc:
+            pet["ability_desc"] = ability_desc
+        pets.append(pet)
 
     # 分配 uid (with stable mapping)
     from collections import Counter
@@ -168,9 +175,31 @@ def parse_pet_list(html: str) -> list[dict]:
         with open(uid_map_path, "r", encoding="utf-8") as f:
             existing_uid_map = json.load(f)
 
-    # First pass: assign UIDs using stable mapping where possible
+    # A pet_id that used to have one unsuffixed UID becomes a canonical
+    # multi-form group as soon as BWIKI exposes more than one row. Re-number the
+    # complete remote group in row order so the original form becomes _1 and
+    # newly added forms become _2, _3, ... .
+    legacy_multi_ids = {
+        pet["pet_id"]
+        for pet in pets
+        if id_total[pet["pet_id"]] > 1
+        and existing_uid_map.get(f"{pet['pet_id']}::{pet['name']}") == f"pet_{pet['pet_id']}"
+    }
+    canonical_multi_map = {}
+    for pid in legacy_multi_ids:
+        group = [pet for pet in pets if pet["pet_id"] == pid]
+        for index, pet in enumerate(group, start=1):
+            canonical_multi_map[f"{pid}::{pet['name']}"] = f"pet_{pid}_{index}"
+
+    reserved_uids = set(canonical_multi_map.values())
+    for map_key, uid in existing_uid_map.items():
+        pid = map_key.split("::", 1)[0]
+        if id_total[pid] > 1 and pid not in legacy_multi_ids:
+            reserved_uids.add(uid)
+
+    # Assign stable canonical UIDs.
     new_uid_map = {}
-    assigned_uids = set()  # Track assigned UIDs to avoid duplicates
+    assigned_uids = set()
 
     for pet in pets:
         pid = pet["pet_id"]
@@ -178,16 +207,15 @@ def parse_pet_list(html: str) -> list[dict]:
 
         if id_total[pid] == 1:
             pet["uid"] = f"pet_{pid}"
+        elif map_key in canonical_multi_map:
+            pet["uid"] = canonical_multi_map[map_key]
         else:
-            # Check if this pet has a stable mapping
             if map_key in existing_uid_map:
                 pet["uid"] = existing_uid_map[map_key]
             else:
-                # Fallback: assign sequentially
                 id_counter[pid] += 1
                 candidate = f"pet_{pid}_{id_counter[pid]}"
-                # Avoid collision with existing stable mappings
-                while candidate in assigned_uids:
+                while candidate in reserved_uids or candidate in assigned_uids:
                     id_counter[pid] += 1
                     candidate = f"pet_{pid}_{id_counter[pid]}"
                 pet["uid"] = candidate

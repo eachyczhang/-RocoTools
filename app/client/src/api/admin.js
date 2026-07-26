@@ -185,6 +185,60 @@ export const adminApi = {
   acceptAllConflicts: () => adminRequest('/conflicts/accept-all', { method: 'POST' }),
   rejectAllConflicts: () => adminRequest('/conflicts/reject-all', { method: 'POST' }),
 
+  // BWIKI Batch 工作流与暂存审核
+  // 版本数据库比对与公告草稿
+  patchNoteDatabases: (directory = 'temp/seasons') => adminRequest(`/patch-notes/databases?directory=${encodeURIComponent(directory)}`),
+  comparePatchNotes: (directory, oldDatabase, newDatabase) => adminRequest('/patch-notes/compare', {
+    method: 'POST',
+    body: JSON.stringify({ directory, oldDatabase, newDatabase }),
+  }),
+
+  wikiBatches: () => adminRequest('/wiki-batches'),
+  createWikiBatch: (name) => adminRequest('/wiki-batches', {
+    method: 'POST', body: JSON.stringify({ name }),
+  }),
+  renameWikiBatch: (batchId, name) => adminRequest(`/wiki-batches/${encodeURIComponent(batchId)}`, {
+    method: 'PATCH', body: JSON.stringify({ name }),
+  }),
+  fetchWikiBatch: (batchId, scope = 'all') => adminRequest(`/wiki-batches/${encodeURIComponent(batchId)}/fetch`, {
+    method: 'POST', body: JSON.stringify({ scope }),
+  }),
+  packageWikiBatch: (batchId, releaseId) => adminRequest(`/wiki-batches/${encodeURIComponent(batchId)}/package`, {
+    method: 'POST', body: JSON.stringify({ releaseId }),
+  }),
+  wikiBatchJob: (jobId) => adminRequest(`/wiki-batches/jobs/${encodeURIComponent(jobId)}`),
+  downloadWikiRelease: (releaseId) => {
+    const token = getToken()
+    return fetch(`${BASE}/wiki-batches/releases/${encodeURIComponent(releaseId)}/download`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(async res => {
+      if (res.status === 401) { clearToken(); throw new Error('未登录或登录已过期') }
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || '下载发布包失败') }
+      return res.blob()
+    })
+  },
+  wikiReviews: (view = 'differences', entity = 'skill', page = 1, pageSize = 1, refresh = false, batchId = '') => adminRequest(`/wiki-review?view=${encodeURIComponent(view)}&entity=${encodeURIComponent(entity)}&page=${encodeURIComponent(page)}&pageSize=${encodeURIComponent(pageSize)}${refresh ? '&refresh=1' : ''}`, {
+    headers: batchId ? { 'X-Wiki-Batch': batchId } : {},
+  }),
+  decideWikiReview: (entity, folderId, decision, fields = [], options = {}, batchId = '') => adminRequest(`/wiki-review/${encodeURIComponent(entity)}/${encodeURIComponent(folderId)}/decision`, {
+    method: 'POST',
+    headers: batchId ? { 'X-Wiki-Batch': batchId } : {},
+    body: JSON.stringify({ decision, fields, ...options }),
+  }),
+  associateWikiReviewPet: (folderId, localUid, batchId = '') => adminRequest(`/wiki-review/pet/${encodeURIComponent(folderId)}/decision`, {
+    method: 'POST',
+    headers: batchId ? { 'X-Wiki-Batch': batchId } : {},
+    body: JSON.stringify({ decision: 'associate-local-pet', local_uid: localUid }),
+  }),
+  wikiReviewAsset: (entity, folderId, assetKey, batchId = '') => {
+    const token = getToken()
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    if (batchId) headers['X-Wiki-Batch'] = batchId
+    return fetch(`${BASE}/wiki-review/${encodeURIComponent(entity)}/${encodeURIComponent(folderId)}/assets/${encodeURIComponent(assetKey)}`, { headers }).then(async res => {
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || '读取暂存图片失败') }
+      return res.blob()
+    })
+  },
   // 批量更新
   batchUpdate: (table, updates) => adminRequest(`/data/${table}/batch`, {
     method: 'POST',

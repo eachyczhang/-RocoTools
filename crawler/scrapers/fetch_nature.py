@@ -14,7 +14,6 @@ import json
 import os
 import sys
 
-import requests
 from bs4 import BeautifulSoup
 
 # ============================================================
@@ -26,13 +25,13 @@ PAGE_TITLE = "性格"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+UTILS_DIR = os.path.join(PROJECT_ROOT, "crawler", "utils")
+sys.path.insert(0, UTILS_DIR)
+_session = None
+
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "natures")
 JSON_OUTPUT = os.path.join(OUTPUT_DIR, "nature_list.json")
 REPORT_OUTPUT = os.path.join(OUTPUT_DIR, "nature_report.md")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-}
 
 # ============================================================
 # 爬取
@@ -40,6 +39,10 @@ HEADERS = {
 
 
 def fetch_page_html():
+    global _session
+    from polite_request import create_session, fetch_json
+
+    _session = _session or create_session()
     """通过 MediaWiki API 获取页面渲染后的 HTML"""
     params = {
         "action": "parse",
@@ -48,9 +51,7 @@ def fetch_page_html():
         "format": "json",
         "utf8": 1,
     }
-    resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
+    data = fetch_json(_session, API_URL, params=params)
     return data["parse"]["text"]["*"]
 
 

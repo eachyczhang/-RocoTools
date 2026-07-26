@@ -1,0 +1,11 @@
+{
+  "name": "rocotools",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:check": "node scripts/dev.mjs --check",
+    "dev:server": "npm --prefix app/server run dev",
+    "dev:client": "npm --prefix app/client run dev"
+  }
+}

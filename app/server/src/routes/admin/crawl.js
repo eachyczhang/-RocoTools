@@ -1,6 +1,6 @@
 /**
  * Admin Crawl Route - Fetch pet data from BWIKI without writing to DB
- * 
+ *
  * Provides a preview of crawled data for manual review before applying.
  */
 const express = require('express');
@@ -8,13 +8,13 @@ const router = express.Router();
 const { getDb } = require('../../db/connection');
 
 const BWIKI_API_URL = 'https://wiki.biligame.com/rocom/api.php';
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+const USER_AGENT = process.env.ROCO_CRAWLER_USER_AGENT || 'RocoTools-BWIKI-Sync/1.0 (respectful MediaWiki client)';
 const REFERER = 'https://wiki.biligame.com/rocom/';
-const ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8';
+const ACCEPT = 'application/json,text/plain;q=0.9,*/*;q=0.5';
 const ACCEPT_LANGUAGE = 'zh-CN,zh;q=0.9,en;q=0.8';
 
 /**
- * Random delay to simulate human browsing behavior
+ * Conservative delay before an explicitly requested detail fetch.
  * @param {number} min - minimum delay in ms
  * @param {number} max - maximum delay in ms
  */
@@ -53,8 +53,8 @@ async function fetchPageHtml(pageTitle) {
     },
   });
 
-  if (res.status === 403) {
-    throw new Error('BWIKI_403');
+  if ([403, 429, 567].includes(res.status)) {
+    throw new Error('BWIKI_RATE_LIMITED');
   }
 
   if (!res.ok) {
@@ -117,7 +117,7 @@ function normalizeRange(str) {
 
 /**
  * Parse pet detail from BWIKI HTML using cheerio
- * 
+ *
  * Adapted to the new BWIKI page structure (2025+ redesign).
  * New class prefix: "sprite-" (old "rocom_sprite_" classes are hidden via display:none).
  */
@@ -395,7 +395,7 @@ function parseDetail(html, cheerio) {
 
 /**
  * Parse skill cards from new #CardSelectTr structure (2025+ redesign)
- * 
+ *
  * Card structure:
  *   <div class="divsort skill-single" data-param1="默认|血脉|技能石" data-param2="物攻|魔攻|防御|状态" data-param3="普通|火|...">
  *     <div class="skill-single-head">
@@ -604,8 +604,8 @@ const CRAWL_COOLDOWN_MS = 60 * 1000; // 60 seconds
 
 /**
  * POST /api/admin/crawl-pet/:uid
- * 
- * Crawl BWIKI for the specified pet and all its variants (same pet_id).
+ *
+ * Crawl BWIKI detail for exactly one selected pet UID.
  * Returns crawled data without writing to DB.
  */
 router.post('/crawl-pet/:uid', async (req, res) => {
@@ -628,65 +628,27 @@ router.post('/crawl-pet/:uid', async (req, res) => {
   const db = getDb();
 
   try {
-    // Get the pet and its variants from DB
+    // 精灵筛选页基础数据由批量 Diff 流程处理；这里只抓当前 UID 的详情页。
     const pet = db.prepare('SELECT uid, pet_id, name FROM pets WHERE uid = ?').get(uid);
     if (!pet) {
       return res.status(404).json({ error: `精灵 ${uid} 不存在` });
     }
 
-    // Find all variants with the same pet_id
-    const variants = db.prepare('SELECT uid, name FROM pets WHERE pet_id = ? ORDER BY uid').all(pet.pet_id);
+    const variants = [{ uid: pet.uid, name: pet.name }];
 
-    // First, try to get stats from the "精灵筛选" list page for all variants
-    let listStats = new Map(); // name -> { hp, atk, matk, def, mdef, speed, total, ability_name, ability_desc }
-    try {
-      console.log('[crawl] Fetching stats from 精灵筛选 list page...');
-      const listHtml = await fetchPageHtml('精灵筛选');
-      listStats = parseListPageStats(listHtml, cheerio, variants.map(v => v.name));
-      console.log(`[crawl] Got stats for ${listStats.size} variants from list page`);
-    } catch (err) {
-      if (err.message === 'BWIKI_403') {
-        return res.status(403).json({ error: 'BWIKI 网站限频，请 5 分钟后重试', is_rate_limited: true });
-      }
-      console.warn('[crawl] Failed to fetch list page stats:', err.message);
-    }
-
-    // Update lastCrawlTime only after first successful request
-    lastCrawlTime = Date.now();
-
-    // Crawl each variant's detail page
+    // Crawl only the selected detail page.
     const results = [];
     const errors = [];
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
       try {
-        // Random delay between requests to simulate human browsing
-        if (i > 0) {
-          await randomDelay(3000, 5000);
-        } else {
-          // Delay before first detail page (after list page)
-          await randomDelay(2000, 4000);
-        }
-
+        await randomDelay(2000, 4000);
         console.log(`[crawl] Fetching BWIKI detail page: ${variant.name} (${variant.uid})`);
         const html = await fetchPageHtml(variant.name);
         const crawled = parseDetail(html, cheerio);
         crawled._uid = variant.uid;
         crawled._name = variant.name;
-
-        // Merge stats from list page if detail page didn't get them
-        const ls = listStats.get(variant.name);
-        if (ls) {
-          if (!crawled.hp && ls.hp) crawled.hp = ls.hp;
-          if (!crawled.atk && ls.atk) crawled.atk = ls.atk;
-          if (!crawled.matk && ls.matk) crawled.matk = ls.matk;
-          if (!crawled.def && ls.def) crawled.def = ls.def;
-          if (!crawled.mdef && ls.mdef) crawled.mdef = ls.mdef;
-          if (!crawled.speed && ls.speed) crawled.speed = ls.speed;
-          if (!crawled.ability_name && ls.ability_name) crawled.ability_name = ls.ability_name;
-          if (!crawled.ability_desc && ls.ability_desc) crawled.ability_desc = ls.ability_desc;
-        }
 
         // Calculate total if stats are available
         if (crawled.hp || crawled.atk || crawled.matk || crawled.def || crawled.mdef || crawled.speed) {
@@ -695,8 +657,9 @@ router.post('/crawl-pet/:uid', async (req, res) => {
         }
 
         results.push(crawled);
+        lastCrawlTime = Date.now();
       } catch (err) {
-        if (err.message === 'BWIKI_403') {
+        if (err.message === 'BWIKI_RATE_LIMITED') {
           console.error(`[crawl] 403 Forbidden for ${variant.name}, stopping`);
           errors.push({ uid: variant.uid, name: variant.name, error: 'BWIKI 网站限频，已中止后续请求' });
           break; // Stop crawling remaining variants
@@ -798,7 +761,7 @@ router.post('/crawl-pet/:uid', async (req, res) => {
 
 /**
  * POST /api/admin/crawl-pet/:uid/apply
- * 
+ *
  * Apply crawled data to the database after user confirmation.
  * Expects the crawled data in request body.
  */
@@ -908,4 +871,6 @@ router.post('/crawl-pet/:uid/apply', async (req, res) => {
   }
 });
 
+// Reused by the BWIKI Diff review flow. Keep the parser in one place so the detail editor and staged review produce the same data.
 module.exports = router;
+module.exports.parseDetail = parseDetail;

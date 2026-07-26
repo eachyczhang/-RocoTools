@@ -6,6 +6,34 @@
 
 ## 一、常用操作流程
 
+### 🧪 本地一键开发
+
+```bash
+npm run dev
+npm run dev:check
+```
+
+根目录入口并行启动 `app/server` 与 `app/client`；不执行数据同步。
+
+### 📦 BWIKI 逐实体暂存导入
+
+```bash
+python scripts/wiki_staging.py fetch --all
+python scripts/wiki_staging.py fetch --all-pets  # 只请求一次精灵筛选页，不逐个抓详情
+python scripts/wiki_staging.py fetch --all-skills  # 只暂存全部技能，不下载图标
+python scripts/wiki_staging.py fetch --pet 001 --skill skill_496
+python scripts/wiki_staging.py fetch-html --all --pet-list-html wiki-input/精灵筛选.html --skill-list-html wiki-input/技能查询.html
+python scripts/wiki_staging.py compare         # 对比远程快照与当前本地 SQLite
+python scripts/wiki_staging.py import          # dry-run
+python scripts/wiki_staging.py import --apply  # 备份后写入本地 SQLite
+python scripts/wiki_staging.py package         # 审核完毕后生成仅含确认差异的目录和 ZIP
+python scripts/wiki_staging.py clean           # 仅预览当前暂存区清理范围
+```
+
+该流程按实体写入 `data/wiki-staging/`，现有记录默认禁用。精灵推荐使用 `--all-pets`，只请求一次精灵筛选页并比较名称、属性、特性名称与基础数值；确认差异后才下载筛选页已有素材，再从管理端精灵详情按当前 UID 单独抓取技能和描述。IP 被限流时可先在可访问端保存列表 HTML，再用 `fetch-html --all-pets` 离线暂存。管理端 `/admin/wiki-review` 按“技能 → 特性 → 精灵”三个 Tab 逐项确认 Diff。全部审核结束后，`package` 会排除忽略/无变化项并生成带逐字段摘要和 SHA-256 的线上增量包。详见 [`docs/features/wiki-staging-import.md`](./docs/features/wiki-staging-import.md)。
+
+每次新版本应使用独立 `BATCH`，并按“服务器基线回拉 → 抓取 → 审核 → 打包 → 服务器 dry-run/导入 → 图片发布 → 回拉 → 清理”的固定流程执行，见 [`docs/operations/BWIKI_VERSION_UPDATE.md`](./docs/operations/BWIKI_VERSION_UPDATE.md)，并分别阅读 [`BWIKI_DEV_DIFF_SOP.md`](./docs/operations/BWIKI_DEV_DIFF_SOP.md) 与 [`BWIKI_SERVER_DEPLOY_SOP.md`](./docs/operations/BWIKI_SERVER_DEPLOY_SOP.md)。
+
 ### 🔄 全量数据更新（爬虫 → 数据库）
 
 当需要从 BWIKI 重新爬取数据并更新数据库时，按以下顺序执行：
