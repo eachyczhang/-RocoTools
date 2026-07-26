@@ -1,123 +1,165 @@
-# BWIKI 服务器：发布包部署与回滚 SOP
+# BWIKI 服务器：自动导入、验证与回滚 SOP
 
-适用：把 Dev 已审核的 BWIKI 发布包安全导入线上。数据库导入、UID 迁移和图片发布必须分开确认。
+适用范围：同一个 Release 已在 Dev 使用 `scripts/wiki_dev_import.sh` 完成自动演练和页面人工验收，并最终输入 `CONFIRM`。本阶段只发布数据与图片，不负责 `git pull`、安装依赖、构建前端或部署代码。
 
-## 1. 部署前检查
-
-确认服务器代码已包含：
-
-- `scripts/wiki_staging.py` 的导入器；
-- 当前审核和素材路由；
-- 与发布包兼容的数据库 schema。
-
-将 ZIP 上传到非正式目录并解压，不要覆盖正在运行的 `app/server/data/roco.db`：
+线上执行入口只有一个：
 
 ```bash
-mkdir -p /tmp/roco-wiki-release
-unzip -q wiki_release_*.zip -d /tmp/roco-wiki-release
+bash scripts/wiki_server_import.sh --release <项目内发布包目录> --version <版本号>
 ```
 
-## 2. 验包和 dry-run
+脚本默认只做隔离演练；只有追加 `--apply`、输入发布包确认文本后，才会停止 PM2 并写生产数据。
+
+## 1. 上线前必须确认
+
+- 线上代码已包含本次使用的 `wiki_staging.py`、`wiki_dev_import.sh` 和 `wiki_server_import.sh`。
+- Release 与 Dev 验收的是同一个目录，未在 Dev 验收后手工修改。
+- 当前生产数据库是 `app/server/data/roco.db`，正式图片目录是 `data/public`。
+- PM2 应用名为 `roco`；如果不同，执行时传 `--pm2-app`。
+- API 健康地址默认是 `http://127.0.0.1:3000/api/stats`；如果不同，传 `--health-url`。
+- 服务器磁盘空间足够同时保存 Release、生产数据库备份、素材旧文件和日志。
+
+不要把 Release 解压到系统 `/tmp`。脚本只接受项目目录内的路径，建议：
 
 ```bash
-python3 scripts/wiki_staging.py import \
-  --input /tmp/roco-wiki-release/<release-dir> \
+cd /path/to/-RocoTools
+mkdir -p data/wiki-releases/<release-id>
+unzip -q /path/to/wiki_release.zip -d data/wiki-releases/<release-id>
+```
+
+如果 ZIP 内已经包含同名顶层目录，解压后应以实际包含 `manifest.json` 的目录作为 `--release`。
+
+## 2. 第一遍：在线隔离演练
+
+生产服务保持运行，先执行：
+
+```bash
+cd /path/to/-RocoTools
+bash scripts/wiki_server_import.sh \
+  --release data/wiki-releases/<release-id> \
   --version S4
 ```
 
-导入器会先检查 manifest 中所有文件的 SHA-256，再检查身份确认、字段白名单和审核状态。dry-run 失败必须停止，不执行 `--apply`。
+这一遍会：
 
-版本号规则：
+1. 校验 Release schema、审核状态和 UTF-8；
+2. 对当前生产 SQLite 使用 Backup API 创建隔离候选库；
+3. 在隔离图片目录执行完整导入；
+4. 校验数据库完整性、外键、UID、版本、技能、特性、身高体重、蛋组和图片；
+5. 输出 `[DONE] 隔离演练通过。生产环境未修改。` 后退出。
 
-- `--version S4`：统一写入技能和精灵的 `version` 列；
-- 不传 `--version`：不改变数据库原有版本值；
-- 特性没有独立版本列，不写入特性表。
-
-## 3. 数据库导入和安全保证
-
-确认 dry-run 输出后才执行：
-
-```bash
-python3 scripts/wiki_staging.py import \
-  --input /tmp/roco-wiki-release/<release-dir> \
-  --version S4 --apply
-```
-
-导入器会：
-
-1. 在 `app/server/data/backups/` 创建 SQLite 备份；
-2. 开启外键约束和单一事务；
-3. 执行全部数据库变更；
-4. 执行 `PRAGMA integrity_check` 和 `PRAGMA foreign_key_check`；
-5. 任一步失败则回滚事务，保留备份供恢复。
-
-## 4. UID 迁移如何保证关联不断裂
-
-UID 迁移必须使用审核生成的 `uid_migration`，禁止手工直接改 `pets.uid`。导入器会先验证：
-
-- 源 UID 存在；
-- 目标 UID 不存在且等于发布计划 ID；
-- `pet_id` 和名称与源记录一致。
-
-通过验证后，在同一事务中完成：
-
-- `pets.uid` 更新；
-- 所有包含 `pet_uid` 的表同步更新，包括 `pet_details`、`pet_skills` 和其他外键表；
-- `variants_map.pet_uid` 和形态排序更新；
-- `seasons` 中受支持的 `pass_pets`、`legend_pet`、`season_pets`、`shiny_pets` JSON UID 引用更新；
-- `pet_details.evolution_chain` 中的 UID 引用更新。
-
-随后才发布图片。图片必须使用迁移后的最终 UID，例如 `pet_031_1`，不能继续使用旧 UID 文件名。
-
-## 5. 图片发布位置和数据库索引
-
-发布包中的图片暂时只放在包内实体目录，例如：
+演练记录默认保存在：
 
 ```text
-pets/pet_177/images/image_shiny.png
+app/server/data/backups/wiki-server-import/<时间>-<进程号>/
 ```
 
-`import --apply` 不会自动复制图片到正式目录，也不会自动写图片字段。数据库导入完成后，使用管理端上传接口逐张发布：
+演练失败时不要追加 `--apply`，根据屏幕中的步骤名和该目录内日志处理。
+
+## 3. 第二遍：人工确认后覆盖线上
+
+隔离演练通过后，使用完全相同的 Release 和版本号：
 
 ```bash
-curl -X POST "https://<host>/api/admin/upload" \
-  -F "type=pet_shiny" -F "uid=pet_177" \
-  -F "file=@pets/pet_177/images/image_shiny.png"
+bash scripts/wiki_server_import.sh \
+  --release data/wiki-releases/<release-id> \
+  --version S4 \
+  --apply
 ```
-请求必须携带现有管理端认证；不要把 Cookie、Token 或密码写入 SOP、Git 或命令历史。
 
-正式目录和索引关系如下：
+脚本会先再次演练，然后要求输入：
 
-| 类型 | 文件位置 | 数据库索引 |
-|---|---|---|
-| 精灵本体 | `data/public/pets/default/<uid>_default.png` | `pet_details.image_default`；同时更新 `pets.image_url` |
-| 精灵异色 | `data/public/pets/shiny/<uid>_shiny.png` | `pet_details.image_shiny` |
-| 精灵果实 | `data/public/pets/fruit/<uid>_fruit.png` | `pet_details.image_fruit` |
-| 精灵蛋 | `data/public/pets/egg/<uid>_egg.png` | `pet_details.image_egg` |
-| 特性图标 | `data/public/pets/abilities/<uid>_ability.png` | `pet_details.ability_icon` |
-| 技能图标 | `data/public/skills/icons/<skill_uid>.png` | `skills.icon_url` |
+```text
+APPLY-PRODUCTION <manifest 中的 package_id>
+```
 
-管理端上传会按 `type + uid` 生成文件名，并更新对应数据库字段；本体图还会生成 `data/public/pets/thumbs/<uid>_default.webp`，写入 `pets.thumb_url`。前端通过 `pet_details.pet_uid = pets.uid` 读取正确槽位，因此 UID 迁移完成后再上传是必要条件。
+确认后自动按以下顺序执行：
 
-## 6. 图片发布后的验证
+1. 停止 PM2 应用，并确认健康地址不再响应；
+2. 使用 SQLite Backup API 保存生产库恢复点并检查完整性和外键；
+3. 针对生产路径再次 dry-run；
+4. 在一个数据库事务中写入技能、精灵、UID 迁移、特性补全、身高体重、三类技能关系和蛋组；
+5. 发布本体、异色、果实、精灵蛋、技能图标、特性图标；
+6. 自动生成缩略图和 WebP，并更新数据库图片 URL；
+7. 校验数据库、导入实体版本、素材回滚清单和全部实际发布文件；
+8. 启动 PM2，并轮询 API 健康检查。
 
-逐项检查：
+脚本不会自动把未审核内容加入 Release，也不会清空赛季备份。UID 迁移沿用发布包中的 `uid_migration`，由导入器在同一事务中同步关联表和受支持的赛季 JSON 引用。
+
+## 4. 页面人工验收与最终选择
+
+PM2 和 API 恢复后，保持当前终端不要关闭，人工检查：
+
+- 管理端精灵、技能、特性数量与内容；
+- 发生 UID 迁移的旧链接、形态切换和技能关系；
+- 精灵本体、异色、果实、精灵蛋；
+- 技能图标、特性图标、特性描述和关联精灵；
+- 身高、体重、三类技能学习列表和蛋组；
+- 首页/API 没有 500、空白图或跨精灵串图。
+
+通过后输入：
+
+```text
+CONFIRM
+```
+
+需要撤回则输入：
+
+```text
+ROLLBACK
+```
+
+输入无效也会按安全策略自动回滚。
+
+## 5. 自动回滚范围
+
+执行 `--apply` 后任一步失败，脚本会尝试：
+
+1. 保持/重新停止 PM2；
+2. 用本轮 `roco-before-import.db` 恢复生产数据库；
+3. 根据 `assets.json` 恢复被覆盖图片，并删除本轮新建图片；
+4. 再次检查数据库完整性和外键；
+5. 重启 PM2并重新检查 API。
+
+如果发布包包含图片但素材回滚清单没有成功生成，脚本会保守地保持服务停止，并显示本次恢复目录，禁止在未知状态下自动重新开放服务。
+
+重要恢复文件：
+
+```text
+app/server/data/backups/wiki-server-import/<会话>/
+  session.txt
+  roco-before-import.db
+  assets.json
+  candidate.log
+  production-dry-run.log
+  production-apply.log
+  production-report.json
+  health.json
+```
+
+导入器自身还会在 `app/server/data/backups/` 生成一份 `wiki_staging_*.db` 和素材旧文件目录。上线确认前不要删除 Release、上述会话目录或导入器备份。
+
+## 6. 自定义服务器参数
+
+仅当服务器实际配置不同才传：
 
 ```bash
-sqlite3 app/server/data/roco.db \
-  "SELECT pet_uid,image_default,image_shiny,image_fruit,image_egg,ability_icon FROM pet_details WHERE pet_uid='pet_177';"
+bash scripts/wiki_server_import.sh \
+  --release data/wiki-releases/<release-id> \
+  --version S4 \
+  --db app/server/data/roco.db \
+  --public-dir data/public \
+  --pm2-app roco \
+  --health-url http://127.0.0.1:3000/api/stats \
+  --apply
 ```
 
-并用管理端或线上页面确认：
+可通过 `PYTHON_BIN` 指定 Python：
 
-- URL 返回 HTTP 200；
-- 图片槽位没有串位；
-- 异色显示在异色槽位；
-- UID 迁移后的精灵、技能组和形态映射仍可打开；
-- 线上统计和 API 无异常。
+```bash
+PYTHON_BIN=python3 bash scripts/wiki_server_import.sh \
+  --release data/wiki-releases/<release-id> \
+  --version S4
+```
 
-## 7. 回滚和收尾
-
-数据库导入失败时保留原库和备份，不继续发布图片。数据库成功、图片失败时，先修复或补传图片，不回滚已验证的数据库字段；若必须整体回滚，停止写入服务后使用本次导入器生成的备份恢复，再重新执行 dry-run。
-
-线上验证完成后归档 ZIP、manifest、导入日志和备份记录。不要立即删除服务器上的备份或本批次发布包。
+不要跳过默认演练直接调用底层 `wiki_staging.py import --apply`；否则不会获得 PM2 停机窗口、持久恢复点、上线后健康检查和最终 `CONFIRM/ROLLBACK` 流程。

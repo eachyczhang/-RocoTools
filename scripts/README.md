@@ -452,7 +452,14 @@ python scripts/wiki_staging.py fetch --all-skills  # 只暂存全部技能，不
 python scripts/wiki_staging.py fetch-html --all --pet-list-html wiki-input/精灵筛选.html --skill-list-html wiki-input/技能查询.html  # 从浏览器保存文件离线暂存
 python scripts/wiki_staging.py compare         # 重新生成本地快照与逐字段差异
 python scripts/wiki_staging.py import          # dry-run
-python scripts/wiki_staging.py import --apply  # 备份后写入
+python scripts/wiki_staging.py import --apply  # 备份后写库、发布原图，并自动生成缩略图/WebP
+# 当前发布包中的精灵本体会生成 pets/thumbs/<uid>_default.webp 并写 pets.thumb_url；
+# 本体/异色/果实/精灵蛋/技能图标/特性图标会保留原图并生成同目录 WebP。
+# gen_thumbnails.js / gen_webp.js 只用于修复历史存量图片，不是 BWIKI 导入后的必做步骤。
+
+# === BWIKI 服务器导入（先演练，后人工覆盖） ===
+bash scripts/wiki_server_import.sh --release data/wiki-releases/<release-id> --version S4
+bash scripts/wiki_server_import.sh --release data/wiki-releases/<release-id> --version S4 --apply
 
 # === 爬虫（获取最新游戏数据） ===
 python crawler/run.py --full                   # 全量爬取（首次）
@@ -612,3 +619,9 @@ git commit --no-verify -m "hotfix: emergency fix"
 - **前端构建**：仅在 `app/client/` 目录有文件变动时触发，构建成功后自动暂存产物
 - **尾部空白**：自动修复后重新 `git add`，无需手动操作
 - **大文件**：阈值 5MB，适用于所有文件类型
+
+### 管理端版本公告生成
+
+管理首页新增“版本公告生成”入口，对应 `/admin/patch-notes`。输入项目内相对目录（默认 `temp/seasons`），读取该目录第一层的 `.db` 文件，选择旧版本和新版本后即可调用同一份 `generate_patch_notes.js` 逻辑。
+
+页面按公告模块展示表格条目，可将仅改名、历史补录等不需要公开的行从当前草稿移除，也可恢复；数据库文件不会被修改。筛选后的 Markdown 可继续手动编辑、复制或下载。后端使用 `--stdout` 获取生成结果，不创建中间公告文件；原命令行输出文件方式保持兼容。

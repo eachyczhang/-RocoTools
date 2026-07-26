@@ -30,6 +30,7 @@ const pikaRouter = require('./pika');
 const uploadRouter = require('./upload');
 const conflictsRouter = require('./conflicts');
 const wikiReviewRouter = require('./wikiReview');
+const { router: wikiBatchRouter } = require('../../services/wikiBatchManager');
 const backupRouter = require('./backup');
 const libraryRouter = require('./library');
 const mediaRouter = require('./media');
@@ -37,6 +38,7 @@ const exportRouter = require('./export');
 const petSkillsRouter = require('./petSkills');
 const crawlRouter = require('./crawl');
 const feedbacksRouter = require('./feedbacks');
+const patchNotesRouter = require('./patchNotes');
 
 // ============================================================
 // 公开 API（不需要鉴权）
@@ -103,7 +105,11 @@ router.use(uploadRouter);
 // 数据审查（冲突处理）
 router.use(conflictsRouter);
 
-// BWIKI 暂存 Diff 审核
+// 版本数据库比对与公告草稿
+router.use(patchNotesRouter);
+
+// BWIKI Batch 工作流与暂存 Diff 审核
+router.use(wikiBatchRouter);
 router.use(wikiReviewRouter);
 
 // 数据库备份 / 恢复

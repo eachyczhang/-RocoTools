@@ -32,6 +32,7 @@ const routes = [
   { path: '/admin/fate-flower', name: 'AdminFateFlower', component: () => import('@/views/admin/AdminFateFlower.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/conflicts', name: 'AdminConflicts', component: () => import('@/views/admin/AdminConflicts.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/wiki-review', name: 'AdminWikiReview', component: () => import('@/views/admin/AdminWikiReview.vue'), meta: { hidden: true, requiresAdmin: true } },
+  { path: '/admin/patch-notes', name: 'AdminPatchNotes', component: () => import('@/views/admin/AdminPatchNotes.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/nav-tabs', name: 'AdminNavTabs', component: () => import('@/views/admin/AdminNavTabs.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/abilities', name: 'AdminAbilities', component: () => import('@/views/admin/AdminAbilities.vue'), meta: { hidden: true, requiresAdmin: true } },
   { path: '/admin/media', name: 'AdminMedia', component: () => import('@/views/admin/AdminMedia.vue'), meta: { hidden: true, requiresAdmin: true } },

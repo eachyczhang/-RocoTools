@@ -197,6 +197,7 @@ const navCards = [
   { path: '/admin/feedbacks', title: '用户反馈', desc: '查看和管理用户提交的反馈建议' },
   { path: '/admin/conflicts', title: '数据审查', desc: '处理爬虫与手动编辑的数据冲突' },
   { path: '/admin/wiki-review', title: 'BWIKI Diff 审核', desc: '按技能、特性、精灵顺序逐个确认暂存差异' },
+  { path: '/admin/patch-notes', title: '版本公告生成', desc: '选择两个数据库，筛除无需展示的改动后导出公告' },
 ]
 
 // 备份

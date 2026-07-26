@@ -17,7 +17,9 @@ import json
 import re
 import shutil
 import sqlite3
+import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -36,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STAGE = ROOT / "data" / "wiki-staging"
 DEFAULT_RELEASES = ROOT / "data" / "wiki-releases"
 DEFAULT_DB = ROOT / "app" / "server" / "data" / "roco.db"
+DEFAULT_PUBLIC = ROOT / "data" / "public"
 SCRAPERS = ROOT / "crawler" / "scrapers"
 
 PET_FIELDS = (
@@ -51,6 +54,7 @@ DETAIL_FIELDS = (
 )
 SKILL_FIELDS = ("name", "element", "category", "cost", "power", "description")
 SKILL_SET_KEYS = ("skills", "bloodline_skills", "learnable_stones")
+PET_SUPPLEMENT_KEYS = ("height", "weight", *SKILL_SET_KEYS, "egg_groups")
 IMAGE_KEYS = {
     "image_url", "thumb_url", "icon_url", "ability_icon", "avatar_url",
     "image_default", "image_shiny", "image_fruit", "image_egg",
@@ -468,6 +472,16 @@ def normalize_pet_form_name(value: Any) -> str:
     return text
 
 
+def normalize_pet_form_label(value: Any) -> str:
+    """Normalize equivalent parenthetical form labels without discarding the form."""
+    text = normalize_match_name(value)
+    match = re.search(r"[（(]([^）)]*)[）)]$", text)
+    if not match:
+        return ""
+    label = re.sub(r"的样子$", "", match.group(1))
+    return re.sub(r"^(储水|枯水)时$", r"\1期", label)
+
+
 def pet_uid_suffix(uid: Any) -> int:
     match = re.search(r"_(\d+)$", str(uid or ""))
     return int(match.group(1)) if match else 0
@@ -535,16 +549,30 @@ def match_local_entity(
         dict(row) for row in rows
         if normalize_match_name(row["name"]) == normalized_name
     ]
+    match_basis = "normalized-name"
     form_candidates = []
     if entity == "pet" and remote_data.get("pet_id") is not None and not candidates:
-        remote_form_name = normalize_pet_form_name(remote_name)
-        form_candidates = [
-            dict(row) for row in rows
-            if str(row["pet_id"] or "") == str(remote_data.get("pet_id") or "")
-            and normalize_pet_form_name(row["name"]) == remote_form_name
-        ]
-        if form_candidates:
-            candidates = sorted(form_candidates, key=lambda row: (pet_uid_suffix(row["uid"]), str(row["uid"])))
+        remote_pet_id = str(remote_data.get("pet_id") or "")
+        remote_form_label = normalize_pet_form_label(remote_name)
+        if remote_form_label:
+            form_candidates = [
+                dict(row) for row in rows
+                if str(row["pet_id"] or "") == remote_pet_id
+                and normalize_pet_form_label(row["name"]) == remote_form_label
+            ]
+            if form_candidates:
+                candidates = sorted(form_candidates, key=lambda row: (pet_uid_suffix(row["uid"]), str(row["uid"])))
+                match_basis = "pet-id-form-label"
+        if not candidates:
+            remote_form_name = normalize_pet_form_name(remote_name)
+            form_candidates = [
+                dict(row) for row in rows
+                if str(row["pet_id"] or "") == remote_pet_id
+                and normalize_pet_form_name(row["name"]) == remote_form_name
+            ]
+            if form_candidates:
+                candidates = sorted(form_candidates, key=lambda row: (pet_uid_suffix(row["uid"]), str(row["uid"])))
+                match_basis = "pet-id-form-name"
     if len(candidates) == 1:
         candidate = candidates[0]
     elif form_candidates:
@@ -552,7 +580,7 @@ def match_local_entity(
         local = local_pet_snapshot(db, candidate["uid"])
         return local, {
             "status": "name-match-id-different",
-            "basis": "pet-id-form-name",
+            "basis": match_basis,
             "remote": remote_identity,
             "local": candidate,
             "candidates": candidates,
@@ -565,7 +593,7 @@ def match_local_entity(
             dict(row) for row in rows
             if str(row["pet_id"] or "") == remote_pet_id
         ]
-        if len(pet_id_candidates) == 1:
+        if len(pet_id_candidates) == 1 and not remote_identity["uid"]:
             candidate = pet_id_candidates[0]
             local = local_pet_snapshot(db, candidate["uid"])
             return local, {
@@ -613,7 +641,7 @@ def match_local_entity(
         )
     return local, {
         "status": "name-match-id-different" if identifiers_differ else "matched",
-        "basis": "normalized-name",
+        "basis": match_basis,
         "remote": remote_identity,
         "local": candidate,
         "candidates": [candidate],
@@ -1236,14 +1264,20 @@ def migrate_pet_uid(db: sqlite3.Connection, plan: dict) -> None:
     data = plan.get("data") or {}
     if not source_uid or not target_uid or source_uid == target_uid or plan.get("id") != target_uid:
         raise ValueError(f"无效精灵 UID 迁移：{migration}")
+    target = db.execute(
+        "SELECT uid, pet_id, name FROM pets WHERE uid = ?",
+        (target_uid,),
+    ).fetchone()
+    if target:
+        if str(target["pet_id"]) == str(data.get("pet_id") or "") and target["name"] == data.get("name"):
+            return
+        raise ValueError(f"UID 迁移目标已被其他精灵占用：{target_uid}")
     source = db.execute(
         "SELECT uid, pet_id, name FROM pets WHERE uid = ?",
         (source_uid,),
     ).fetchone()
     if not source:
         raise ValueError(f"UID 迁移源不存在：{source_uid}")
-    if db.execute("SELECT 1 FROM pets WHERE uid = ?", (target_uid,)).fetchone():
-        raise ValueError(f"UID 迁移目标已存在：{target_uid}")
     if str(source["pet_id"]) != str(data.get("pet_id") or "") or source["name"] != data.get("name"):
         raise ValueError(f"UID 迁移身份不一致：{source_uid} -> {target_uid}")
 
@@ -1279,9 +1313,6 @@ def apply_pet(db: sqlite3.Connection, plan: dict, version_override: str | None =
     if version_override is not None:
         selected_pet.add("version")
     selected_detail = set(plan.get("fields", {}).get("detail", []))
-    replace_skill_sets = bool(plan.get("fields", {}).get("replace_skill_sets"))
-    if selected_detail or replace_skill_sets:
-        raise ValueError(f"{uid} 精灵暂存仅允许基础字段，不允许详情或技能组导入")
     unknown = (selected_pet - set(PET_FIELDS) - {"version"}) | (selected_detail - set(DETAIL_FIELDS))
     if unknown:
         raise ValueError(f"{uid} 含不允许字段：{sorted(unknown)}")
@@ -1298,9 +1329,17 @@ def apply_pet(db: sqlite3.Connection, plan: dict, version_override: str | None =
     if exists:
         identity_fields = selected_pet & {"pet_id", "name"}
         if identity_fields:
-            raise ValueError(
-                f"{uid} 现有精灵的身份字段不可作为普通字段导入：{sorted(identity_fields)}"
-            )
+            existing_identity = db.execute(
+                "SELECT pet_id, name FROM pets WHERE uid = ?", (uid,)
+            ).fetchone()
+            mismatched = [
+                field for field in identity_fields
+                if str(existing_identity[field]) != str(data.get(field))
+            ]
+            if mismatched:
+                raise ValueError(f"{uid} 现有精灵身份与导入计划不一致：{sorted(mismatched)}")
+            for field in identity_fields:
+                pet_values.pop(field, None)
         update_columns(db, "pets", "uid", uid, pet_values)
     else:
         base_values = {
@@ -1325,6 +1364,142 @@ def apply_pet(db: sqlite3.Connection, plan: dict, version_override: str | None =
             (data["pet_id"], uid, sort_order),
         )
 
+
+def normalized_skill_name(value: Any) -> str:
+    return re.sub(r"[\s·•・,，。.!！?？:：;；'\"“”‘’（）()【】\[\]_-]+", "", str(value or "")).casefold()
+
+
+def clean_detail_text(value: Any, label: str, max_length: int = 500) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if "\ufffd" in text:
+        raise ValueError(f"{label} 包含损坏字符，请重新抓取当前 Batch")
+    if len(text) > max_length:
+        raise ValueError(f"{label} 长度超过 {max_length}")
+    return text
+
+
+def resolve_pet_skill(db: sqlite3.Connection, uid: str, skill_type: str, item: dict) -> dict:
+    name = clean_detail_text(item.get("name"), f"{uid}/{skill_type} 技能名称", 100)
+    if not name:
+        raise ValueError(f"{uid}/{skill_type} 存在无名称技能")
+    requested_uid = clean_detail_text(
+        item.get("skill_ref_uid") or (item.get("skill_ref") or {}).get("uid"),
+        f"{uid}/{skill_type}/{name} 技能 UID", 100,
+    )
+    row = None
+    if requested_uid:
+        row = db.execute(
+            """SELECT s.uid, s.name, e.name AS element, s.category, s.cost, s.power, s.description
+               FROM skills s LEFT JOIN elements e ON e.id = s.element_id WHERE s.uid = ?""",
+            (requested_uid,),
+        ).fetchone()
+        if row and normalized_skill_name(row["name"]) != normalized_skill_name(name):
+            raise ValueError(f"{uid}/{skill_type} 技能 UID 与名称不一致：{requested_uid}={row['name']}，远程={name}")
+    if row is None:
+        normalized = normalized_skill_name(name)
+        candidates = [candidate for candidate in db.execute(
+            """SELECT s.uid, s.name, e.name AS element, s.category, s.cost, s.power, s.description
+               FROM skills s LEFT JOIN elements e ON e.id = s.element_id"""
+        ).fetchall() if normalized_skill_name(candidate["name"]) == normalized]
+        if len(candidates) != 1:
+            raise ValueError(f"{uid}/{skill_type} 技能“{name}”无法唯一关联全局技能表；请先完成技能审核")
+        row = candidates[0]
+    level = clean_detail_text(item.get("level"), f"{uid}/{skill_type}/{name} 学习等级", 40)
+    level_match = re.search(r"\d+", level) if level else None
+    return {
+        "level": level_match.group(0) if level_match else None,
+        "name": row["name"], "element": row["element"], "type": row["category"],
+        "cost": int(row["cost"] or 0), "power": int(row["power"] or 0),
+        "description": row["description"], "skill_ref_uid": row["uid"],
+    }
+
+
+def apply_pet_supplement(db: sqlite3.Connection, plan: dict) -> dict[str, int]:
+    uid = str(plan.get("id") or "")
+    detail = plan.get("detail")
+    result = {"details": 0, "skill_sets": 0, "skills": 0, "egg_groups": 0}
+    if not uid or not isinstance(detail, dict):
+        return result
+    if not db.execute("SELECT 1 FROM pets WHERE uid = ?", (uid,)).fetchone():
+        raise ValueError(f"{uid} 详情补全目标精灵不存在")
+    unknown = set(detail) - set(PET_SUPPLEMENT_KEYS) - {"stats"}
+    if unknown:
+        raise ValueError(f"{uid} 详情补全包含未知字段：{sorted(unknown)}")
+
+    height = clean_detail_text(detail.get("height"), f"{uid} 身高", 100)
+    weight = clean_detail_text(detail.get("weight"), f"{uid} 体重", 100)
+    if height or weight:
+        db.execute(
+            """INSERT INTO pet_details (pet_uid, height, weight, manual_edit)
+               VALUES (?, ?, ?, 1)
+               ON CONFLICT(pet_uid) DO UPDATE SET
+                 height = CASE WHEN pet_details.height IS NULL OR TRIM(pet_details.height) = ''
+                   OR INSTR(pet_details.height, '�') > 0
+                   THEN COALESCE(excluded.height, pet_details.height) ELSE pet_details.height END,
+                 weight = CASE WHEN pet_details.weight IS NULL OR TRIM(pet_details.weight) = ''
+                   OR INSTR(pet_details.weight, '�') > 0
+                   THEN COALESCE(excluded.weight, pet_details.weight) ELSE pet_details.weight END,
+                 manual_edit = 1""",
+            (uid, height, weight),
+        )
+        result["details"] = 1
+
+    for skill_type in SKILL_SET_KEYS:
+        items = detail.get(skill_type)
+        if not isinstance(items, list) or not items:
+            continue
+        resolved = [resolve_pet_skill(db, uid, skill_type, item) for item in items]
+        seen, unique = set(), []
+        for item in resolved:
+            key = (item["skill_ref_uid"], item["level"])
+            if key not in seen:
+                seen.add(key)
+                unique.append(item)
+        db.execute("DELETE FROM pet_skills WHERE pet_uid = ? AND skill_type = ?", (uid, skill_type))
+        for item in unique:
+            db.execute(
+                """INSERT INTO pet_skills
+                   (pet_uid, skill_type, level, name, element, type, cost, power, description, skill_ref_uid)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (uid, skill_type, item["level"], item["name"], item["element"], item["type"],
+                 item["cost"], item["power"], item["description"], item["skill_ref_uid"]),
+            )
+        result["skill_sets"] += 1
+        result["skills"] += len(unique)
+
+    egg_groups = detail.get("egg_groups")
+    if isinstance(egg_groups, list) and egg_groups:
+        resolved_group_ids = []
+        for group in egg_groups:
+            group_id = group.get("id") if isinstance(group, dict) else None
+            group_name = group.get("name") if isinstance(group, dict) else group
+            row = db.execute(
+                "SELECT id, name FROM egg_groups WHERE id = ?" if group_id is not None
+                else "SELECT id, name FROM egg_groups WHERE name = ?",
+                (group_id if group_id is not None else group_name,),
+            ).fetchone()
+            if not row or (group_name and str(row["name"]) != str(group_name)):
+                raise ValueError(f"{uid} 蛋组无法关联：{group}")
+            resolved_group_ids.append(row["id"])
+        manual_groups = db.execute(
+            "SELECT COUNT(*) FROM pet_egg_groups WHERE pet_uid = ? AND manual_edit = 1", (uid,)
+        ).fetchone()[0]
+        if manual_groups:
+            print(f"[PET DETAIL] {uid} 保留 {manual_groups} 个人工蛋组关联")
+        else:
+            db.execute("DELETE FROM pet_egg_groups WHERE pet_uid = ?", (uid,))
+            for group_id in dict.fromkeys(resolved_group_ids):
+                db.execute(
+                    "INSERT INTO pet_egg_groups (pet_uid, egg_group_id, manual_edit) VALUES (?, ?, 0)",
+                    (uid, group_id),
+                )
+            result["egg_groups"] = len(set(resolved_group_ids))
+    return result
+
 def apply_skill(db: sqlite3.Connection, plan: dict, version_override: str | None = None) -> None:
     data = dict(plan["data"])
     if version_override is not None:
@@ -1346,7 +1521,10 @@ def apply_skill(db: sqlite3.Connection, plan: dict, version_override: str | None
     exists = db.execute("SELECT 1 FROM skills WHERE uid = ?", (uid,)).fetchone()
     if exists:
         if "name" in selected:
-            raise ValueError(f"{uid} 现有技能的名称不可作为普通字段导入")
+            existing_name = db.execute("SELECT name FROM skills WHERE uid = ?", (uid,)).fetchone()["name"]
+            if existing_name != data.get("name"):
+                raise ValueError(f"{uid} 现有技能名称与导入计划不一致")
+            values.pop("name", None)
         update_columns(db, "skills", "uid", uid, values)
     else:
         base_values = {"uid": uid, "name": data.get("name"), **values, "manual_edit": 1}
@@ -1372,6 +1550,25 @@ def apply_ability(db: sqlite3.Connection, plan: dict) -> None:
         )
         if result.rowcount == 0:
             raise ValueError(f"数据库中没有使用特性 {data.get('name')} 的精灵")
+
+
+def apply_reference_ability(db: sqlite3.Connection, plan: dict) -> None:
+    data = plan.get("data") or {}
+    name = data.get("name")
+    description = data.get("description")
+    if not name:
+        raise ValueError(f"{plan.get('id')} 特性补全缺少名称")
+    if description:
+        result = db.execute(
+            """
+            UPDATE pets
+            SET ability_desc = ?, manual_edit = 1
+            WHERE ability_name = ?
+              AND (ability_desc IS NULL OR TRIM(ability_desc) = '' OR INSTR(ability_desc, '�') > 0)
+            """,
+            (description, name),
+        )
+        print(f"[ABILITY] {name} 补全空描述：{result.rowcount} 只精灵")
 
 
 def iter_entity_files(stage: Path, filename: str):
@@ -1510,6 +1707,7 @@ def build_release_change(folder: Path, plan: dict, decision: str, assets: dict) 
         "identity": plan.get("identity") or difference.get("identity") or {},
         "fields": fields,
         "detail": plan.get("detail") if plan.get("entity") == "pet" else None,
+        "data": data if not plan.get("enabled") else None,
         "assets": sorted(assets),
     }
 
@@ -1628,7 +1826,7 @@ def package_command(args: argparse.Namespace) -> int:
         reviews.append((plan_path, plan, decision))
         if decision not in RESOLVED_REVIEW_DECISIONS:
             pending.append(plan_path.parent.relative_to(stage).as_posix())
-        if plan.get("enabled") and decision not in {"approved-new", "approved-fields"}:
+        if plan.get("enabled") and decision not in {"approved-new", "approved-fields", "approved-uid-migration"}:
             inconsistent.append(plan_path.parent.relative_to(stage).as_posix())
     if pending:
         preview = ", ".join(pending[:10])
@@ -1658,14 +1856,21 @@ def package_command(args: argparse.Namespace) -> int:
             assets = downloaded_assets(folder)
             include_import = bool(plan.get("enabled"))
             include_reference_assets = decision == "approved-reference" and bool(assets)
-            if not include_import and not include_reference_assets:
+            detail = plan.get("detail") if plan.get("entity") == "pet" else None
+            include_reference_detail = (
+                not include_import
+                and decision not in {"pending", "ignored"}
+                and isinstance(detail, dict)
+                and any(detail.get(key) for key in PET_SUPPLEMENT_KEYS)
+            )
+            if not include_import and not include_reference_assets and not include_reference_detail:
                 continue
 
             relative_folder = folder.relative_to(stage)
             destination = temp_output / relative_folder
             destination.mkdir(parents=True, exist_ok=True)
 
-            if include_import:
+            if include_import or include_reference_assets or include_reference_detail:
                 import_target = destination / "import.json"
                 write_json(import_target, plan)
                 payload_files.append(import_target)
@@ -1695,6 +1900,10 @@ def package_command(args: argparse.Namespace) -> int:
                 "decision": decision,
                 "action": change["action"],
                 "fields": [entry["field"] for entry in change["fields"]],
+                "detail": sorted(
+                    key for key in PET_SUPPLEMENT_KEYS
+                    if isinstance(plan.get("detail"), dict) and plan["detail"].get(key)
+                ),
                 "assets": sorted(packaged_assets),
                 "folder": relative_folder.as_posix(),
             })
@@ -1707,7 +1916,7 @@ def package_command(args: argparse.Namespace) -> int:
             for path in sorted(payload_files)
         }
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "package_id": output.name,
             "created_at": utc_now(),
             "source_stage": stage.name,
@@ -1774,6 +1983,236 @@ def compare_command(args: argparse.Namespace) -> int:
         db.close()
 
 
+ASSET_TARGETS = {
+    ("pet", "image_default"): ("pets/default", "_default"),
+    ("pet", "image_shiny"): ("pets/shiny", "_shiny"),
+    ("pet", "image_fruit"): ("pets/fruit", "_fruit"),
+    ("pet", "image_egg"): ("pets/egg", "_egg"),
+    ("pet", "ability_icon"): ("pets/abilities", "_ability"),
+    ("skill", "icon"): ("skills/icons", ""),
+}
+
+
+def load_release_items(stage: Path) -> list[dict]:
+    manifest = read_json(stage / "manifest.json", {}) or {}
+    result = []
+    for item in manifest.get("items") or []:
+        relative = item.get("folder")
+        if not isinstance(relative, str) or relative.startswith("/") or ".." in Path(relative).parts:
+            raise ValueError(f"发布包包含非法实体目录：{relative}")
+        folder = (stage / relative).resolve()
+        if stage not in folder.parents:
+            raise ValueError(f"发布包实体目录越界：{relative}")
+        result.append({
+            **item,
+            "folder_path": folder,
+            "plan": read_json(folder / "import.json", {}) or {},
+            "change": read_json(folder / "change.json", {}) or {},
+            "asset_data": read_json(folder / "assets.json", {}) or {},
+        })
+    return result
+
+
+def asset_public_path(public_dir: Path, entity: str, uid: str, key: str, source: Path) -> tuple[Path, str]:
+    config = ASSET_TARGETS.get((entity, key))
+    if not config:
+        raise ValueError(f"不支持的正式素材槽位：{entity}/{key}")
+    directory, suffix = config
+    extension = source.suffix.lower()
+    if extension not in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+        raise ValueError(f"不支持的图片扩展名：{source}")
+    relative = Path(directory) / f"{uid}{suffix}{extension}"
+    return public_dir / relative, "/public/" + relative.as_posix()
+
+
+def publish_file(source: Path, target: Path, public_dir: Path, backup_dir: Path, originals: dict[Path, Path | None]) -> None:
+    if target not in originals:
+        if target.exists():
+            backup = backup_dir / target.relative_to(public_dir)
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, backup)
+            originals[target] = backup
+        else:
+            originals[target] = None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + ".wiki-import.tmp")
+    shutil.copy2(source, temporary)
+    temporary.replace(target)
+
+
+def rollback_published_files(originals: dict[Path, Path | None]) -> None:
+    for target, backup in reversed(list(originals.items())):
+        if backup is None:
+            if target.exists():
+                target.unlink()
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(backup, target)
+
+
+def set_pet_detail_asset(db: sqlite3.Connection, uid: str, field: str, url: str) -> None:
+    if not db.execute("SELECT 1 FROM pets WHERE uid = ?", (uid,)).fetchone():
+        raise ValueError(f"图片对应精灵不存在：{uid}")
+    db.execute(
+        f"INSERT INTO pet_details (pet_uid, {field}) VALUES (?, ?) "
+        f"ON CONFLICT(pet_uid) DO UPDATE SET {field} = excluded.{field}, manual_edit = 1",
+        (uid, url),
+    )
+    if field == "image_default":
+        db.execute("UPDATE pets SET image_url = ?, manual_edit = 1 WHERE uid = ?", (url, uid))
+
+
+def apply_packaged_assets(db: sqlite3.Connection, stage: Path, public_dir: Path, backup_dir: Path, originals: dict[Path, Path | None]) -> int:
+    published = 0
+    for item in load_release_items(stage):
+        entity = item.get("entity")
+        uid = item.get("id")
+        folder = item["folder_path"]
+        plan = item.get("plan") or {}
+        data = plan.get("data") or (item.get("change") or {}).get("data") or {}
+        for key, metadata in (item.get("asset_data") or {}).items():
+            source = verified_asset_path(folder, metadata)
+            if entity == "ability" and key == "icon":
+                ability_name = data.get("name") or item.get("name")
+                pet_rows = db.execute("SELECT uid FROM pets WHERE ability_name = ?", (ability_name,)).fetchall()
+                if not pet_rows:
+                    raise ValueError(f"特性图标没有可关联精灵：{ability_name}")
+                for row in pet_rows:
+                    target, url = asset_public_path(public_dir, "pet", row["uid"], "ability_icon", source)
+                    publish_file(source, target, public_dir, backup_dir, originals)
+                    set_pet_detail_asset(db, row["uid"], "ability_icon", url)
+                    published += 1
+                continue
+            target, url = asset_public_path(public_dir, entity, uid, key, source)
+            publish_file(source, target, public_dir, backup_dir, originals)
+            if entity == "pet":
+                set_pet_detail_asset(db, uid, key, url)
+            elif entity == "skill":
+                result = db.execute("UPDATE skills SET icon_url = ?, manual_edit = 1 WHERE uid = ?", (url, uid))
+                if result.rowcount == 0:
+                    raise ValueError(f"图片对应技能不存在：{uid}")
+            published += 1
+    return published
+
+
+def generate_packaged_derivatives(
+    db: sqlite3.Connection,
+    stage: Path,
+    public_dir: Path,
+    backup_dir: Path,
+    originals: dict[Path, Path | None],
+) -> dict[str, int]:
+    generator = ROOT / "scripts" / "generate_image_derivatives.js"
+    node = shutil.which("node")
+    if not node:
+        raise RuntimeError("未找到 Node.js，无法生成缩略图和 WebP")
+    if not generator.is_file():
+        raise RuntimeError(f"衍生图生成器不存在：{generator}")
+
+    jobs: list[dict[str, str]] = []
+    outputs: list[dict[str, Any]] = []
+    seen_targets: set[Path] = set()
+
+    def add_job(source: Path, target: Path, mode: str, uid: str | None = None) -> None:
+        target = target.resolve()
+        if target in seen_targets:
+            return
+        if public_dir != target and public_dir not in target.parents:
+            raise ValueError(f"衍生图输出越界：{target}")
+        seen_targets.add(target)
+        output_name = f"job_{len(jobs):05d}.webp"
+        jobs.append({"source": str(source), "output": output_name, "mode": mode})
+        outputs.append({
+            "temporary": output_name,
+            "target": target,
+            "uid": uid,
+            "mode": mode,
+        })
+
+    for item in load_release_items(stage):
+        entity = item.get("entity")
+        uid = item.get("id")
+        if entity == "ability":
+            metadata = (item.get("asset_data") or {}).get("icon")
+            if not metadata:
+                continue
+            source = verified_asset_path(item["folder_path"], metadata)
+            if source.suffix.lower() == ".webp":
+                continue
+            plan = item.get("plan") or {}
+            data = plan.get("data") or (item.get("change") or {}).get("data") or {}
+            ability_name = data.get("name") or item.get("name")
+            pet_rows = db.execute(
+                "SELECT uid FROM pets WHERE ability_name = ?",
+                (ability_name,),
+            ).fetchall()
+            for row in pet_rows:
+                published_target, _ = asset_public_path(
+                    public_dir, "pet", row["uid"], "ability_icon", source
+                )
+                add_job(published_target, published_target.with_suffix(".webp"), "webp")
+            continue
+        if entity not in {"pet", "skill"} or not uid:
+            continue
+        for key, metadata in (item.get("asset_data") or {}).items():
+            if entity == "pet" and key not in {"image_default", "image_shiny", "image_fruit", "image_egg", "ability_icon"}:
+                continue
+            if entity == "skill" and key != "icon":
+                continue
+            source = verified_asset_path(item["folder_path"], metadata)
+            published_target, _ = asset_public_path(public_dir, entity, uid, key, source)
+            if source.suffix.lower() != ".webp":
+                add_job(published_target, published_target.with_suffix(".webp"), "webp")
+            if entity == "pet" and key == "image_default":
+                thumbnail = public_dir / "pets" / "thumbs" / f"{uid}_default.webp"
+                add_job(published_target, thumbnail, "thumbnail", uid)
+
+    if not jobs:
+        return {"webp": 0, "thumbnails": 0}
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".wiki-derivatives-", dir=backup_dir) as temporary:
+        temporary_dir = Path(temporary)
+        jobs_path = temporary_dir / "jobs.json"
+        output_dir = temporary_dir / "output"
+        write_json(jobs_path, jobs)
+        result = subprocess.run(
+            [
+                node, str(generator),
+                "--input", str(jobs_path),
+                "--output-dir", str(output_dir),
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=max(120, len(jobs) * 3),
+            check=False,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            raise RuntimeError(f"衍生图生成失败（code {result.returncode}）：{detail[-2000:]}")
+        for output in outputs:
+            source = output_dir / output["temporary"]
+            if not source.is_file():
+                raise RuntimeError(f"衍生图结果缺失：{source}")
+            publish_file(source, output["target"], public_dir, backup_dir, originals)
+            if output["mode"] == "thumbnail":
+                url = "/public/" + output["target"].relative_to(public_dir).as_posix()
+                result_row = db.execute(
+                    "UPDATE pets SET thumb_url = ? WHERE uid = ?",
+                    (url, output["uid"]),
+                )
+                if result_row.rowcount == 0:
+                    raise ValueError(f"缩略图对应精灵不存在：{output['uid']}")
+
+    return {
+        "webp": sum(1 for output in outputs if output["mode"] == "webp"),
+        "thumbnails": sum(1 for output in outputs if output["mode"] == "thumbnail"),
+    }
+
+
 def verify_release_package(stage: Path) -> None:
     manifest = read_json(stage / "manifest.json", {}) or {}
     expected = manifest.get("sha256")
@@ -1800,55 +2239,90 @@ def verify_release_package(stage: Path) -> None:
 def import_command(args: argparse.Namespace) -> int:
     stage = Path(args.input).resolve()
     db_path = Path(args.db).resolve()
+    public_dir = Path(args.public_dir).resolve()
     verify_release_package(stage)
+    release_items = load_release_items(stage)
     plans = load_enabled_plans(stage)
+    reference_plans = []
+    pet_supplement_plans = []
+    for item in release_items:
+        plan = item.get("plan") or {}
+        if item.get("entity") == "pet" and isinstance(plan.get("detail"), dict):
+            if any(plan["detail"].get(key) for key in PET_SUPPLEMENT_KEYS):
+                pet_supplement_plans.append((item["folder_path"] / "import.json", plan))
+        if item.get("action") != "reference-assets-only":
+            continue
+        if item.get("entity") == "ability" and not plan:
+            raise ValueError(
+                f"旧发布包缺少特性补全数据：{item.get('folder')}；请用修复后的 package 重新打包"
+            )
+        if item.get("entity") == "ability" and plan:
+            reference_plans.append((item["folder_path"] / "import.json", plan))
+
     unresolved = [
-        (path, plan) for path, plan in plans
+        (path, plan) for path, plan in plans + pet_supplement_plans
         if not plan.get("identity", {}).get("safe_to_import")
         and not plan.get("identity_confirmed", False)
     ]
     if unresolved:
         names = ", ".join(str(path.parent) for path, _ in unresolved)
         raise ValueError(f"存在未确认身份匹配的导入项：{names}")
-    print(f"[PLAN] 已启用导入项：{len(plans)}")
+
+    asset_items = [item for item in release_items if item.get("asset_data")]
+    asset_files = sum(len(item.get("asset_data") or {}) for item in asset_items)
+    for item in asset_items:
+        for key, metadata in (item.get("asset_data") or {}).items():
+            source = verified_asset_path(item["folder_path"], metadata)
+            if item.get("entity") != "ability":
+                asset_public_path(public_dir, item.get("entity"), item.get("id"), key, source)
+
+    print(f"[PLAN] 数据库导入项：{len(plans)}")
+    print(f"[PLAN] 精灵详情补全项：{len(pet_supplement_plans)}")
+    print(f"[PLAN] 特性补全项：{len(reference_plans)}")
+    print(f"[PLAN] 正式素材文件：{asset_files}（特性图标会展开到关联精灵）")
     for path, plan in plans:
         print(f"  - {plan.get('entity')} {plan.get('id')} ({path.parent})")
 
-    if not plans:
-        print("[DONE] 没有启用的 import.json")
+    if not plans and not pet_supplement_plans and not reference_plans and not asset_files:
+        print("[DONE] 没有可导入的数据、详情或素材")
         return 0
     if args.version is not None and not args.version.strip():
         raise ValueError("--version 不能为空")
     if args.version:
         print(f"[VERSION] 将统一写入 skills/pets.version: {args.version}")
     if not args.apply:
-        print("[DRY-RUN] 未写入数据库；确认后追加 --apply")
+        print("[DRY-RUN] 未写入数据库或 data/public；确认后追加 --apply")
         return 0
     if not db_path.exists():
         raise FileNotFoundError(f"数据库不存在：{db_path}")
+    if public_dir != ROOT and ROOT not in public_dir.parents:
+        raise ValueError(f"正式素材目录必须位于项目内：{public_dir}")
 
     backup_dir = db_path.parent / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = backup_dir / f"wiki_staging_{timestamp}.db"
+    asset_backup_dir = backup_dir / f"wiki_assets_{timestamp}"
 
-    source = sqlite3.connect(db_path)
-    target = sqlite3.connect(backup_path)
+    source_db = sqlite3.connect(db_path)
+    target_db = sqlite3.connect(backup_path)
     try:
-        source.backup(target)
+        source_db.backup(target_db)
     finally:
-        target.close()
-        source.close()
-    print(f"[BACKUP] {backup_path}")
+        target_db.close()
+        source_db.close()
+    print(f"[BACKUP] 数据库：{backup_path}")
 
     db = sqlite3.connect(db_path)
     db.row_factory = sqlite3.Row
+    originals: dict[Path, Path | None] = {}
     try:
         db.execute("PRAGMA foreign_keys = ON")
         db.execute("BEGIN IMMEDIATE")
         db.execute("PRAGMA defer_foreign_keys = ON")
         try:
-            for _, plan in plans:
+            entity_order = {"skill": 0, "pet": 1, "ability": 2}
+            for _, plan in sorted(plans, key=lambda entry: entity_order.get(entry[1].get("entity"), 99)):
                 entity = plan.get("entity")
                 if entity == "pet":
                     apply_pet(db, plan, args.version)
@@ -1858,6 +2332,19 @@ def import_command(args: argparse.Namespace) -> int:
                     apply_ability(db, plan)
                 else:
                     raise ValueError(f"未知实体类型：{entity}")
+            supplement_totals = {"details": 0, "skill_sets": 0, "skills": 0, "egg_groups": 0}
+            for _, plan in pet_supplement_plans:
+                applied = apply_pet_supplement(db, plan)
+                for key, value in applied.items():
+                    supplement_totals[key] += value
+            for _, plan in reference_plans:
+                apply_reference_ability(db, plan)
+            published = apply_packaged_assets(
+                db, stage, public_dir, asset_backup_dir, originals
+            ) if asset_files else 0
+            derivatives = generate_packaged_derivatives(
+                db, stage, public_dir, asset_backup_dir, originals
+            ) if asset_files else {"webp": 0, "thumbnails": 0}
             integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
             if integrity != "ok":
                 raise RuntimeError(f"导入后数据库完整性失败：{integrity}")
@@ -1868,8 +2355,29 @@ def import_command(args: argparse.Namespace) -> int:
             db.commit()
         except Exception:
             db.rollback()
+            rollback_published_files(originals)
             raise
-        print(f"[DONE] 已导入 {len(plans)} 项，integrity_check=ok")
+        print(
+            f"[DONE] 数据库导入 {len(plans)} 项，精灵详情 {supplement_totals['details']} 项，"
+            f"技能分类 {supplement_totals['skill_sets']} 组/{supplement_totals['skills']} 条，"
+            f"蛋组关联 {supplement_totals['egg_groups']} 条，特性补全 {len(reference_plans)} 项，"
+            f"发布图片 {published} 个，生成缩略图 {derivatives['thumbnails']} 个/"
+            f"WebP {derivatives['webp']} 个，integrity_check=ok"
+        )
+        if originals:
+            journal_path = Path(args.asset_journal).resolve() if args.asset_journal else asset_backup_dir / "journal.json"
+            write_json(journal_path, {
+                "public_dir": str(public_dir),
+                "files": [
+                    {
+                        "target": target.relative_to(public_dir).as_posix(),
+                        "backup": str(backup) if backup else None,
+                    }
+                    for target, backup in originals.items()
+                ],
+            })
+            print(f"[BACKUP] 被替换素材备份：{asset_backup_dir}")
+            print(f"[BACKUP] 素材回滚清单：{journal_path}")
         return 0
     finally:
         db.close()
@@ -1926,6 +2434,8 @@ def build_parser() -> argparse.ArgumentParser:
     importer = subparsers.add_parser("import", help="按 import.json 选择性导入")
     importer.add_argument("--input", default=str(DEFAULT_STAGE), help="暂存目录")
     importer.add_argument("--db", default=str(DEFAULT_DB), help="目标本地 SQLite")
+    importer.add_argument("--public-dir", default=str(DEFAULT_PUBLIC), help="正式图片目录；默认 data/public")
+    importer.add_argument("--asset-journal", help="可选；写入素材回滚清单 JSON")
     importer.add_argument("--apply", action="store_true", help="实际写入；不传时只做 dry-run")
     importer.add_argument("--version", help="导入时统一写入 skills/pets.version；例如 S3")
     importer.set_defaults(handler=import_command)

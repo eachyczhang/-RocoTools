@@ -3,11 +3,11 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { getDb } = require('../../db/connection');
+const { batchRequestContext, currentStageRoot, DEFAULT_STAGE_ROOT } = require('../../services/wikiBatchManager');
 
 const router = express.Router();
 
-const DEFAULT_STAGE_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'wiki-staging');
-const STAGE_ROOT = path.resolve(process.env.WIKI_STAGING_ROOT || DEFAULT_STAGE_ROOT);
+router.use('/wiki-review', batchRequestContext);
 const REVIEW_STAGES = [
   { entity: 'skill', folder: 'skills', label: '技能' },
   { entity: 'ability', folder: 'abilities', label: '特性' },
@@ -98,7 +98,7 @@ function stageConfig(entity) {
 }
 
 function entityRoot(entity) {
-  return path.join(STAGE_ROOT, stageConfig(entity).folder);
+  return path.join(currentStageRoot(), stageConfig(entity).folder);
 }
 
 function entityFolder(entity, folderId) {
@@ -113,7 +113,7 @@ function abilityPetRefs(remote) {
   const refs = Array.isArray(remote?.data?.pet_refs) ? remote.data.pet_refs.filter(ref => ref?.name) : [];
   if (refs.length) return refs;
   return (remote?.data?.pet_uids || []).map(uid => {
-    const petRemote = readJson(path.join(STAGE_ROOT, 'pets', uid, 'remote.json'));
+    const petRemote = readJson(path.join(currentStageRoot(), 'pets', uid, 'remote.json'));
     const data = petRemote?.data || {};
     return data.name ? { uid, name: data.name, pet_id: data.pet_id || null } : null;
   }).filter(Boolean);
@@ -295,7 +295,8 @@ function loadReviewEntry(entity, folderId) {
 }
 
 function listReviewEntries(entity) {
-  const cached = reviewEntryCache.get(entity);
+  const cacheKey = `${currentStageRoot()}::${entity}`;
+  const cached = reviewEntryCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.entries;
   const root = entityRoot(entity);
   if (!fs.existsSync(root)) return [];
@@ -305,7 +306,7 @@ function listReviewEntries(entity) {
     .map(entry => loadReviewEntry(entity, entry.name))
     .filter(Boolean)
     .sort((left, right) => collator.compare(reviewSortValue(left), reviewSortValue(right)));
-  reviewEntryCache.set(entity, {
+  reviewEntryCache.set(cacheKey, {
     entries,
     expiresAt: Date.now() + REVIEW_ENTRY_CACHE_TTL_MS,
   });
@@ -313,11 +314,12 @@ function listReviewEntries(entity) {
 }
 
 function invalidateReviewEntries(entity) {
-  reviewEntryCache.delete(entity);
+  reviewEntryCache.delete(`${currentStageRoot()}::${entity}`);
 }
 
 function updateCachedReviewPlan(entity, folderId, plan) {
-  const cached = reviewEntryCache.get(entity);
+  const cacheKey = `${currentStageRoot()}::${entity}`;
+  const cached = reviewEntryCache.get(cacheKey);
   if (!cached) return;
   const entry = cached.entries.find(item => item.folderId === folderId);
   if (entry) entry.plan = plan;
@@ -459,7 +461,7 @@ function extensionFor(contentType, url) {
 }
 
 function updateManifestImageCount() {
-  const manifestPath = path.join(STAGE_ROOT, 'manifest.json');
+  const manifestPath = path.join(currentStageRoot(), 'manifest.json');
   const manifest = readJson(manifestPath);
   if (!manifest) return;
   let downloaded = 0;
@@ -625,8 +627,9 @@ function quarantineMisclassifiedPetAssets(assets) {
 function extractPetDetailAssets($) {
   const assets = {};
   const section = $('.allImgTab').first();
-  let elements = section.find('img.imgAll-sprite-img').toArray();
-  if (!elements.length) elements = section.find('img').toArray();
+  // `.imgAll-sprite-img` is only used by some single-image tabs (often fruit).
+  // Restricting the scan to that class hides the sibling base/shiny/egg images.
+  let elements = section.find('img').toArray();
   if (!elements.length) elements = $('main img, #mw-content-text img, .mw-parser-output img').toArray();
   elements = elements.filter(element => !isPetUiControlHint(petImageHint($, element)) && !/按钮|icon-nav|\btab\b/.test(decodedPetImageHint(petImageHint($, element))));
   if (!elements.length) {
@@ -786,7 +789,7 @@ function abilityFolderId(name) {
 function reuseConfirmedAbilityIcon(review, petFolder, savedAssets) {
   const abilityName = review.remote?.data?.ability_name;
   if (!abilityName || review.local?.data?.ability_icon || savedAssets.ability_icon) return savedAssets;
-  const abilityFolder = path.join(STAGE_ROOT, 'abilities', abilityFolderId(abilityName));
+  const abilityFolder = path.join(currentStageRoot(), 'abilities', abilityFolderId(abilityName));
   const abilityAssets = readJson(path.join(abilityFolder, 'assets.json'), {}) || {};
   const icon = abilityAssets.icon;
   if (!icon?.local_file) return savedAssets;
@@ -808,12 +811,12 @@ function reuseConfirmedAbilityIcon(review, petFolder, savedAssets) {
   };
 }
 
-async function hydratePetAssets(review) {
+async function hydratePetAssets(review, { ignoreLocalAssets = false } = {}) {
   const folder = entityFolder('pet', review.folderId);
   let savedAssets = quarantineMisclassifiedPetAssets(readJson(path.join(folder, 'assets.json'), {}) || {});
   savedAssets = reuseConfirmedAbilityIcon(review, folder, savedAssets);
   const keys = ENTITY_ASSET_KEYS.pet;
-  const missing = keys.filter(key => !review.local?.data?.[key] && (!savedAssets[key]?.local_file || !petAssetSlotCompatible(key, savedAssets[key])));
+  const missing = keys.filter(key => (ignoreLocalAssets || !review.local?.data?.[key]) && (!savedAssets[key]?.local_file || !petAssetSlotCompatible(key, savedAssets[key])));
   // A confirmation/backfill action explicitly refreshes the detail page, even when all images already exist.
 
   const pet = { uid: review.remote?.data?.uid || review.folderId, name: review.remote?.data?.name };
@@ -868,7 +871,7 @@ function updateAbilityDiffAfterDetail(review, description, sourcePet) {
 
 function propagateNewAbilityDescription(remote, description) {
   for (const pet of remote.data?.pet_refs || []) {
-    const folder = path.join(STAGE_ROOT, 'pets', pet.uid);
+    const folder = path.join(currentStageRoot(), 'pets', pet.uid);
     const petRemotePath = path.join(folder, 'remote.json');
     const petPlanPath = path.join(folder, 'import.json');
     const petRemote = readJson(petRemotePath);
@@ -940,7 +943,8 @@ router.get('/wiki-review', (req, res) => {
       view,
       entity,
       stages: buildStages({ view, entity, page, pageSize }),
-      stageRoot: 'data/wiki-staging',
+      batchId: path.basename(currentStageRoot()),
+      stageRoot: currentStageRoot(),
     });
   } catch (error) {
     console.error('[wiki-review] list failed:', error);
@@ -990,8 +994,8 @@ router.post('/wiki-review/:entity/:folderId/decision', async (req, res) => {
     const decidedAt = new Date().toISOString();
 
     if (decision === 'associate-local-pet') {
-      if (entity !== 'pet' || !['unmatched', 'ambiguous'].includes(identityStatus) || isResolved(review)) {
-        return res.status(400).json({ error: '只允许为待审核新增精灵关联本地精灵' });
+      if (entity !== 'pet' || !['unmatched', 'ambiguous', 'name-match-id-different', 'id-match-name-different'].includes(identityStatus) || isResolved(review)) {
+        return res.status(400).json({ error: '只允许为待审核精灵重新关联本地精灵' });
       }
       const localUid = String(req.body?.local_uid || '').trim();
       const localData = localPetSnapshot(localUid);
@@ -1019,6 +1023,25 @@ router.post('/wiki-review/:entity/:folderId/decision', async (req, res) => {
       writeJsonAtomic(planPath, review.plan);
       invalidateReviewEntries(entity);
       return res.json({ success: true, local_pet: { uid: localUid, name: localData.name } });
+    }
+    if (decision === 'approve-new-form') {
+      const remoteUid = String(review.remote?.data?.uid || review.diff.identity?.remote?.uid || '').trim();
+      const localUid = String(review.local?.data?.uid || review.diff.identity?.local?.uid || '').trim();
+      if (entity !== 'pet' || !['name-match-id-different', 'id-match-name-different'].includes(identityStatus) || review.plan.uid_migration || isResolved(review) || !remoteUid || !localUid || remoteUid === localUid) {
+        return res.status(400).json({ error: '当前候选不能作为独立新形态新增' });
+      }
+      if (localPetSnapshot(remoteUid)) return res.status(400).json({ error: '远程 UID ' + remoteUid + ' 已存在，不能重复新增' });
+      review.plan.id = remoteUid;
+      review.plan.identity_confirmed = true;
+      review.plan.uid_migration = null;
+      const assets = await hydratePetAssets(review, { ignoreLocalAssets: true });
+      review.plan.enabled = true;
+      setPlanFields(review.plan, entity, PET_NEW_FIELDS);
+      review.plan.assets = assets;
+      review.plan.review = { decision: 'approved-new', decided_at: decidedAt, identity_resolution: 'create-new-form', compared_local_uid: localUid, remote_uid: remoteUid };
+      writeJsonAtomic(planPath, review.plan);
+      updateCachedReviewPlan(entity, folderId, review.plan);
+      return res.json({ success: true });
     }
     if (decision === 'approve-new') {
       if (identityStatus !== 'unmatched') {
@@ -1161,6 +1184,9 @@ router.post('/wiki-review/:entity/:folderId/decision', async (req, res) => {
       if (!['matched', 'name-match-id-different', 'id-match-name-different'].includes(identityStatus)) {
         return res.status(400).json({ error: '当前身份状态不能接受字段更新'});
       }
+      if (entity === 'pet' && ['name-match-id-different', 'id-match-name-different'].includes(identityStatus) && !review.plan.uid_migration && req.body?.identity_resolution !== 'update-existing') {
+        return res.status(400).json({ error: '请先明确选择更新现有精灵或作为新形态新增' });
+      }
       const requestedFields = Array.isArray(req.body?.fields) ? req.body.fields : [];
       const allowedFields = ENTITY_FIELDS[entity];
       const fields = [...new Set(requestedFields)].filter(
@@ -1169,13 +1195,24 @@ router.post('/wiki-review/:entity/:folderId/decision', async (req, res) => {
       );
       if (fields.length === 0) return res.status(400).json({ error: '至少选择一个允许字段'});
       if (entity === 'pet') {
+        if (req.body?.identity_resolution === 'update-existing') {
+          review.plan.id = review.local?.data?.uid || review.diff.identity?.local?.uid || review.plan.id;
+        }
         const assets = await hydratePetAssets(review);
         review.plan.assets = assets;
       }
       review.plan.enabled = true;
       review.plan.identity_confirmed = true;
       setPlanFields(review.plan, entity, fields);
-      review.plan.review = { decision: 'approved-fields', decided_at: decidedAt };
+      review.plan.review = {
+        decision: 'approved-fields',
+        decided_at: decidedAt,
+        ...(req.body?.identity_resolution === 'update-existing' ? {
+          identity_resolution: 'update-existing',
+          local_uid: review.local?.data?.uid || review.diff.identity?.local?.uid || review.plan.id,
+          remote_uid: review.remote?.data?.uid || review.diff.identity?.remote?.uid || null,
+        } : {}),
+      };
       writeJsonAtomic(planPath, review.plan);
       updateCachedReviewPlan(entity, folderId, review.plan);
       return res.json({ success: true });
@@ -1185,10 +1222,24 @@ router.post('/wiki-review/:entity/:folderId/decision', async (req, res) => {
       if (hasAllowedChanges(review) || review.plan.uid_migration) {
         return res.status(400).json({ error: '该候选仍有字段差异，不能标记为无变化' });
       }
+      if (entity === 'pet' && ['name-match-id-different', 'id-match-name-different'].includes(identityStatus) && req.body?.identity_resolution !== 'update-existing') {
+        return res.status(400).json({ error: '请先明确选择更新现有精灵或作为新形态新增' });
+      }
+      if (entity === 'pet' && req.body?.identity_resolution === 'update-existing') {
+        review.plan.id = review.local?.data?.uid || review.diff.identity?.local?.uid || review.plan.id;
+      }
       review.plan.enabled = false;
       review.plan.identity_confirmed = ['matched', 'name-match-id-different', 'id-match-name-different'].includes(identityStatus);
       clearPlanFields(review.plan, entity);
-      review.plan.review = { decision: 'approved-no-change', decided_at: decidedAt };
+      review.plan.review = {
+        decision: 'approved-no-change',
+        decided_at: decidedAt,
+        ...(req.body?.identity_resolution === 'update-existing' ? {
+          identity_resolution: 'update-existing',
+          local_uid: review.local?.data?.uid || review.diff.identity?.local?.uid || review.plan.id,
+          remote_uid: review.remote?.data?.uid || review.diff.identity?.remote?.uid || null,
+        } : {}),
+      };
       writeJsonAtomic(planPath, review.plan);
       updateCachedReviewPlan(entity, folderId, review.plan);
       return res.json({ success: true });

@@ -9,6 +9,58 @@
       <button class="btn-ghost text-xs self-start" :disabled="loading" @click="refreshData">刷新暂存数据</button>
     </div>
 
+    <section class="card mb-4 space-y-4">
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-end">
+        <div class="flex-1">
+          <label class="mb-1 block text-xs text-muted" for="wiki-batch-selector">当前审核 Batch</label>
+          <select id="wiki-batch-selector" v-model="activeBatchId" class="input w-full" :disabled="workflowBusy" @change="switchBatch">
+            <option value="">请选择 Batch</option>
+            <option v-for="batch in batches" :key="batch.id" :value="batch.id">
+              {{ batch.name }}（技能 {{ batch.counts.skill }} / 特性 {{ batch.counts.ability }} / 精灵 {{ batch.counts.pet }}）
+            </option>
+          </select>
+        </div>
+        <div class="flex flex-1 gap-2">
+          <input v-model.trim="newBatchName" class="input flex-1" maxlength="100" placeholder="输入新 Batch 名称" :disabled="workflowBusy" @keyup.enter="createBatch" />
+          <button class="btn text-sm" :disabled="workflowBusy || !newBatchName" @click="createBatch">创建</button>
+        </div>
+      </div>
+
+      <div v-if="selectedBatch" class="rounded-lg border border-gray-200 p-3 dark:border-white/10">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div class="min-w-0 flex-1">
+            <p class="text-xs text-muted">稳定 ID：{{ selectedBatch.id }}（修改名称不会改变目录和审核引用）</p>
+            <div class="mt-2 flex gap-2">
+              <input v-model.trim="renameBatchName" class="input flex-1" maxlength="100" placeholder="修改 Batch 显示名称" :disabled="workflowBusy" @keyup.enter="renameBatch" />
+              <button class="btn-ghost text-sm" :disabled="workflowBusy || !renameBatchName || renameBatchName === selectedBatch.name" @click="renameBatch">保存名称</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-ghost text-sm" :disabled="workflowBusy" @click="startFetch('skills')">拉取技能</button>
+            <button class="btn-ghost text-sm" :disabled="workflowBusy" @click="startFetch('pets')">拉取精灵与特性</button>
+            <button class="btn text-sm" :disabled="workflowBusy" @click="startFetch('all')">依次拉取全部</button>
+          </div>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-2 lg:flex-row lg:items-end">
+          <div class="flex-1">
+            <label class="mb-1 block text-xs text-muted" for="wiki-release-name">发布包名称</label>
+            <input id="wiki-release-name" v-model.trim="releaseId" class="input w-full" maxlength="80" placeholder="例如 s4-2026-08-01-release" :disabled="workflowBusy" />
+          </div>
+          <button class="btn text-sm" :disabled="workflowBusy || !releaseId" @click="startPackage">校验并打包 ZIP</button>
+          <button v-if="completedReleaseId" class="btn-ghost text-sm" :disabled="workflowBusy" @click="downloadRelease">下载 ZIP</button>
+        </div>
+      </div>
+
+      <div v-if="workflowJob" class="rounded-lg border p-3 text-xs dark:border-white/10">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span>任务：{{ jobTypeLabel(workflowJob.type) }} · 第 {{ workflowJob.currentStep }}/{{ workflowJob.totalSteps }} 步</span>
+          <span :class="jobStatusClass(workflowJob.status)">{{ jobStatusLabel(workflowJob.status) }}</span>
+        </div>
+        <p v-if="workflowJob.error" class="mt-2 text-red-600">{{ workflowJob.error }}</p>
+        <pre v-if="workflowJob.logs?.length" class="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-gray-50 p-2 text-[11px] dark:bg-black/20">{{ workflowJob.logs.map(item => item.line).join('\n') }}</pre>
+      </div>
+    </section>
     <div class="card mb-4 text-sm">
       <div class="flex flex-wrap items-center gap-2">
         <template v-for="(stage, index) in stages" :key="stage.entity">
@@ -94,7 +146,18 @@
           </div>
           <div class="flex flex-wrap gap-2">
             <button v-if="canAssociateLocalPet(currentReview)" class="btn text-xs" :disabled="busy" @click="openAssociation(currentReview)">关联本地精灵</button>
-            <button v-if="canApproveNew(currentReview)" class="btn text-xs" :disabled="busy" @click="approveNew(currentReview)">
+            <button
+              v-if="hasPetUidConflict(currentReview)"
+              class="btn text-xs"
+              :disabled="busy || (hasChanges(currentReview) && selectedFor(currentReview).length === 0)"
+              @click="confirmExistingPet(currentReview)"
+            >
+              更新现有 {{ petLocalUid(currentReview) }}
+            </button>
+            <button v-if="hasPetUidConflict(currentReview)" class="btn text-xs" :disabled="busy" @click="approveNewPetForm(currentReview)">
+              作为新形态 {{ petRemoteUid(currentReview) }}
+            </button>
+            <button v-else-if="canApproveNew(currentReview)" class="btn text-xs" :disabled="busy" @click="approveNew(currentReview)">
               {{ busy ? '处理中...' : newButtonLabel(currentReview) }}
             </button>
             <button v-else-if="canAcceptFields(currentReview)" class="btn text-xs" :disabled="busy || selectedFor(currentReview).length === 0" @click="acceptFields(currentReview)">
@@ -123,6 +186,11 @@
           </div>
         </div>
 
+        <div v-if="hasPetUidConflict(currentReview)" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/5 dark:text-amber-300">
+          远程 <strong>{{ petRemoteUid(currentReview) }} / {{ petRemoteName(currentReview) }}</strong> 与本地候选
+          <strong>{{ petLocalUid(currentReview) }} / {{ petLocalName(currentReview) }}</strong> 身份不同。请选择更新现有记录（保留本地 UID，只接受勾选字段），
+          或作为新形态新增（使用远程 UID）；选择前不会生成导入决定。
+        </div>
         <div v-if="downloadedAssets(currentReview).length" class="mt-3 rounded-lg bg-green-50 dark:bg-green-500/5 px-3 py-2 text-xs text-green-700 dark:text-green-300">
           已下载 {{ downloadedAssets(currentReview).length }} 个素材：{{ downloadedAssetLabels(currentReview) }}。
         </div>
@@ -306,6 +374,14 @@ const busy = ref(false)
 const assetUrls = reactive({})
 const associationReview = ref(null)
 const associationUid = ref('')
+const batches = ref([])
+const activeBatchId = ref('')
+const newBatchName = ref('')
+const renameBatchName = ref('')
+const releaseId = ref('')
+const workflowJob = ref(null)
+const completedReleaseId = ref('')
+let workflowTimer = null
 
 const REVIEW_VIEWS = [
   { key: 'differences', countKey: 'differences', label: '有差异' },
@@ -341,6 +417,8 @@ const activePagination = computed(() => activeStage.value?.pagination || {
 })
 const activeSelector = computed(() => activeStage.value?.selector || [])
 const currentReview = computed(() => activeStage.value?.reviews[0] || null)
+const selectedBatch = computed(() => batches.value.find(batch => batch.id === activeBatchId.value) || null)
+const workflowBusy = computed(() => workflowJob.value?.status === 'running')
 
 const decision = review => review.plan.review?.decision || (review.plan.enabled ? 'approved-fields' : 'pending')
 const isResolved = review => Boolean(review.plan.enabled) || RESOLVED_DECISIONS.has(decision(review))
@@ -372,17 +450,160 @@ function applyStages(nextStages) {
   }
 }
 
-const canAssociateLocalPet = review => review?.entity === 'pet' && isNew(review) && !isResolved(review)
+const canAssociateLocalPet = review => review?.entity === 'pet'
+  && ['unmatched', 'ambiguous', 'name-match-id-different', 'id-match-name-different'].includes(review.diff.identity?.status)
+  && !isResolved(review)
 function openAssociation(review) { associationReview.value = review; associationUid.value = ''; }
 function closeAssociation() { associationReview.value = null; associationUid.value = ''; }
 async function associateLocalPet() {
   if (!associationReview.value || !associationUid.value || busy.value) return
   busy.value = true
-  try { await adminApi.associateWikiReviewPet(associationReview.value.folderId, associationUid.value); closeAssociation(); await loadData() }
+  try { await adminApi.associateWikiReviewPet(associationReview.value.folderId, associationUid.value, activeBatchId.value); closeAssociation(); await loadData() }
   catch (error) { await modal.alert('关联失败', error.message) }
   finally { busy.value = false }
 }
 
+function defaultReleaseId(batchId) {
+  const date = new Date().toISOString().slice(0, 10)
+  return `${batchId}-release-${date}`.slice(0, 80)
+}
+
+function clearWorkflowTimer() {
+  if (workflowTimer) clearTimeout(workflowTimer)
+  workflowTimer = null
+}
+
+async function loadBatches() {
+  const result = await adminApi.wikiBatches()
+  batches.value = result.batches || []
+  if (activeBatchId.value && !batches.value.some(batch => batch.id === activeBatchId.value)) activeBatchId.value = ''
+  if (!activeBatchId.value && batches.value.length) {
+    const saved = localStorage.getItem('wiki_review_batch')
+    activeBatchId.value = batches.value.some(batch => batch.id === saved) ? saved : batches.value[0].id
+  }
+  if (selectedBatch.value) {
+    renameBatchName.value = selectedBatch.value.name
+    if (!releaseId.value) releaseId.value = defaultReleaseId(selectedBatch.value.id)
+  }
+}
+
+async function initializePage() {
+  try {
+    await loadBatches()
+    if (activeBatchId.value) {
+      const runningJobId = selectedBatch.value?.runningJobId
+      if (runningJobId) await pollWorkflowJob(runningJobId)
+      await loadData()
+    }
+  } catch (error) {
+    await modal.alert('初始化失败', error.message)
+  }
+}
+
+async function switchBatch() {
+  if (!activeBatchId.value || workflowBusy.value) return
+  localStorage.setItem('wiki_review_batch', activeBatchId.value)
+  stages.value = []
+  pages.skill = 1; pages.ability = 1; pages.pet = 1
+  activeEntity.value = 'skill'
+  activeView.value = 'differences'
+  renameBatchName.value = selectedBatch.value?.name || ''
+  releaseId.value = defaultReleaseId(activeBatchId.value)
+  completedReleaseId.value = ''
+  workflowJob.value = null
+  Object.values(assetUrls).forEach(url => URL.revokeObjectURL(url))
+  Object.keys(assetUrls).forEach(key => delete assetUrls[key])
+  await loadData()
+}
+
+async function createBatch() {
+  if (!newBatchName.value || workflowBusy.value) return
+  try {
+    const result = await adminApi.createWikiBatch(newBatchName.value)
+    newBatchName.value = ''
+    await loadBatches()
+    activeBatchId.value = result.batch.id
+    await switchBatch()
+  } catch (error) {
+    await modal.alert('创建 Batch 失败', error.message)
+  }
+}
+
+async function renameBatch() {
+  if (!selectedBatch.value || !renameBatchName.value || workflowBusy.value) return
+  try {
+    await adminApi.renameWikiBatch(activeBatchId.value, renameBatchName.value)
+    await loadBatches()
+  } catch (error) {
+    await modal.alert('修改名称失败', error.message)
+  }
+}
+
+async function pollWorkflowJob(jobId) {
+  clearWorkflowTimer()
+  try {
+    const result = await adminApi.wikiBatchJob(jobId)
+    workflowJob.value = result.job
+    if (result.job.status === 'running') {
+      workflowTimer = setTimeout(() => pollWorkflowJob(jobId), 1500)
+      return
+    }
+    if (result.job.status === 'completed') {
+      if (result.job.result?.releaseId) completedReleaseId.value = result.job.result.releaseId
+      await loadBatches()
+      await loadData(true)
+    }
+  } catch (error) {
+    workflowJob.value = { ...(workflowJob.value || {}), status: 'failed', error: error.message, logs: [] }
+  }
+}
+
+async function startFetch(scope) {
+  if (!activeBatchId.value || workflowBusy.value) return
+  const labels = { all: '技能、精灵基础数据与特性', skills: '技能列表', pets: '精灵基础数据与特性' }
+  if (!await modal.confirm('开始拉取', `确认向 BWIKI 拉取“${labels[scope]}”并写入当前 Batch？任务会遵守串行限速与熔断规则。`)) return
+  try {
+    const result = await adminApi.fetchWikiBatch(activeBatchId.value, scope)
+    workflowJob.value = result.job
+    await pollWorkflowJob(result.job.id)
+  } catch (error) {
+    await modal.alert('启动拉取失败', error.message)
+  }
+}
+
+async function startPackage() {
+  if (!activeBatchId.value || !releaseId.value || workflowBusy.value) return
+  if (!await modal.confirm('生成发布包', '确认校验当前 Batch 的全部审核决定并生成 ZIP？仍有待审核项时任务会失败，不会产生不完整发布包。')) return
+  try {
+    completedReleaseId.value = ''
+    const result = await adminApi.packageWikiBatch(activeBatchId.value, releaseId.value)
+    workflowJob.value = result.job
+    await pollWorkflowJob(result.job.id)
+  } catch (error) {
+    await modal.alert('启动打包失败', error.message)
+  }
+}
+
+async function downloadRelease() {
+  if (!completedReleaseId.value) return
+  try {
+    const blob = await adminApi.downloadWikiRelease(completedReleaseId.value)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${completedReleaseId.value}.zip`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    await modal.alert('下载失败', error.message)
+  }
+}
+
+const jobTypeLabel = type => ({ 'fetch-all': '拉取全部', 'fetch-skills': '拉取技能', 'fetch-pets': '拉取精灵与特性', package: '生成发布包' }[type] || type)
+const jobStatusLabel = status => ({ running: '执行中', completed: '已完成', failed: '失败' }[status] || status)
+const jobStatusClass = status => status === 'completed' ? 'text-green-600' : status === 'failed' ? 'text-red-600' : 'text-amber-600'
 async function loadData(refresh = false) {
   loading.value = true
   try {
@@ -394,6 +615,7 @@ async function loadData(refresh = false) {
       pages[requestedEntity] || 1,
       1,
       refresh,
+      activeBatchId.value,
     )
     applyStages(result.stages)
     if (isInitialLoad) {
@@ -407,6 +629,7 @@ async function loadData(refresh = false) {
         pages[activeEntity.value] || 1,
         1,
         refresh,
+        activeBatchId.value,
       )
       applyStages(result.stages)
     }
@@ -450,10 +673,10 @@ async function move(offset) {
   await loadData()
 }
 
-async function decide(review, nextDecision, fields = []) {
+async function decide(review, nextDecision, fields = [], options = {}) {
   busy.value = true
   try {
-    await adminApi.decideWikiReview(review.entity, review.folderId, nextDecision, fields)
+    await adminApi.decideWikiReview(review.entity, review.folderId, nextDecision, fields, options, activeBatchId.value)
     await loadData()
   } catch (error) {
     await modal.alert('审核操作失败', error.message)
@@ -464,6 +687,15 @@ async function decide(review, nextDecision, fields = []) {
 
 async function approveNew(review) { if (await modal.confirm("确认新增", "确认导入这个暂存项目？")) await decide(review, "approve-new") }
 async function acceptFields(review) { const fields = selectedFor(review); if (fields.length && await modal.confirm('接受字段', '确认接受当前选中的 BWIKI 字段？')) await decide(review, 'accept-fields', fields) }
+async function confirmExistingPet(review) {
+  const fields = selectedFor(review)
+  if (hasChanges(review) && fields.length === 0) return
+  if (!await modal.confirm('更新现有精灵', '保留本地 UID ' + petLocalUid(review) + '，并用远程 ' + petRemoteUid(review) + ' 的勾选字段更新现有记录？')) return
+  await decide(review, hasChanges(review) ? 'accept-fields' : 'approve-no-change', fields, { identity_resolution: 'update-existing' })
+}
+async function approveNewPetForm(review) {
+  if (await modal.confirm('新增精灵形态', '保留现有 ' + petLocalUid(review) + '，并将 ' + petRemoteUid(review) + ' 作为独立新形态新增？')) await decide(review, 'approve-new-form')
+}
 async function confirmAbilityDetail(review) { if (await modal.confirm("确认特性详情", "获取特性描述和图标？")) await decide(review, "confirm-ability-detail") }
 async function backfillPetAssets(review) { if (await modal.confirm('补充精灵数据', '确认从 BWIKI 刷新详情并补充缺失图片？')) await decide(review, 'backfill-pet-assets') }
 async function approvePetAssetsOnly(review) { if (await modal.confirm('补充缺失图片', '确认只补充本地缺失的正式图片？')) await decide(review, 'approve-pet-assets-only') }
@@ -477,10 +709,21 @@ const abilitySourcePet = review => review?.remote?.data?.source_pet || review?.r
 const abilityLocalDescription = review => displayValue(review?.local?.data?.description)
 const abilityRemoteDescription = review => review?.remote?.data?.description || '暂无描述'
 const needsManualAbilityDescription = review => review.entity === "ability" && review.diff.fields?.description?.reason === "local-description-missing"
-const canAcceptFields = review => ["matched", "name-match-id-different", "id-match-name-different"].includes(review.diff.identity?.status) && hasChanges(review) && !needsManualAbilityDescription(review)
 const uidMigration = review => review?.plan?.uid_migration || review?.diff?.identity?.uid_migration || null
+const petRemoteUid = review => review?.diff?.identity?.remote?.uid || review?.remote?.data?.uid || ''
+const petLocalUid = review => review?.diff?.identity?.local?.uid || review?.local?.data?.uid || ''
+const petRemoteName = review => review?.diff?.identity?.remote?.name || review?.remote?.data?.name || '—'
+const petLocalName = review => review?.diff?.identity?.local?.name || review?.local?.data?.name || '—'
+const hasPetUidConflict = review => review?.entity === 'pet'
+  && ['name-match-id-different', 'id-match-name-different'].includes(review.diff.identity?.status)
+  && !uidMigration(review)
+  && !isResolved(review)
+  && Boolean(petRemoteUid(review))
+  && Boolean(petLocalUid(review))
+  && petRemoteUid(review) !== petLocalUid(review)
+const canAcceptFields = review => ["matched", "name-match-id-different", "id-match-name-different"].includes(review.diff.identity?.status) && hasChanges(review) && !needsManualAbilityDescription(review) && !hasPetUidConflict(review)
 const canApproveUidMigration = review => review.entity === "pet" && Boolean(uidMigration(review)) && !hasChanges(review) && !isResolved(review)
-const canApproveNoChange = review => ["matched", "name-match-id-different", "id-match-name-different"].includes(review.diff.identity?.status) && !hasChanges(review) && !uidMigration(review)
+const canApproveNoChange = review => ["matched", "name-match-id-different", "id-match-name-different"].includes(review.diff.identity?.status) && !hasChanges(review) && !uidMigration(review) && !hasPetUidConflict(review)
 const canFetchUnchangedPetAssets = review => review.entity === "pet" && activeView.value === "unchanged" && !isResolved(review) && canApproveNoChange(review)
 const canApprovePetAssetsOnly = review => review.entity === "pet" && !isResolved(review) && canApproveNoChange(review) && [...PET_IMAGE_SLOTS.map(slot => slot.key), "ability_icon"].some(key => !petAssetUrl(review, key))
 const needsPetAssetBackfill = review => review.entity === "pet" && isResolved(review)
@@ -517,6 +760,9 @@ const reviewAssetUrl = (review, key) => review?.remote?.assets?.[key]?.remote_ur
 const downloadedAssets = review => Object.entries(review.assets || {})
   .filter(([, metadata]) => metadata?.status?.startsWith('downloaded-after-'))
   .map(([key, metadata]) => ({ key, metadata }))
+const downloadedAssetLabels = review => downloadedAssets(review)
+  .map(({ key }) => ASSET_LABELS[key] || key)
+  .join('、')
 
 async function loadReviewAssets(review) {
   if (!review) return
@@ -524,7 +770,7 @@ async function loadReviewAssets(review) {
     const cacheKey = assetCacheKey(review, key)
     if (assetUrls[cacheKey]) continue
     try {
-      const blob = await adminApi.wikiReviewAsset(review.entity, review.folderId, key)
+      const blob = await adminApi.wikiReviewAsset(review.entity, review.folderId, key, activeBatchId.value)
       assetUrls[cacheKey] = URL.createObjectURL(blob)
     } catch (error) {
       console.warn(`Temporary asset load failed ${cacheKey}`, error)
@@ -533,8 +779,9 @@ async function loadReviewAssets(review) {
 }
 
 watch(currentReview, loadReviewAssets, { immediate: true })
-onMounted(loadData)
+onMounted(initializePage)
 onBeforeUnmount(() => {
+  clearWorkflowTimer()
   Object.values(assetUrls).forEach(url => URL.revokeObjectURL(url))
 })
 </script>

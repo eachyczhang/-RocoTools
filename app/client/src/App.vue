@@ -70,7 +70,7 @@
           <!-- 系统分组 -->
           <div class="relative" @mouseenter="adminMenus.system = true" @mouseleave="adminMenus.system = false">
             <button class="nav-link inline-flex items-center gap-1"
-              :class="{ 'router-link-active': route.path.startsWith('/admin/media') || route.path.startsWith('/admin/nav-tabs') || route.path.startsWith('/admin/feedbacks') || route.path.startsWith('/admin/conflicts') || route.path.startsWith('/admin/wiki-review') }">
+              :class="{ 'router-link-active': route.path.startsWith('/admin/media') || route.path.startsWith('/admin/nav-tabs') || route.path.startsWith('/admin/feedbacks') || route.path.startsWith('/admin/conflicts') || route.path.startsWith('/admin/wiki-review') || route.path.startsWith('/admin/patch-notes') }">
               系统 <span class="text-xs opacity-60 ml-0.5">▼</span>
             </button>
             <div v-show="adminMenus.system" class="absolute top-full left-0 pt-1">
@@ -81,6 +81,7 @@
                 <router-link to="/admin/feedbacks" class="dropdown-item" @click="adminMenus.system = false">反馈</router-link>
                 <router-link to="/admin/conflicts" class="dropdown-item" @click="adminMenus.system = false">审查</router-link>
                 <router-link to="/admin/wiki-review" class="dropdown-item" @click="adminMenus.system = false">BWIKI Diff</router-link>
+                <router-link to="/admin/patch-notes" class="dropdown-item" @click="adminMenus.system = false">版本公告</router-link>
               </div>
             </div>
           </div>
@@ -171,6 +172,7 @@
               <router-link to="/admin/feedbacks" class="mobile-nav-link text-sm" @click="mobileMenuOpen = false">反馈</router-link>
               <router-link to="/admin/conflicts" class="mobile-nav-link text-sm" @click="mobileMenuOpen = false">审查</router-link>
               <router-link to="/admin/wiki-review" class="mobile-nav-link text-sm" @click="mobileMenuOpen = false">BWIKI Diff</router-link>
+              <router-link to="/admin/patch-notes" class="mobile-nav-link text-sm" @click="mobileMenuOpen = false">版本公告</router-link>
             </div>
           </div>
           <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">回到用户端</router-link>
