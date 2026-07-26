@@ -251,7 +251,7 @@
 
 - 状态：`committed`；新增 `scripts/wiki_server_import.sh`，默认只基于当前生产库快照执行完整隔离演练，追加 `--apply` 后才进入生产停机、备份、导入、验证和人工确认。
 - 生产流程：Release/UTF-8/审核预检 → 隔离候选库与图片演练 → 精确输入 `APPLY-PRODUCTION <package_id>` → PM2 停机 → SQLite Backup API 持久恢复点 → 生产 dry-run → 数据、原图、缩略图和 WebP 导入 → 数据库/版本/图片校验 → PM2/API 恢复 → `CONFIRM` 或 `ROLLBACK`。
-- 失败保护：生产写入后任一步失败会恢复 `roco-before-import.db` 和素材回滚清单；发布包含图片但清单缺失时保守保持服务停止。服务器日志和恢复点保存在 `app/server/data/backups/wiki-server-import/<session>/`。
+- 失败保护：生产写入后任一步失败或收到 `INT/TERM/HUP` 信号都会恢复 `roco-before-import.db` 和素材回滚清单；发布包含图片但清单缺失时保守保持服务停止。服务器日志和恢复点保存在 `app/server/data/backups/wiki-server-import/<session>/`。
 - 同时修复 Dev 向导验证函数的退出码传播；之前报告中已有 errors 时仍可能继续打印 PASS。身高/体重范围现按 `~/-` 和尾随零进行语义比较。
 - 本地只读回归：`s3-2026-07-26-detail-fix` 默认服务器模式完成 256 个数据项、41 个特性补全、186 个详情、555 组/8995 条技能、231 条最终蛋组、521 个原图和 620 个衍生图验证，errors=0；未传 `--apply`，未修改 DEV 正式库或 `data/public`。临时回归目录已清理。
 - 下一步：代码部署到服务器后，先按 `BWIKI_SERVER_DEPLOY_SOP.md` 不带 `--apply` 演练；确认同一 Release 后再追加 `--apply`。真实 Linux PM2 停机/启动、生产健康地址和回滚尚未实际执行。

@@ -158,8 +158,18 @@ on_error() {
   [[ -n "$SESSION_DIR" ]] && say "[INFO] 日志与恢复点：$SESSION_DIR"
   exit "$code"
 }
+on_signal() {
+  trap - ERR INT TERM HUP
+  say "[WARN] 收到中断信号，正在执行安全收尾。"
+  if [[ $PRODUCTION_TOUCHED -eq 1 ]]; then
+    rollback_production
+  elif [[ $SERVICE_STOPPED -eq 1 ]]; then
+    start_service || say "[ERROR] PM2 恢复失败，请人工检查 $SESSION_DIR"
+  fi
+  exit 130
+}
 trap 'on_error $LINENO' ERR
-trap 'exit 130' INT TERM HUP
+trap 'on_signal' INT TERM HUP
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

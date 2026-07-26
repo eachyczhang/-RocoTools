@@ -113,7 +113,7 @@ ROLLBACK
 
 ## 5. 自动回滚范围
 
-执行 `--apply` 后任一步失败，脚本会尝试：
+执行 `--apply` 后任一步失败，或收到 `Ctrl+C`、`TERM`、SSH 断线引发的 `HUP`，脚本都会进入安全收尾并尝试：
 
 1. 保持/重新停止 PM2；
 2. 用本轮 `roco-before-import.db` 恢复生产数据库；
