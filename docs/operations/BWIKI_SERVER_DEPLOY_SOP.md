@@ -5,7 +5,7 @@
 线上执行入口只有一个：
 
 ```bash
-bash scripts/wiki_server_import.sh --release <项目内发布包目录> --version <版本号>
+bash scripts/wiki_server_import.sh --release data/wiki-releases/S3/s3-2026-07-26-detail-fix --version S3
 ```
 
 脚本默认只做隔离演练；只有追加 `--apply`、输入发布包确认文本后，才会停止 PM2 并写生产数据。
@@ -19,25 +19,30 @@ bash scripts/wiki_server_import.sh --release <项目内发布包目录> --versio
 - API 健康地址默认是 `http://127.0.0.1:3000/api/stats`；如果不同，传 `--health-url`。
 - 服务器磁盘空间足够同时保存 Release、生产数据库备份、素材旧文件和日志。
 
-不要把 Release 解压到系统 `/tmp`。脚本只接受项目目录内的路径，建议：
+不要把 Release 解压到系统 `/tmp`。当前服务器项目根目录是 `/var/www/roco`，S3 压缩包保存在 `/var/www/release/s3/`，解压后按以下目录使用：
 
 ```bash
-cd /path/to/-RocoTools
-mkdir -p data/wiki-releases/<release-id>
-unzip -q /path/to/wiki_release.zip -d data/wiki-releases/<release-id>
+cd /var/www/roco
+
+RELEASE_ARCHIVE="/var/www/release/s3/s3-2026-07-26-detail-fix"
+RELEASE="data/wiki-releases/S3"
+
+mkdir -p "$RELEASE"
+unzip -q "$RELEASE_ARCHIVE" -d "$RELEASE"
+test -f "$RELEASE/s3-2026-07-26-detail-fix/manifest.json"
 ```
 
-如果 ZIP 内已经包含同名顶层目录，解压后应以实际包含 `manifest.json` 的目录作为 `--release`。
+即使压缩包文件名没有 `.zip` 后缀，`unzip` 也可以读取。当前传给导入脚本的实际目录是 `data/wiki-releases/S3/s3-2026-07-26-detail-fix`。
 
 ## 2. 第一遍：在线隔离演练
 
 生产服务保持运行，先执行：
 
 ```bash
-cd /path/to/-RocoTools
+cd /var/www/roco
 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3
 ```
 
 这一遍会：
@@ -62,8 +67,8 @@ app/server/data/backups/wiki-server-import/<时间>-<进程号>/
 
 ```bash
 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4 \
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3 \
   --apply
 ```
 
@@ -145,8 +150,8 @@ app/server/data/backups/wiki-server-import/<会话>/
 
 ```bash
 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4 \
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3 \
   --db app/server/data/roco.db \
   --public-dir data/public \
   --pm2-app roco \
@@ -158,8 +163,8 @@ bash scripts/wiki_server_import.sh \
 
 ```bash
 PYTHON_BIN=python3 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3
 ```
 
 不要跳过默认演练直接调用底层 `wiki_staging.py import --apply`；否则不会获得 PM2 停机窗口、持久恢复点、上线后健康检查和最终 `CONFIRM/ROLLBACK` 流程。

@@ -129,16 +129,16 @@ npm run dev
 
 ```bash
 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3
 ```
 
 演练通过后，用同一 Release 追加 `--apply`：
 
 ```bash
 bash scripts/wiki_server_import.sh \
-  --release data/wiki-releases/<release-id> \
-  --version S4 \
+  --release data/wiki-releases/S3/s3-2026-07-26-detail-fix \
+  --version S3 \
   --apply
 ```
 

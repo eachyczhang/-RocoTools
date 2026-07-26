@@ -458,8 +458,8 @@ python scripts/wiki_staging.py import --apply  # 备份后写库、发布原图�
 # gen_thumbnails.js / gen_webp.js 只用于修复历史存量图片，不是 BWIKI 导入后的必做步骤。
 
 # === BWIKI 服务器导入（先演练，后人工覆盖） ===
-bash scripts/wiki_server_import.sh --release data/wiki-releases/<release-id> --version S4
-bash scripts/wiki_server_import.sh --release data/wiki-releases/<release-id> --version S4 --apply
+bash scripts/wiki_server_import.sh --release data/wiki-releases/S3/s3-2026-07-26-detail-fix --version S3
+bash scripts/wiki_server_import.sh --release data/wiki-releases/S3/s3-2026-07-26-detail-fix --version S3 --apply
 
 # === 爬虫（获取最新游戏数据） ===
 python crawler/run.py --full                   # 全量爬取（首次）
