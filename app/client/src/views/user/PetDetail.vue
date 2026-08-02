@@ -1,29 +1,45 @@
 <template>
-  <div v-if="pet" ref="pageEl" :style="swipeStyle" class="pet-detail-page">
-    <!-- 返回 -->
-    <button @click="goBack" class="text-sm sm:text-base text-muted hover:text-primary-500 mb-3 sm:mb-4 inline-block cursor-pointer">← 返回</button>
+  <div v-if="pet" ref="pageEl" :style="[swipeStyle, detailThemeStyle]" class="pet-detail-page">
+    <div class="pet-detail-toolbar">
+      <button @click="goBack" class="pet-detail__back text-sm sm:text-base text-muted inline-flex cursor-pointer">← 返回</button>
 
-    <!-- 形态切换 -->
-    <div class="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 flex-wrap" v-if="pet.variants && pet.variants.length > 1">
-      <span class="text-xs sm:text-sm text-muted mr-1">形态：</span>
-      <button v-for="v in pet.variants" :key="v.pet_uid"
-        @click="switchVariant(v.pet_uid)"
-        class="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm transition-colors"
-        :class="v.pet_uid === pet.uid
-          ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'">
-        {{ v.name }}
-      </button>
+      <div ref="variantMenuEl" class="pet-variant-switcher" v-if="pet.variants && pet.variants.length > 1" @keydown.esc="variantMenuOpen = false">
+        <div class="pet-variant-heading">
+          <span class="pet-variant-label text-xs sm:text-sm">形态切换</span>
+          <span class="pet-variant-count">{{ pet.variants.length }} 种</span>
+        </div>
+        <div class="pet-variant-select-shell">
+          <button type="button" class="pet-variant-trigger" :aria-expanded="variantMenuOpen" aria-haspopup="listbox" @click="variantMenuOpen = !variantMenuOpen">
+            <span>{{ currentVariantName }}</span>
+            <svg class="pet-variant-chevron" :class="{ 'pet-variant-chevron--open': variantMenuOpen }" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m6 8 4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </button>
+          <Transition name="variant-menu">
+            <div v-if="variantMenuOpen" class="pet-variant-menu" role="listbox" aria-label="精灵形态">
+              <button v-for="v in pet.variants" :key="v.pet_uid" type="button" role="option"
+                class="pet-variant-option" :class="{ 'pet-variant-option--active': v.pet_uid === pet.uid }"
+                :aria-selected="v.pet_uid === pet.uid" @click="selectVariant(v.pet_uid)">
+                <span class="pet-variant-option__dot"></span>
+                <span class="pet-variant-option__name">{{ v.name }}</span>
+                <span v-if="v.pet_uid === pet.uid" class="pet-variant-option__current">当前</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
+      </div>
     </div>
-
     <!-- 精灵介绍 -->
-    <div class="card mb-4 sm:mb-5 lg:mb-6">
-      <div class="flex flex-col sm:flex-row gap-4 sm:gap-5 lg:gap-6 items-center">
+    <div class="card pet-hero mb-4 sm:mb-5 lg:mb-6">
+      <div class="pet-hero__layout flex flex-col sm:flex-row gap-4 sm:gap-5 lg:gap-6 items-center">
         <!-- 立绘区域（Tab切换） -->
-        <div class="flex flex-col items-center flex-shrink-0">
-          <img :src="currentImage" class="w-36 h-36 sm:w-44 sm:h-44 lg:w-48 lg:h-48 object-contain mb-2 sm:mb-3" loading="lazy" />
+        <div class="pet-hero__visual flex flex-col items-center flex-shrink-0">
+          <span class="pet-hero__serial">No.{{ paddedPetId }}</span>
+          <span class="pet-hero__watermark" aria-hidden="true">{{ paddedPetId }}</span>
+          <span class="pet-hero__halo" aria-hidden="true"></span>
+          <img :src="currentImage" class="pet-hero__image w-36 h-36 sm:w-44 sm:h-44 lg:w-48 lg:h-48 object-contain mb-2 sm:mb-3" loading="lazy" />
           <!-- 切换按钮 -->
-          <div class="flex items-center gap-3 sm:gap-4">
+          <div class="pet-hero__image-tabs flex items-center gap-3 sm:gap-4">
             <button @click="imageTab = 'default'"
               class="flex flex-col items-center gap-0.5 sm:gap-1 transition-opacity"
               :class="imageTab === 'default' ? 'opacity-100' : 'opacity-40 hover:opacity-70'">
@@ -52,10 +68,10 @@
         </div>
 
         <!-- 信息 -->
-        <div class="flex-1 text-center md:text-left w-full">
+        <div class="pet-hero__info flex-1 text-center md:text-left w-full">
           <!-- 名称 + 属性 -->
           <div class="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 justify-center sm:justify-start flex-wrap">
-            <h1 class="font-roco text-2xl sm:text-3xl text-primary-500">{{ pet.name }}</h1>
+            <h1 class="pet-hero__name font-roco text-2xl sm:text-3xl">{{ pet.name }}</h1>
             <span class="badge flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm" :style="{ background: pet.element_color + '18', color: pet.element_color }">
               <img v-if="pet.element_icon" :src="pet.element_icon" class="w-5 h-5 sm:w-6 sm:h-6" />
               {{ pet.element_name }}
@@ -86,7 +102,7 @@
           </div>
 
           <!-- 特性 -->
-          <div class="flex items-start gap-2.5 sm:gap-3 mb-3 sm:mb-4 justify-center sm:justify-start p-2.5 sm:p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03]">
+          <div class="pet-hero__ability flex items-start gap-2.5 sm:gap-3 mb-3 sm:mb-4 justify-center sm:justify-start p-2.5 sm:p-3 rounded-xl">
             <img v-if="pet.detail?.ability_icon" :src="pet.detail.ability_icon"
               class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg object-contain flex-shrink-0 mt-0.5" loading="lazy" />
             <div class="text-left flex-1 min-w-0">
@@ -96,7 +112,7 @@
           </div>
 
           <!-- 身高/体重/分布 -->
-          <div class="flex gap-3 sm:gap-6 text-xs sm:text-sm justify-center sm:justify-start flex-wrap">
+          <div class="pet-hero__meta flex gap-3 sm:gap-6 text-xs sm:text-sm justify-center sm:justify-start flex-wrap">
             <div v-if="pet.detail?.height"><span class="text-muted">身高</span> {{ formatRange(pet.detail.height, 'm') }}</div>
             <div v-if="pet.detail?.weight"><span class="text-muted">体重</span> {{ formatRange(pet.detail.weight, 'kg') }}</div>
             <div v-if="pet.detail?.location"><span class="text-muted">分布</span> {{ pet.detail.location }}</div>
@@ -106,63 +122,112 @@
     </div>
 
     <!-- 进化链 -->
-    <div class="card mb-4 sm:mb-6" v-if="pet.detail?.evolution_chain?.some(r => r.length > 1)">
-      <h3 class="font-roco text-sm sm:text-base mb-2 sm:mb-3">进化链</h3>
-      <div class="space-y-3">
-        <div v-for="(route, rIdx) in pet.detail.evolution_chain" :key="rIdx">
-          <div v-if="pet.detail.evolution_chain.length > 1" class="text-[10px] text-muted mb-1 pl-1">路线 {{ rIdx + 1 }}</div>
-          <div class="flex items-center justify-center flex-wrap gap-0">
-            <template v-for="(stage, idx) in route" :key="idx">
-              <!-- Evolution level arrow -->
-              <div v-if="idx > 0" class="flex flex-col items-center mx-1 sm:mx-2">
-                <span v-if="stage.evolve_level" class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">Lv.{{ stage.evolve_level }}</span>
-                <span v-else-if="!stage.evolve_condition" class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">特殊</span>
-                <!-- Rich condition display (when no level, or as sub-text when level exists) -->
+    <div
+      v-if="evolutionRoutes.length"
+      class="card pet-section-card pet-evolution-card mb-4 sm:mb-6"
+      :class="{ 'pet-evolution-card--menu-open': evolutionMenuOpen }"
+    >
+      <div class="pet-evolution-header">
+        <h3 class="font-roco text-sm sm:text-base">进化链</h3>
+
+        <div v-if="evolutionRoutes.length > 1" class="pet-evolution-controls">
+          <div v-if="evolutionRoutes.length <= 4 && windowWidth >= 640" class="pet-evolution-tabs" role="tablist" aria-label="进化路线">
+            <button
+              v-for="(evolutionRoute, routeIndex) in evolutionRoutes"
+              :key="`route-tab-${routeIndex}`"
+              type="button"
+              role="tab"
+              class="pet-evolution-tab"
+              :class="{ 'pet-evolution-tab--active': selectedEvolutionRouteIndex === routeIndex }"
+              :aria-selected="selectedEvolutionRouteIndex === routeIndex"
+              @click="selectEvolutionRoute(routeIndex)"
+            >
+              <span>路线 {{ routeIndex + 1 }}</span>
+              <small>{{ evolutionRoute[evolutionRoute.length - 1]?.name }}</small>
+            </button>
+          </div>
+
+          <div v-else ref="evolutionMenuEl" class="pet-evolution-select" @keydown.esc="evolutionMenuOpen = false">
+            <button
+              type="button"
+              class="pet-evolution-select__trigger"
+              :aria-expanded="evolutionMenuOpen"
+              aria-haspopup="listbox"
+              @click="evolutionMenuOpen = !evolutionMenuOpen"
+            >
+              <span>{{ evolutionRouteLabel(activeEvolutionRoute, selectedEvolutionRouteIndex) }}</span>
+              <svg :class="{ 'pet-evolution-select__chevron--open': evolutionMenuOpen }" class="pet-evolution-select__chevron" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m6 8 4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              </svg>
+            </button>
+            <Transition name="variant-menu">
+              <div v-if="evolutionMenuOpen" class="pet-evolution-select__menu" role="listbox" aria-label="选择进化路线">
+                <button
+                  v-for="(evolutionRoute, routeIndex) in evolutionRoutes"
+                  :key="`route-option-${routeIndex}`"
+                  type="button"
+                  role="option"
+                  class="pet-evolution-select__option"
+                  :class="{ 'pet-evolution-select__option--active': selectedEvolutionRouteIndex === routeIndex }"
+                  :aria-selected="selectedEvolutionRouteIndex === routeIndex"
+                  @click="selectEvolutionRoute(routeIndex)"
+                >
+                  <span class="pet-evolution-select__number">{{ routeIndex + 1 }}</span>
+                  <span class="pet-evolution-select__name">{{ evolutionRouteLabel(evolutionRoute, routeIndex) }}</span>
+                  <span v-if="evolutionRoute.some(stage => stage.uid === pet.uid)" class="pet-evolution-select__current">当前精灵</span>
+                </button>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </div>
+
+      <Transition name="evolution-route" mode="out-in">
+        <div :key="selectedEvolutionRouteIndex" class="pet-evolution-viewport">
+          <div class="pet-evolution-track">
+            <template v-for="(stage, stageIndex) in activeEvolutionRoute" :key="stage.uid || stageIndex">
+              <div v-if="stageIndex > 0" class="pet-evolution-arrow">
+                <span v-if="stage.evolve_level">Lv.{{ stage.evolve_level }}</span>
+                <span v-else-if="!stage.evolve_condition">特殊</span>
                 <EvoConditionTag v-if="!stage.evolve_level && stage.evolve_condition" :condition="stage.evolve_condition" :elem-map="elemMap" />
-                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
                 <EvoConditionTag v-if="stage.evolve_level && stage.evolve_condition" :condition="stage.evolve_condition" :elem-map="elemMap" small />
               </div>
-              <!-- Pet stage card -->
-              <router-link v-if="stage.uid && stage.uid !== pet.uid"
-                :to="'/pets/' + stage.uid"
-                class="flex flex-col items-center px-3 py-2 rounded-xl transition-all hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:scale-105 cursor-pointer group">
-                <img v-if="stage.thumb_url" :src="stage.thumb_url"
-                  class="w-16 h-16 sm:w-20 sm:h-20 object-contain" loading="lazy" />
-                <div v-else class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                  <span class="text-base text-gray-400">?</span>
-                </div>
-                <span class="text-xs sm:text-sm text-gray-700 dark:text-gray-200 group-hover:text-primary-500 transition-colors mt-1">{{ stage.name }}</span>
+
+              <router-link
+                v-if="stage.uid && stage.uid !== pet.uid"
+                :to="`/pets/${stage.uid}`"
+                class="pet-evolution-stage group"
+              >
+                <img v-if="stage.thumb_url" :src="stage.thumb_url" :alt="stage.name" loading="lazy" />
+                <div v-else class="pet-evolution-stage__placeholder">?</div>
+                <span>{{ stage.name }}</span>
               </router-link>
-              <div v-else
-                class="flex flex-col items-center px-3 py-2 rounded-xl"
-                :class="stage.uid === pet.uid ? 'bg-primary-50 dark:bg-primary-500/10 ring-2 ring-primary-400/60' : ''">
-                <img v-if="stage.thumb_url" :src="stage.thumb_url"
-                  class="w-16 h-16 sm:w-20 sm:h-20 object-contain" loading="lazy" />
-                <div v-else class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                  <span class="text-base text-gray-400">?</span>
-                </div>
-                <span class="text-xs sm:text-sm mt-1 font-medium" :class="stage.uid === pet.uid ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-200'">{{ stage.name }}</span>
+              <div v-else class="pet-evolution-stage" :class="{ 'pet-evolution-stage--current': stage.uid === pet.uid }">
+                <img v-if="stage.thumb_url" :src="stage.thumb_url" :alt="stage.name" loading="lazy" />
+                <div v-else class="pet-evolution-stage__placeholder">?</div>
+                <span>{{ stage.name }}</span>
+                <small v-if="stage.uid === pet.uid">当前</small>
               </div>
             </template>
           </div>
         </div>
-      </div>
+      </Transition>
     </div>
-
     <!-- 种族值 -->
-    <div class="card mb-4 sm:mb-6">
-      <h3 class="font-roco text-sm sm:text-base mb-3 sm:mb-4">种族值 <span class="text-primary-500 font-bold ml-2">{{ pet.total }}</span></h3>
+    <div class="card pet-section-card pet-stats-card mb-4 sm:mb-6">
+      <h3 class="pet-section-title font-roco text-sm sm:text-base mb-3 sm:mb-4">种族值 <span class="pet-total-value font-bold ml-2">{{ pet.total }}</span></h3>
       <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
         <div class="flex-1 w-full space-y-2 sm:space-y-3">
-          <div v-for="s in statsBarList" :key="s.key" class="flex items-center gap-2 sm:gap-3">
+          <div v-for="s in statsBarList" :key="s.key" class="pet-stat-row flex items-center gap-2 sm:gap-3">
             <span class="text-xs sm:text-sm text-muted w-8 sm:w-10 text-right">{{ s.label }}</span>
-            <div class="flex-1 h-3 md:h-4 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-500 bg-primary-500/70"
+            <div class="pet-stat-track flex-1 h-3 md:h-4 rounded-full overflow-hidden">
+              <div class="pet-stat-fill h-full rounded-full transition-all duration-500"
                 :style="{ width: (s.value / 200 * 100) + '%' }"></div>
             </div>
-              <span class="text-xs sm:text-sm font-medium w-7 sm:w-8">{{ s.value }}</span>
+              <span class="pet-stat-value text-xs sm:text-sm font-medium w-7 sm:w-8">{{ s.value }}</span>
           </div>
         </div>
         <StatsRadar v-if="pet" :values="{ hp: pet.hp, atk: pet.atk, matk: pet.matk, def: pet.def, mdef: pet.mdef, speed: pet.speed }" :size="radarSize" />
@@ -173,7 +238,7 @@
     <ElementMatchup v-if="petElementIds.length" :element-ids="petElementIds" :elements="elemList" :multipliers="multipliers" />
 
     <!-- 图鉴课题 -->
-    <div class="card mb-4 sm:mb-6" v-if="pet.achievements?.length && !pet.is_boss_form">
+    <div class="card pet-section-card mb-4 sm:mb-6" v-if="pet.achievements?.length && !pet.is_boss_form">
       <h3 class="font-roco text-sm sm:text-base mb-2 sm:mb-3">图鉴课题</h3>
       <div class="space-y-1.5">
         <div v-for="(ach, idx) in pet.achievements" :key="idx"
@@ -245,7 +310,7 @@
       :initial-coverage="initialCoverage" :initial-bloodline="initialBloodline" />
 
     <!-- 技能区域（Tab 切换） -->
-    <div class="card" v-if="pet.skills?.length || pet.bloodline_skills?.length || pet.learnable_stones?.length">
+    <div class="card pet-section-card" v-if="pet.skills?.length || pet.bloodline_skills?.length || pet.learnable_stones?.length">
       <div class="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 border-b border-surface-light-border dark:border-surface-dark-border pb-2 sm:pb-3 overflow-x-auto">
         <button v-for="tab in skillTabs" :key="tab.key"
           @click="activeSkillTab = tab.key"
@@ -391,6 +456,51 @@ const pet = ref(null)
 const neighbors = ref({ prev: null, next: null })
 const showSwipeGuide = ref(false)
 const navVisible = ref(false)
+const variantMenuEl = ref(null)
+const variantMenuOpen = ref(false)
+const evolutionMenuEl = ref(null)
+const evolutionMenuOpen = ref(false)
+const selectedEvolutionRouteIndex = ref(0)
+
+const evolutionRoutes = computed(() => (pet.value?.detail?.evolution_chain || []).filter(route => Array.isArray(route) && route.length > 1))
+const activeEvolutionRoute = computed(() => evolutionRoutes.value[selectedEvolutionRouteIndex.value] || evolutionRoutes.value[0] || [])
+
+const currentVariantName = computed(() => {
+  const current = pet.value?.variants?.find(variant => variant.pet_uid === pet.value?.uid)
+  return current?.name || pet.value?.name || ''
+})
+
+function selectVariant(uid) {
+  variantMenuOpen.value = false
+  if (uid && uid !== pet.value?.uid) switchVariant(uid)
+}
+
+function evolutionRouteLabel(route, index) {
+  if (!route?.length) return `路线 ${index + 1}`
+  const firstName = route[0]?.name || '起点'
+  const lastName = route[route.length - 1]?.name || '终点'
+  return `路线 ${index + 1} · ${firstName} → ${lastName}`
+}
+
+function selectEvolutionRoute(index) {
+  selectedEvolutionRouteIndex.value = index
+  evolutionMenuOpen.value = false
+}
+
+function selectInitialEvolutionRoute() {
+  const matchingIndex = evolutionRoutes.value.findIndex(route => route.some(stage => stage.uid === pet.value?.uid))
+  selectedEvolutionRouteIndex.value = matchingIndex >= 0 ? matchingIndex : 0
+  evolutionMenuOpen.value = false
+}
+
+function closeVariantMenu(event) {
+  if (variantMenuOpen.value && variantMenuEl.value && !variantMenuEl.value.contains(event.target)) {
+    variantMenuOpen.value = false
+  }
+  if (evolutionMenuOpen.value && evolutionMenuEl.value && !evolutionMenuEl.value.contains(event.target)) {
+    evolutionMenuOpen.value = false
+  }
+}
 
 // Format range string "1.50-2.15" to display "1.50~2.15m" or "1.50m" if same
 function formatRange(str, unit) {
@@ -526,6 +636,17 @@ const currentImage = computed(() => {
   return d?.image_default || pet.value.image_url
 })
 
+const paddedPetId = computed(() => String(pet.value?.pet_id ?? '').padStart(3, '0'))
+
+const detailThemeStyle = computed(() => {
+  const primary = pet.value?.element_color || '#D69F23'
+  const secondary = pet.value?.sub_element_color || primary
+  return {
+    '--pet-detail-accent': primary,
+    '--pet-detail-secondary': secondary,
+  }
+})
+
 const skillKeywordOptions = [
   { value: '连击', label: '连击' },
   { value: '回复', label: '回复' },
@@ -634,6 +755,7 @@ async function loadPet(uid) {
     petsApi.neighbors(uid).catch(() => ({ prev: null, next: null })),
   ])
   pet.value = petData
+  selectInitialEvolutionRoute()
   elemList.value = elemData.elements
   multipliers.value = multData
   neighbors.value = neighborsData
@@ -649,6 +771,7 @@ async function loadPet(uid) {
 }
 
 function switchVariant(uid) {
+  variantMenuOpen.value = false
   initialCoverage.value = []
   initialBloodline.value = ''
   router.replace(`/pets/${uid}`)
@@ -666,7 +789,11 @@ const statsBarList = computed(() => {
   ]
 })
 
-onMounted(() => loadPet(route.params.uid))
+onMounted(() => {
+  document.addEventListener('pointerdown', closeVariantMenu)
+  loadPet(route.params.uid)
+})
+onUnmounted(() => document.removeEventListener('pointerdown', closeVariantMenu))
 
 // Show swipe guide mask once for mobile/tablet devices (< xl breakpoint)
 onMounted(() => {
@@ -801,6 +928,1019 @@ onUnmounted(() => {
 </script>
 
 <style>
+/* 详情页沿用精灵卡片的属性色、编号水印、柔和阴影和数字信息层级。 */
+.pet-detail-page {
+  position: relative;
+  --pet-detail-accent: #d69f23;
+  --pet-detail-secondary: var(--pet-detail-accent);
+}
+
+.pet-detail-page .pet-detail-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.pet-detail-page .pet-detail__back {
+  justify-self: start;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 12%, #e7e1d7);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.58);
+  padding: 0.42rem 0.7rem;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.pet-detail-page .pet-detail__back:hover {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 34%, #e7e1d7);
+  color: var(--pet-detail-accent);
+  transform: translateX(-2px);
+}
+
+.pet-detail-page .pet-variant-switcher {
+  display: inline-grid;
+  grid-column: 2;
+  justify-self: center;
+  width: fit-content;
+  max-width: 100%;
+  grid-template-columns: auto minmax(16rem, 30rem);
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 13%, #e7e1d7);
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--pet-detail-accent) 8%, transparent), transparent 36%),
+    rgb(255 255 255 / 0.64);
+  padding: 0.5rem 0.55rem 0.5rem 0.72rem;
+  box-shadow: 0 7px 20px rgb(68 40 20 / 0.045);
+}
+
+.pet-detail-page .pet-variant-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-variant-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: #5f6875;
+  font-weight: 600;
+}
+
+.pet-detail-page .pet-variant-label::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--pet-detail-accent);
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--pet-detail-accent) 9%, transparent);
+  content: '';
+}
+
+.pet-detail-page .pet-variant-count {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pet-detail-accent) 8%, transparent);
+  color: var(--pet-detail-accent);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem 0.42rem;
+}
+
+.pet-detail-page .pet-variant-select-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.pet-detail-page .pet-variant-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 22%, #dfe3e8);
+  border-radius: 0.8rem;
+  outline: none;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--pet-detail-accent) 9%, white), rgb(255 255 255 / 0.94));
+  color: #303846;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  padding: 0.58rem 0.72rem 0.58rem 0.8rem;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.pet-detail-page .pet-variant-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-variant-trigger:hover,
+.pet-detail-page .pet-variant-trigger[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 48%, #dfe3e8);
+}
+
+.pet-detail-page .pet-variant-trigger:focus-visible {
+  border-color: var(--pet-detail-accent);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--pet-detail-accent) 12%, transparent);
+}
+
+.pet-detail-page .pet-variant-chevron {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  color: var(--pet-detail-accent);
+  transition: transform 180ms ease;
+}
+
+.pet-detail-page .pet-variant-chevron--open {
+  transform: rotate(180deg);
+}
+
+.pet-detail-page .pet-variant-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  left: 0;
+  max-height: min(20rem, 52vh);
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 18%, #dfe3e8);
+  border-radius: 0.95rem;
+  background: rgb(255 255 255 / 0.96);
+  padding: 0.38rem;
+  box-shadow:
+    0 14px 34px rgb(36 30 24 / 0.14),
+    0 30px 68px -34px color-mix(in srgb, var(--pet-detail-accent) 42%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.pet-detail-page .pet-variant-option {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.72rem;
+  color: #4b5563;
+  font-size: 0.84rem;
+  padding: 0.62rem 0.7rem;
+  text-align: left;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.pet-detail-page .pet-variant-option:hover {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 7%, transparent);
+  color: var(--pet-detail-accent);
+}
+
+.pet-detail-page .pet-variant-option--active {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 24%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 11%, white);
+  color: var(--pet-detail-accent);
+  font-weight: 600;
+}
+
+.pet-detail-page .pet-variant-option__dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 36%, transparent);
+  border-radius: 999px;
+}
+
+.pet-detail-page .pet-variant-option--active .pet-variant-option__dot {
+  border-color: var(--pet-detail-accent);
+  background: var(--pet-detail-accent);
+  box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--pet-detail-accent) 10%, transparent);
+}
+
+.pet-detail-page .pet-variant-option__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-variant-option__current {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pet-detail-accent) 10%, transparent);
+  font-size: 0.62rem;
+  padding: 0.18rem 0.38rem;
+}
+
+.variant-menu-enter-active,
+.variant-menu-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+  transform-origin: top center;
+}
+
+.variant-menu-enter-from,
+.variant-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-0.3rem) scale(0.985);
+}
+.pet-detail-page .pet-hero,
+.pet-detail-page .pet-section-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 22%, #e7e1d7);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at 3% 0%, color-mix(in srgb, var(--pet-detail-accent) 8%, transparent), transparent 38%),
+    radial-gradient(circle at 97% 0%, color-mix(in srgb, var(--pet-detail-secondary) 9%, transparent), transparent 42%),
+    linear-gradient(155deg, rgb(255 255 255 / 0.98), rgb(255 254 251 / 0.94));
+  box-shadow:
+    0 1px 2px rgb(68 40 20 / 0.04),
+    0 14px 32px rgb(68 40 20 / 0.08),
+    0 32px 64px -42px color-mix(in srgb, var(--pet-detail-accent) 48%, transparent);
+}
+
+.pet-detail-page .pet-hero::before,
+.pet-detail-page .pet-section-card::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.16;
+  background-image: radial-gradient(color-mix(in srgb, var(--pet-detail-accent) 48%, transparent) 0.7px, transparent 0.7px);
+  background-size: 13px 13px;
+  mask-image: linear-gradient(to bottom, black, transparent 64%);
+  content: '';
+  pointer-events: none;
+}
+
+
+.pet-detail-page .pet-hero__layout {
+  align-items: stretch;
+}
+
+.pet-detail-page .pet-hero__visual {
+  position: relative;
+  isolation: isolate;
+  justify-content: center;
+  width: min(100%, 20rem);
+  min-height: 18.5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 14%, transparent);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 36% 56%, color-mix(in srgb, var(--pet-detail-accent) 16%, transparent), transparent 48%),
+    radial-gradient(circle at 72% 46%, color-mix(in srgb, var(--pet-detail-secondary) 14%, transparent), transparent 48%),
+    linear-gradient(145deg, rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.2));
+}
+
+.pet-detail-page .pet-hero__serial {
+  position: absolute;
+  z-index: 4;
+  top: 0.9rem;
+  left: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 24%, transparent);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.72);
+  color: var(--pet-detail-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.42rem 0.62rem;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.86);
+}
+
+.pet-detail-page .pet-hero__watermark {
+  position: absolute;
+  z-index: 0;
+  top: -0.15rem;
+  right: 0.8rem;
+  background-image: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--pet-detail-accent) 9%, transparent),
+    color-mix(in srgb, var(--pet-detail-secondary) 12%, transparent)
+  );
+  background-clip: text;
+  color: transparent;
+  font-size: clamp(5rem, 11vw, 8.5rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  user-select: none;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pet-detail-page .pet-hero__halo {
+  position: absolute;
+  z-index: 0;
+  width: min(62%, 12rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 18%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 16px color-mix(in srgb, var(--pet-detail-accent) 4%, transparent);
+  transition: transform 300ms ease;
+}
+
+.pet-detail-page .pet-hero:hover .pet-hero__halo {
+  transform: scale(1.06) rotate(7deg);
+}
+
+.pet-detail-page .pet-hero__image {
+  position: relative;
+  z-index: 2;
+  width: min(72%, 13.5rem);
+  height: 13.5rem;
+  margin-top: 1.5rem;
+  filter: drop-shadow(0 18px 15px rgb(24 30 39 / 0.2));
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 300ms ease;
+}
+
+.pet-detail-page .pet-hero:hover .pet-hero__image {
+  filter: drop-shadow(0 22px 18px rgb(24 30 39 / 0.25));
+  transform: scale(1.035) translateY(-2px);
+}
+
+.pet-detail-page .pet-hero__image-tabs {
+  position: relative;
+  z-index: 4;
+  min-height: 3.2rem;
+  border: 1px solid rgb(231 225 215 / 0.66);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.7);
+  padding: 0.35rem 0.75rem;
+  backdrop-filter: blur(8px);
+}
+
+.pet-detail-page .pet-hero__info {
+  align-self: center;
+  padding: 0.35rem 0.2rem;
+}
+
+.pet-detail-page .pet-hero__name {
+  position: relative;
+  padding-left: 0.72rem;
+  color: #202938;
+  font-family: 'MIANFEIZITI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.025em;
+  transition: color 180ms ease;
+}
+
+.pet-detail-page .pet-hero__name::before {
+  position: absolute;
+  top: 0.2em;
+  bottom: 0.2em;
+  left: 0;
+  width: 0.2rem;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--pet-detail-accent), var(--pet-detail-secondary));
+  content: '';
+}
+
+.pet-detail-page .pet-hero:hover .pet-hero__name {
+  color: var(--pet-detail-accent);
+}
+
+.pet-detail-page .pet-hero__ability {
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 13%, transparent);
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--pet-detail-accent) 8%, white),
+    color-mix(in srgb, var(--pet-detail-secondary) 5%, white)
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.74);
+}
+
+.pet-detail-page .pet-hero__meta > div {
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 12%, transparent);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.62);
+  padding: 0.45rem 0.65rem;
+}
+
+.pet-detail-page .pet-section-card {
+  transition: border-color 180ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.pet-detail-page .pet-section-card:hover {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 34%, #e7e1d7);
+  box-shadow:
+    0 3px 8px rgb(68 40 20 / 0.05),
+    0 18px 40px rgb(68 40 20 / 0.1),
+    0 34px 70px -42px color-mix(in srgb, var(--pet-detail-accent) 54%, transparent);
+  transform: translateY(-1px);
+}
+
+.pet-detail-page .pet-section-card > h3,
+.pet-detail-page .pet-section-title {
+  position: relative;
+  padding-left: 0.7rem;
+  color: #202938;
+  font-family: 'MIANFEIZITI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: 0.025em;
+}
+
+.pet-detail-page .pet-section-card > h3::before,
+.pet-detail-page .pet-section-title::before {
+  position: absolute;
+  top: 0.12em;
+  bottom: 0.12em;
+  left: 0;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--pet-detail-accent), var(--pet-detail-secondary));
+  content: '';
+}
+
+.pet-detail-page .pet-total-value,
+.pet-detail-page .pet-evolution-card {
+  overflow: visible;
+}
+
+.pet-detail-page .pet-evolution-card--menu-open {
+  z-index: 40;
+}
+
+.pet-detail-page .pet-evolution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.pet-detail-page .pet-evolution-header > h3 {
+  flex: none;
+  margin: 0;
+}
+
+.pet-detail-page .pet-evolution-controls {
+  min-width: 0;
+}
+
+.pet-detail-page .pet-evolution-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 13%, #e3e6ea);
+  border-radius: 0.9rem;
+  background: rgb(255 255 255 / 0.48);
+  padding: 0.28rem;
+}
+
+.pet-detail-page .pet-evolution-tab {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 6.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.68rem;
+  color: #687382;
+  font-size: 0.72rem;
+  padding: 0.48rem 0.65rem;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.pet-detail-page .pet-evolution-tab small {
+  max-width: 9rem;
+  overflow: hidden;
+  color: #8b94a1;
+  font-size: 0.62rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-evolution-tab:hover {
+  background: color-mix(in srgb, var(--pet-detail-accent) 6%, transparent);
+  color: var(--pet-detail-accent);
+}
+
+.pet-detail-page .pet-evolution-tab--active {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 24%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 11%, white);
+  color: var(--pet-detail-accent);
+  font-weight: 600;
+}
+
+.pet-detail-page .pet-evolution-tab--active small {
+  color: color-mix(in srgb, var(--pet-detail-accent) 72%, #687382);
+}
+
+.pet-detail-page .pet-evolution-select {
+  position: relative;
+  width: min(31rem, 58vw);
+}
+
+.pet-detail-page .pet-evolution-select__trigger {
+  display: flex;
+  width: 100%;
+  min-height: 2.7rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 20%, #dfe3e8);
+  border-radius: 0.82rem;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--pet-detail-accent) 7%, white), rgb(255 255 255 / 0.86));
+  color: #465160;
+  font-size: 0.78rem;
+  padding: 0.62rem 0.75rem 0.62rem 0.85rem;
+  text-align: left;
+}
+
+.pet-detail-page .pet-evolution-select__trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-evolution-select__chevron {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  color: var(--pet-detail-accent);
+  transition: transform 180ms ease;
+}
+
+.pet-detail-page .pet-evolution-select__chevron--open {
+  transform: rotate(180deg);
+}
+
+.pet-detail-page .pet-evolution-select__menu {
+  position: absolute;
+  z-index: 35;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: 0;
+  max-height: min(23rem, 56vh);
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 18%, #dfe3e8);
+  border-radius: 0.9rem;
+  background: rgb(255 255 255 / 0.97);
+  padding: 0.38rem;
+  box-shadow: 0 18px 44px rgb(36 30 24 / 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.pet-detail-page .pet-evolution-select__option {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  color: #596474;
+  font-size: 0.75rem;
+  padding: 0.58rem 0.65rem;
+  text-align: left;
+}
+
+.pet-detail-page .pet-evolution-select__option:hover,
+.pet-detail-page .pet-evolution-select__option--active {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 8%, transparent);
+  color: var(--pet-detail-accent);
+}
+
+.pet-detail-page .pet-evolution-select__number {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--pet-detail-accent) 9%, transparent);
+  color: var(--pet-detail-accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.pet-detail-page .pet-evolution-select__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-evolution-select__current {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pet-detail-accent) 10%, transparent);
+  font-size: 0.6rem;
+  padding: 0.18rem 0.38rem;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-evolution-viewport {
+  overflow-x: auto;
+  border: 1px solid color-mix(in srgb, var(--pet-detail-accent) 10%, #e7e9ed);
+  border-radius: 1.15rem;
+  background:
+    radial-gradient(circle at 8% 20%, color-mix(in srgb, var(--pet-detail-accent) 6%, transparent), transparent 38%),
+    radial-gradient(circle at 92% 80%, color-mix(in srgb, var(--pet-detail-secondary) 6%, transparent), transparent 40%),
+    rgb(255 255 255 / 0.28);
+  scrollbar-width: thin;
+}
+
+.pet-detail-page .pet-evolution-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  min-height: 11.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+}
+
+.pet-detail-page .pet-evolution-stage {
+  position: relative;
+  display: flex;
+  width: 8.6rem;
+  min-height: 9rem;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 1rem;
+  color: #4c5665;
+  padding: 0.7rem;
+  text-align: center;
+  transition: border-color 170ms ease, background-color 170ms ease, color 170ms ease, transform 170ms ease;
+}
+
+.pet-detail-page a.pet-evolution-stage:hover {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 7%, transparent);
+  color: var(--pet-detail-accent);
+  transform: translateY(-2px);
+}
+
+.pet-detail-page .pet-evolution-stage img,
+.pet-detail-page .pet-evolution-stage__placeholder {
+  width: 5.5rem;
+  height: 5.5rem;
+  object-fit: contain;
+}
+
+.pet-detail-page .pet-evolution-stage__placeholder {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pet-detail-accent) 6%, #f1f3f5);
+  color: #9aa2ae;
+}
+
+.pet-detail-page .pet-evolution-stage > span {
+  width: 100%;
+  overflow: hidden;
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  line-height: 1.2rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-detail-page .pet-evolution-stage > small {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border-radius: 999px;
+  background: var(--pet-detail-accent);
+  color: white;
+  font-size: 0.56rem;
+  padding: 0.16rem 0.35rem;
+}
+
+.pet-detail-page .pet-evolution-stage--current {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 38%, transparent);
+  background: color-mix(in srgb, var(--pet-detail-accent) 10%, white);
+  color: var(--pet-detail-accent);
+  box-shadow: 0 12px 28px -20px color-mix(in srgb, var(--pet-detail-accent) 62%, transparent);
+}
+
+.pet-detail-page .pet-evolution-arrow {
+  display: flex;
+  width: 5.8rem;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  color: var(--pet-detail-accent);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pet-detail-page .pet-evolution-arrow > svg {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.evolution-route-enter-active,
+.evolution-route-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.evolution-route-enter-from {
+  opacity: 0;
+  transform: translateX(0.45rem);
+}
+
+.evolution-route-leave-to {
+  opacity: 0;
+  transform: translateX(-0.45rem);
+}
+
+.dark .pet-detail-page .pet-evolution-tabs,
+.dark .pet-detail-page .pet-evolution-viewport {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 16%, #303a48);
+  background: rgb(17 21 28 / 0.3);
+}
+
+.dark .pet-detail-page .pet-evolution-tab,
+.dark .pet-detail-page .pet-evolution-stage {
+  color: #b7c0cc;
+}
+
+.dark .pet-detail-page .pet-evolution-tab small {
+  color: #87919f;
+}
+
+.dark .pet-detail-page .pet-evolution-tab--active,
+.dark .pet-detail-page .pet-evolution-stage--current {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 30%, #303a48);
+  background: color-mix(in srgb, var(--pet-detail-accent) 12%, #202835);
+  color: var(--pet-detail-accent);
+}
+
+.dark .pet-detail-page .pet-evolution-select__trigger {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 24%, #303a48);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--pet-detail-accent) 9%, #202835), #202835);
+  color: #d8dee7;
+}
+
+.dark .pet-detail-page .pet-evolution-select__menu {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 24%, #303a48);
+  background: rgb(25 31 41 / 0.98);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.36);
+}
+
+.dark .pet-detail-page .pet-evolution-select__option {
+  color: #c2cad5;
+}
+
+.dark .pet-detail-page .pet-evolution-select__option:hover,
+.dark .pet-detail-page .pet-evolution-select__option--active {
+  background: color-mix(in srgb, var(--pet-detail-accent) 12%, #202835);
+  color: var(--pet-detail-accent);
+}
+
+@media (max-width: 639px) {
+  .pet-detail-page .pet-evolution-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .pet-detail-page .pet-evolution-select {
+    width: 100%;
+  }
+
+  .pet-detail-page .pet-evolution-track {
+    min-height: 9.6rem;
+    justify-content: flex-start;
+    padding: 0.75rem;
+  }
+
+  .pet-detail-page .pet-evolution-stage {
+    width: 7.1rem;
+    min-height: 8.2rem;
+    padding: 0.55rem;
+  }
+
+  .pet-detail-page .pet-evolution-stage img,
+  .pet-detail-page .pet-evolution-stage__placeholder {
+    width: 4.7rem;
+    height: 4.7rem;
+  }
+
+  .pet-detail-page .pet-evolution-arrow {
+    width: 4.5rem;
+  }
+}
+.pet-detail-page .pet-stat-value {
+  color: var(--pet-detail-accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-detail-page .pet-total-value {
+  position: relative;
+  padding-bottom: 0.12rem;
+  font-size: 1.1em;
+}
+
+.pet-detail-page .pet-total-value::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.08rem;
+  left: 0;
+  height: 0.12rem;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--pet-detail-accent), var(--pet-detail-secondary));
+  content: '';
+}
+
+.pet-detail-page .pet-stat-row {
+  border-radius: 0.8rem;
+  padding: 0.22rem 0.35rem;
+  transition: background-color 160ms ease;
+}
+
+.pet-detail-page .pet-stat-row:hover {
+  background: color-mix(in srgb, var(--pet-detail-accent) 6%, transparent);
+}
+
+.pet-detail-page .pet-stat-track {
+  background: color-mix(in srgb, var(--pet-detail-accent) 7%, #f0f1f3);
+  box-shadow: inset 0 1px 2px rgb(24 30 39 / 0.06);
+}
+
+.pet-detail-page .pet-stat-fill {
+  background: linear-gradient(90deg, var(--pet-detail-accent), var(--pet-detail-secondary));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
+}
+
+.pet-detail-page .pet-stat-value {
+  text-align: right;
+  font-weight: 700;
+}
+
+.dark .pet-detail-page .pet-detail__back,
+.dark .pet-detail-page .pet-variant-switcher {
+  background:
+    radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--pet-detail-accent) 11%, transparent), transparent 36%),
+    rgb(17 21 28 / 0.52);
+}
+
+.dark .pet-detail-page .pet-variant-label {
+  color: #aeb6c2;
+}
+
+.dark .pet-detail-page .pet-variant-trigger {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 26%, #303a48);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--pet-detail-accent) 10%, #202835), #202835);
+  color: #f2f4f7;
+}
+
+.dark .pet-detail-page .pet-variant-menu {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 26%, #303a48);
+  background: rgb(25 31 41 / 0.98);
+  box-shadow: 0 18px 42px rgb(0 0 0 / 0.34);
+}
+
+.dark .pet-detail-page .pet-variant-option {
+  color: #c7ced8;
+}
+
+.dark .pet-detail-page .pet-variant-option:hover {
+  background: color-mix(in srgb, var(--pet-detail-accent) 10%, #202835);
+}
+
+.dark .pet-detail-page .pet-variant-option--active {
+  background: color-mix(in srgb, var(--pet-detail-accent) 16%, #202835);
+  color: var(--pet-detail-accent);
+}
+
+.dark .pet-detail-page .pet-hero,
+.dark .pet-detail-page .pet-section-card {
+  border-color: color-mix(in srgb, var(--pet-detail-accent) 28%, #303a48);
+  background:
+    radial-gradient(circle at 3% 0%, color-mix(in srgb, var(--pet-detail-accent) 11%, transparent), transparent 38%),
+    radial-gradient(circle at 97% 0%, color-mix(in srgb, var(--pet-detail-secondary) 12%, transparent), transparent 42%),
+    linear-gradient(155deg, rgb(31 39 51 / 0.98), rgb(25 31 41 / 0.98));
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.2),
+    0 18px 38px rgb(0 0 0 / 0.24),
+    0 34px 72px -42px color-mix(in srgb, var(--pet-detail-accent) 58%, transparent);
+}
+
+.dark .pet-detail-page .pet-hero__visual {
+  background:
+    radial-gradient(circle at 36% 56%, color-mix(in srgb, var(--pet-detail-accent) 19%, transparent), transparent 48%),
+    radial-gradient(circle at 72% 46%, color-mix(in srgb, var(--pet-detail-secondary) 16%, transparent), transparent 48%),
+    linear-gradient(145deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.015));
+}
+
+.dark .pet-detail-page .pet-hero__serial,
+.dark .pet-detail-page .pet-hero__image-tabs,
+.dark .pet-detail-page .pet-hero__meta > div {
+  background: rgb(17 21 28 / 0.58);
+}
+
+.dark .pet-detail-page .pet-hero__name,
+.dark .pet-detail-page .pet-section-card > h3,
+.dark .pet-detail-page .pet-section-title {
+  color: #f2f4f7;
+}
+
+.dark .pet-detail-page .pet-hero:hover .pet-hero__name {
+  color: var(--pet-detail-accent);
+}
+
+.dark .pet-detail-page .pet-hero__ability {
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--pet-detail-accent) 11%, #1c232e),
+    color-mix(in srgb, var(--pet-detail-secondary) 8%, #1c232e)
+  );
+}
+
+.dark .pet-detail-page .pet-stat-track {
+  background: color-mix(in srgb, var(--pet-detail-accent) 8%, #202835);
+}
+
+@media (max-width: 639px) {
+  .pet-detail-page .pet-detail-toolbar {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .pet-detail-page .pet-detail__back {
+    align-self: flex-start;
+  }
+
+  .pet-detail-page .pet-variant-switcher {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+    border-radius: 1rem;
+    padding: 0.55rem;
+  }
+
+  .pet-detail-page .pet-variant-heading {
+    justify-content: space-between;
+    padding-inline: 0.2rem;
+  }
+
+  .pet-detail-page .pet-variant-trigger {
+    min-height: 2.65rem;
+    font-size: 0.82rem;
+  }
+
+  .pet-detail-page .pet-hero {
+    padding: 0.8rem;
+  }
+
+  .pet-detail-page .pet-hero__visual {
+    min-height: 17rem;
+  }
+
+  .pet-detail-page .pet-hero__image {
+    height: 11.5rem;
+  }
+
+  .pet-detail-page .pet-hero__info {
+    padding-inline: 0.25rem;
+  }
+
+  .pet-detail-page .pet-hero__name {
+    padding-left: 0.62rem;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .pet-detail-page .pet-detail-toolbar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .pet-detail-page .pet-variant-switcher {
+    width: 100%;
+    grid-column: 2;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-self: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail-page .pet-hero__halo,
+  .pet-detail-page .pet-hero__image,
+  .pet-detail-page .pet-section-card {
+    transition: none;
+  }
+
+  .pet-detail-page .pet-hero:hover .pet-hero__image,
+  .pet-detail-page .pet-section-card:hover {
+    transform: none;
+  }
+}
+
 /* Unscoped: Teleport content needs global styles */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s ease;

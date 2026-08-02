@@ -2,7 +2,7 @@
   <div class="min-h-screen flex flex-col">
     <!-- 导航栏 -->
     <nav class="sticky top-0 z-50 backdrop-blur-md border-b"
-      :class="isDark ? 'bg-surface-dark/90 border-surface-dark-border' : 'bg-white/90 border-surface-light-border'">
+      :class="isDark ? 'bg-surface-dark/90 border-surface-dark-border' : 'bg-surface-light-card/90 border-surface-light-border shadow-sm'">
       <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-15 lg:h-16 flex items-center gap-4 lg:gap-8">
         <!-- Logo：管理端点击回管理首页，用户端回首页 -->
         <router-link :to="isAdminRoute ? '/admin/dashboard' : '/'"
@@ -32,7 +32,7 @@
               <div v-show="openMenus[tab.tab_key]"
                 class="absolute top-full left-0 pt-1">
                 <div class="py-1 rounded-lg shadow-lg min-w-[140px] border"
-                  :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
+                  :class="isDark ? 'bg-surface-dark-card border-surface-dark-border' : 'bg-surface-light-card border-surface-light-border'">
                   <router-link v-for="child in tab.children" :key="child.tab_key"
                     :to="child.route" class="dropdown-item" @click="openMenus[tab.tab_key] = false">{{ child.label }}</router-link>
                 </div>
@@ -54,7 +54,7 @@
             </router-link>
             <div v-show="adminMenus.pets" class="absolute top-full left-0 pt-1">
               <div class="py-1 rounded-lg shadow-lg min-w-[120px] border"
-                :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
+                :class="isDark ? 'bg-surface-dark-card border-surface-dark-border' : 'bg-surface-light-card border-surface-light-border'">
                 <router-link to="/admin/pets" class="dropdown-item" @click="adminMenus.pets = false">精灵管理</router-link>
                 <router-link to="/admin/eggs" class="dropdown-item" @click="adminMenus.pets = false">蛋组</router-link>
                 <router-link to="/admin/abilities" class="dropdown-item" @click="adminMenus.pets = false">特性</router-link>
@@ -75,7 +75,7 @@
             </button>
             <div v-show="adminMenus.system" class="absolute top-full left-0 pt-1">
               <div class="py-1 rounded-lg shadow-lg min-w-[120px] border"
-                :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
+                :class="isDark ? 'bg-surface-dark-card border-surface-dark-border' : 'bg-surface-light-card border-surface-light-border'">
                 <router-link to="/admin/media" class="dropdown-item" @click="adminMenus.system = false">素材</router-link>
                 <router-link to="/admin/nav-tabs" class="dropdown-item" @click="adminMenus.system = false">导航标签</router-link>
                 <router-link to="/admin/feedbacks" class="dropdown-item" @click="adminMenus.system = false">反馈</router-link>
@@ -116,7 +116,7 @@
 
         <!-- 移动端导航菜单 -->
       <div v-show="mobileMenuOpen" class="md:hidden border-t px-4 py-2 space-y-0.5"
-        :class="isDark ? 'bg-surface-dark border-surface-dark-border' : 'bg-white border-surface-light-border'">
+        :class="isDark ? 'bg-surface-dark-card border-surface-dark-border' : 'bg-surface-light-card border-surface-light-border'">
         <template v-if="!isAdminRoute">
           <template v-for="tab in navTabsGrouped" :key="tab.tab_key">
             <!-- 有子标签：可展开 -->

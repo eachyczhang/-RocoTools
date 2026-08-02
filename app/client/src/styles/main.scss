@@ -33,11 +33,18 @@
   // 亮色主题（默认）
   body {
     @apply bg-surface-light-alt text-gray-800;
+    background-image:
+      radial-gradient(circle at 8% -10%, rgb(237 194 90 / 0.13), transparent 28rem),
+      radial-gradient(circle at 96% 8%, rgb(47 157 142 / 0.07), transparent 24rem);
+    background-attachment: fixed;
   }
 
   // 暗色主题
   body.dark {
     @apply bg-surface-dark text-gray-100;
+    background-image:
+      radial-gradient(circle at 8% -10%, rgb(197 139 42 / 0.11), transparent 30rem),
+      radial-gradient(circle at 96% 8%, rgb(47 157 142 / 0.06), transparent 26rem);
   }
 
   // 滚动条优化（桌面端）
@@ -63,36 +70,50 @@
 @layer components {
   // ========== 卡片 ==========
   .card {
-    @apply rounded-xl shadow-sm transition-all duration-200;
+    @apply rounded-2xl transition-all duration-200;
     @apply bg-surface-light-card border border-surface-light-border;
+    box-shadow: 0 1px 2px rgb(68 40 20 / 0.04), 0 10px 30px rgb(68 40 20 / 0.045);
     // 三端间距：手机p-3 → 平板p-4 → 桌面p-5
     @apply p-3 sm:p-4 lg:p-5;
-    @apply hover:shadow-md hover:-translate-y-0.5;
+    @apply hover:border-primary-200;
 
     .dark & {
       @apply bg-surface-dark-card border-surface-dark-border;
-      @apply hover:shadow-lg hover:shadow-primary-500/5;
+      box-shadow: 0 14px 36px rgb(0 0 0 / 0.16);
+      @apply hover:border-primary-700/60;
     }
   }
 
   .card-flat {
-    @apply card hover:shadow-sm hover:translate-y-0;
+    @apply card;
+    box-shadow: 0 1px 2px rgb(68 40 20 / 0.035);
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer hover:-translate-y-0.5;
+    &:hover {
+      box-shadow: 0 4px 10px rgb(68 40 20 / 0.06), 0 18px 42px rgb(68 40 20 / 0.08);
+    }
   }
 
   // ========== 按钮 ==========
   .btn {
-    @apply rounded-lg font-medium transition-all duration-150;
+    @apply rounded-xl font-medium transition-all duration-150;
     @apply active:scale-95;
     // 三端尺寸
     @apply px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-sm lg:px-5 lg:py-2.5 lg:text-base;
   }
 
   .btn-primary {
-    @apply btn bg-primary-500 text-white hover:bg-primary-600;
+    @apply btn text-white shadow-sm hover:shadow-md;
+    background-image: linear-gradient(135deg, theme('colors.primary.400'), theme('colors.primary.600'));
+    &:hover {
+      background-image: linear-gradient(135deg, theme('colors.primary.500'), theme('colors.primary.700'));
+    }
   }
 
   .btn-ghost {
-    @apply btn hover:bg-gray-100;
+    @apply btn hover:bg-primary-50 hover:text-primary-700;
     .dark & {
       @apply hover:bg-white/5;
     }
@@ -105,14 +126,14 @@
 
   // ========== 输入 ==========
   .input {
-    @apply rounded-lg outline-none transition-all duration-150;
+    @apply rounded-xl outline-none transition-all duration-150;
     @apply px-3 py-2 text-sm sm:px-3.5 sm:py-2 sm:text-sm lg:px-4 lg:py-2.5 lg:text-base;
-    @apply bg-white border border-surface-light-border;
-    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+    @apply bg-surface-light-card border border-surface-light-border shadow-sm;
+    @apply hover:border-primary-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10;
 
     .dark & {
       @apply bg-surface-dark-alt border-surface-dark-border text-white;
-      @apply focus:border-primary-400 focus:ring-primary-400/20;
+      @apply hover:border-primary-700/60 focus:border-primary-400 focus:ring-primary-400/10;
     }
   }
 
@@ -135,8 +156,8 @@
   }
   .input-counter {
     @apply w-full text-center text-sm py-2 outline-none;
-    @apply bg-white border border-surface-light-border;
-    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+    @apply bg-surface-light-card border border-surface-light-border shadow-sm;
+    @apply hover:border-primary-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10;
     // Hide number input spinners
     -moz-appearance: textfield;
     &::-webkit-inner-spin-button,
@@ -147,7 +168,7 @@
 
     .dark & {
       @apply bg-surface-dark-alt border-surface-dark-border text-white;
-      @apply focus:border-primary-400 focus:ring-primary-400/20;
+      @apply hover:border-primary-700/60 focus:border-primary-400 focus:ring-primary-400/10;
     }
   }
 
@@ -162,7 +183,7 @@
 
   // ========== 徽章 ==========
   .badge {
-    @apply inline-flex items-center rounded-md text-xs font-medium;
+    @apply inline-flex items-center rounded-full text-xs font-medium;
     @apply px-1.5 py-0.5 sm:px-2 sm:py-0.5;
   }
 

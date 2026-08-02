@@ -3,11 +3,13 @@
     <Transition name="modal">
       <div v-if="visible" class="fixed inset-0 z-[300] flex items-center justify-center p-4" @click.self="handleCancel">
         <!-- 遮罩 -->
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"></div>
 
         <!-- 弹窗 -->
-        <div class="relative w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
-          :class="isDark ? 'bg-gray-800' : 'bg-white'">
+        <div class="relative w-full max-w-sm rounded-3xl shadow-2xl ring-1 overflow-hidden"
+          :class="isDark
+            ? 'bg-surface-dark-card ring-surface-dark-border'
+            : 'bg-surface-light-card ring-surface-light-border'">
 
           <!-- 顶部色条 -->
           <div class="h-1" :class="barColor"></div>
@@ -42,14 +44,14 @@
             <!-- 按钮 -->
             <div class="flex justify-end gap-2.5 mt-5">
               <button v-if="showCancel" @click="handleCancel"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
                 :class="isDark
                   ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'">
+                  : 'bg-surface-light text-gray-600 hover:bg-primary-50 hover:text-primary-700'">
                 {{ cancelText }}
               </button>
               <button @click="handleConfirm"
-                class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                class="px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors shadow-sm"
                 :class="confirmBtnClass">
                 {{ confirmText }}
               </button>
