@@ -153,6 +153,10 @@ const panelRef = ref(null)
 const dragStartY = ref(0)
 const dragDelta = ref(0)
 let justOpened = false // Prevent click-outside from immediately closing
+const ENABLED_CACHE_TTL = 5 * 60 * 1000
+let enabledCache = null
+let enabledCacheExpiresAt = 0
+let enabledRequest = null
 
 const types = [
   { value: 'bug', icon: '🐛', label: 'Bug' },
@@ -225,14 +229,35 @@ const canSubmit = computed(() => {
 // Methods
 // ============================================================
 async function checkEnabled() {
+  if (enabledCache && enabledCacheExpiresAt > Date.now()) {
+    applyEnabledConfig(enabledCache)
+    return
+  }
+  if (enabledRequest) return enabledRequest
+
+  enabledRequest = loadEnabledConfig()
+  try {
+    await enabledRequest
+  } finally {
+    enabledRequest = null
+  }
+}
+
+function applyEnabledConfig(data) {
+  showFab.value = data.enabled
+  if (data.cooldown !== undefined) {
+    cooldownMs.value = data.cooldown * 1000
+  }
+}
+
+async function loadEnabledConfig() {
   try {
     const res = await fetch('/api/feedbacks/enabled')
     if (res.ok) {
       const data = await res.json()
-      showFab.value = data.enabled
-      if (data.cooldown !== undefined) {
-        cooldownMs.value = data.cooldown * 1000
-      }
+      applyEnabledConfig(data)
+      enabledCache = data
+      enabledCacheExpiresAt = Date.now() + ENABLED_CACHE_TTL
     }
   } catch {
     showFab.value = false

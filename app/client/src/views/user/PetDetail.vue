@@ -190,17 +190,17 @@
             </span>
             <span v-if="ach.reward_desc" class="text-[10px] sm:text-xs text-muted flex-shrink-0">{{ ach.reward_desc }}</span>
           </div>
-          
+
           <!-- 技能类型课题的详细展示 -->
           <div v-if="ach.type === 'skill' && ach.skill_ref_uid" class="ml-7 sm:ml-9">
             <div class="flex items-center gap-2 sm:gap-3 p-2 bg-white/50 dark:bg-white/5 rounded">
               <!-- 技能图标 -->
-              <img v-if="skillIcons[ach.skill_ref_uid]" :src="skillIcons[ach.skill_ref_uid]" 
+              <img v-if="skillIcons[ach.skill_ref_uid]" :src="skillIcons[ach.skill_ref_uid]"
                    class="w-6 h-6 sm:w-8 sm:h-8 object-contain rounded flex-shrink-0" loading="lazy" />
-              <img v-else-if="skillElements[ach.skill_ref_uid]?.icon" :src="skillElements[ach.skill_ref_uid].icon" 
+              <img v-else-if="skillElements[ach.skill_ref_uid]?.icon" :src="skillElements[ach.skill_ref_uid].icon"
                    class="w-6 h-6 sm:w-8 sm:h-8 object-contain rounded flex-shrink-0" loading="lazy" />
               <div v-else class="w-6 h-6 sm:w-8 sm:h-8 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
-              
+
               <!-- 技能名称和属性 -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -212,7 +212,7 @@
                   </span>
                 </div>
               </div>
-              
+
               <!-- 技能数据 -->
               <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 text-[10px] sm:text-xs text-center">
                 <div v-if="skillCategories[ach.skill_ref_uid]" class="w-8 sm:w-10">
@@ -471,23 +471,23 @@ const radarSize = computed(() => windowWidth.value < 768 ? 160 : 200)
 // 加载技能详情
 async function loadSkillDetails(achievements) {
   if (!achievements) return
-  
+
   const skillRefs = achievements
     .filter(ach => ach.type === 'skill' && ach.skill_ref_uid)
     .map(ach => ach.skill_ref_uid)
     .filter((uid, index, array) => array.indexOf(uid) === index) // 去重
-  
+
   if (skillRefs.length === 0) return
-  
+
   try {
     // 并行加载所有技能详情以提高性能
     const skillPromises = skillRefs.map(uid => skillsApi.get(uid).catch(err => {
       console.warn(`Failed to load skill ${uid}:`, err)
       return null
     }))
-    
+
     const skills = await Promise.all(skillPromises)
-    
+
     skills.forEach((skill, index) => {
       if (skill) {
         const uid = skillRefs[index]
@@ -502,7 +502,7 @@ async function loadSkillDetails(achievements) {
         skillPowers.value[uid] = skill.power
       }
     })
-    
+
     // 从精灵的升级技能列表中获取学习等级（课题技能一定是升级学习）
     if (pet.value && pet.value.skills) {
       for (const uid of skillRefs) {
@@ -643,7 +643,7 @@ async function loadPet(uid) {
   }
   elemMap.value = map
   activeSkillTab.value = 'skills'
-  
+
   // 加载技能详情
   await loadSkillDetails(petData.achievements)
 }
@@ -652,7 +652,6 @@ function switchVariant(uid) {
   initialCoverage.value = []
   initialBloodline.value = ''
   router.replace(`/pets/${uid}`)
-  loadPet(uid)
 }
 
 const statsBarList = computed(() => {

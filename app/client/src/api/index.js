@@ -2,6 +2,43 @@ const BASE = '/api'
 const MAX_RETRIES = 2
 const RETRY_DELAY = 500
 const REQUEST_TIMEOUT = 20000 // 20s timeout for user-facing API
+const REFERENCE_CACHE_TTL = 10 * 60 * 1000
+
+// 仅缓存稳定的公共只读数据。缓存只存在于当前页面内存中，刷新页面即清空。
+const responseCache = new Map()
+const inflightRequests = new Map()
+
+function requestKey(path, params) {
+  const url = new URL(path, window.location.origin)
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value)
+    })
+  }
+  return url.toString()
+}
+
+async function cachedRequest(path, params, ttl = REFERENCE_CACHE_TTL) {
+  const key = requestKey(path, params)
+  const cached = responseCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.value
+  if (cached) responseCache.delete(key)
+
+  const inflight = inflightRequests.get(key)
+  if (inflight) return inflight
+
+  const pending = request(path, params)
+    .then((value) => {
+      responseCache.set(key, { value, expiresAt: Date.now() + ttl })
+      return value
+    })
+    .finally(() => {
+      inflightRequests.delete(key)
+    })
+
+  inflightRequests.set(key, pending)
+  return pending
+}
 
 async function request(path, params, retries = MAX_RETRIES) {
   const url = new URL(path, window.location.origin)
@@ -31,9 +68,9 @@ async function request(path, params, retries = MAX_RETRIES) {
 }
 
 export const elementsApi = {
-  list: () => request(`${BASE}/elements`),
-  get: (id) => request(`${BASE}/elements/${id}`),
-  multipliers: () => request(`${BASE}/elements/multipliers`),
+  list: () => cachedRequest(`${BASE}/elements`),
+  get: (id) => cachedRequest(`${BASE}/elements/${id}`),
+  multipliers: () => cachedRequest(`${BASE}/elements/multipliers`),
 }
 
 export const skillsApi = {
@@ -56,7 +93,7 @@ export const petsApi = {
 }
 
 export const naturesApi = {
-  list: () => request(`${BASE}/natures`),
+  list: () => cachedRequest(`${BASE}/natures`),
 }
 
 export const seasonsApi = {

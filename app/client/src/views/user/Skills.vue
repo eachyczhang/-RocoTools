@@ -177,6 +177,7 @@ const keywordOptions = [
 ]
 
 let debounceTimer = null
+let fetchSequence = 0
 function debouncedFetch() {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => { page.value = 1; fetchData() }, 300)
@@ -188,7 +189,9 @@ function filterChanged() {
 }
 
 async function fetchData() {
+  const sequence = ++fetchSequence
   const res = await skillsApi.list({ page: page.value, limit: limit.value, search: search.value, category: category.value, counter: counter.value, element_id: elementId.value, keyword: keyword.value })
+  if (sequence !== fetchSequence) return
   skills.value = res.skills
   total.value = res.total
 }

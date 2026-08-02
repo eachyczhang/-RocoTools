@@ -89,6 +89,7 @@ function syncQuery() {
 }
 
 let debounceTimer = null
+let fetchSequence = 0
 function debouncedFetch() {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => { page.value = 1; fetchData() }, 300)
@@ -100,6 +101,7 @@ function filterChanged() {
 }
 
 async function fetchData() {
+  const sequence = ++fetchSequence
   syncQuery()
   const params = {
     page: page.value, limit: limit.value,
@@ -108,6 +110,7 @@ async function fetchData() {
   }
   if (tagFilter.value) params.tag = tagFilter.value
   const res = await petsApi.list(params)
+  if (sequence !== fetchSequence) return
   pets.value = res.pets
   total.value = res.total
 }
