@@ -1,6 +1,10 @@
 <template>
   <div>
-    <h1 class="page-title">性格</h1>
+    <UserPageHeader
+      eyebrow="NATURE GUIDE"
+      title="性格一览"
+      description="快速对照性格带来的属性增减，并按效果筛选适合精灵的培养方向。"
+    />
 
     <!-- 属性筛选 -->
     <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-5 lg:mb-6">
@@ -81,6 +85,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { naturesApi } from '@/api'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 import { statColor } from '@/constants/categoryColors'
 
 const natures = ref([])

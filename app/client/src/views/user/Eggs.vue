@@ -1,6 +1,10 @@
 <template>
   <div>
-    <h1 class="page-title">蛋组</h1>
+    <UserPageHeader
+      eyebrow="EGG GROUPS"
+      title="蛋组图鉴"
+      description="按蛋组查看可关联的精灵成员，为繁育与队伍规划提供清晰索引。"
+    />
 
     <!-- 蛋组选择 -->
     <div class="flex flex-wrap gap-1.5 sm:gap-2 lg:gap-2.5 mb-4 sm:mb-5 lg:mb-6">
@@ -50,6 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { eggsApi } from '@/api'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 import { getEggGroupColor } from '@/constants/eggGroupColors'
 
 const route = useRoute()

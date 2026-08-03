@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col" :class="isAdminRoute ? 'admin-app' : 'user-app'">
     <!-- 导航栏 -->
     <nav class="sticky top-0 z-50 backdrop-blur-md border-b"
-      :class="isDark ? 'bg-surface-dark/90 border-surface-dark-border' : 'bg-surface-light-card/90 border-surface-light-border shadow-sm'">
+      :class="[isDark ? 'bg-surface-dark/90 border-surface-dark-border' : 'bg-surface-light-card/90 border-surface-light-border shadow-sm', { 'user-navbar': !isAdminRoute }]">
       <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-15 lg:h-16 flex items-center gap-4 lg:gap-8">
         <!-- Logo：管理端点击回管理首页，用户端回首页 -->
         <router-link :to="isAdminRoute ? '/admin/dashboard' : '/'"
@@ -181,12 +181,13 @@
     </nav>
 
     <!-- 内容区 -->
-    <main class="flex-1 max-w-screen-2xl mx-auto w-full px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+    <main class="flex-1 max-w-screen-2xl mx-auto w-full px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8"
+      :class="isAdminRoute ? 'admin-main' : 'user-main'">
       <router-view />
     </main>
 
     <!-- 底部（仅用户端显示） -->
-    <footer v-if="!isAdminRoute" class="text-center py-4 text-xs sm:text-sm text-muted border-t"
+    <footer v-if="!isAdminRoute" class="user-footer text-center py-4 text-xs sm:text-sm text-muted border-t"
       :class="isDark ? 'border-surface-dark-border' : 'border-surface-light-border'">
       数据来源：<a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer" class="hover:text-primary-500 underline underline-offset-2">BWIKI</a>
       · <a href="https://space.bilibili.com/626796832" target="_blank" rel="noopener noreferrer" class="hover:text-primary-500 underline underline-offset-2">B站</a>
@@ -339,7 +340,7 @@ watch(mobileMenuOpen, (val) => {
 
 <style lang="scss" scoped>
 .nav-link {
-  @apply px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm lg:text-base font-medium transition-colors;
+  @apply px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl text-sm lg:text-base font-medium transition-colors;
   @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
 
   .dark & {
@@ -355,7 +356,7 @@ watch(mobileMenuOpen, (val) => {
 }
 
 .mobile-nav-link {
-  @apply block px-4 py-2.5 rounded-lg text-base font-medium transition-colors;
+  @apply block px-4 py-2.5 rounded-xl text-base font-medium transition-colors;
   @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
 
   .dark & {
@@ -384,6 +385,23 @@ watch(mobileMenuOpen, (val) => {
       @apply text-primary-400 bg-primary-500/10;
     }
   }
+}
+
+.user-navbar {
+  box-shadow: 0 6px 24px rgb(68 40 20 / 0.035);
+}
+
+.user-footer {
+  margin: 0 0.75rem 0.75rem;
+  border: 1px solid rgb(231 225 215 / 0.82);
+  border-radius: 1.25rem;
+  background: rgb(255 254 251 / 0.58);
+  backdrop-filter: blur(12px);
+}
+
+.dark .user-footer {
+  border-color: rgb(48 58 72 / 0.8);
+  background: rgb(29 36 48 / 0.48);
 }
 
 .btn-icon {

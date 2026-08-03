@@ -212,6 +212,94 @@
     @apply space-y-3 sm:space-y-3 lg:space-y-4;
     @apply mb-5 sm:mb-6 lg:mb-8;
   }
+
+  // ========== 用户端统一框架 ==========
+  .user-main {
+    position: relative;
+
+    > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    // 普通内容卡片继承精灵卡面的圆角、点阵与轻层次；管理端不受影响。
+    .card,
+    .card-flat,
+    .card-interactive {
+      border-color: rgb(146 112 65 / 0.14);
+      border-radius: 1.45rem;
+      background-image: radial-gradient(circle, rgb(201 139 42 / 0.035) 1px, transparent 1.15px);
+      background-size: 17px 17px;
+      box-shadow: 0 2px 3px rgb(68 40 20 / 0.025), 0 10px 26px rgb(68 40 20 / 0.05);
+    }
+
+    .card-interactive:hover {
+      transform: translateY(-3px);
+      border-color: rgb(201 139 42 / 0.32);
+      box-shadow: 0 5px 10px rgb(68 40 20 / 0.05), 0 22px 42px rgb(68 40 20 / 0.11);
+    }
+
+    .filter-bar {
+      @apply p-3 sm:p-4 lg:p-5;
+      border: 1px solid rgb(231 225 215 / 0.9);
+      border-radius: 1.35rem;
+      background: linear-gradient(135deg, rgb(255 254 251 / 0.94), rgb(248 246 241 / 0.9));
+      box-shadow: 0 10px 28px rgb(68 40 20 / 0.045);
+    }
+
+    .user-pagination {
+      width: fit-content;
+      max-width: calc(100vw - 1.5rem);
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid rgb(231 225 215 / 0.88);
+      border-radius: 999px;
+      background: rgb(255 254 251 / 0.9);
+      box-shadow: 0 10px 30px rgb(68 40 20 / 0.08);
+      backdrop-filter: blur(14px);
+    }
+
+    .user-empty-state {
+      @apply text-center text-muted;
+      padding: 2.5rem 1rem;
+      border: 1px dashed rgb(197 139 42 / 0.25);
+      border-radius: 1.5rem;
+      background: rgb(255 254 251 / 0.55);
+    }
+  }
+
+  .dark .user-main {
+    .card,
+    .card-flat,
+    .card-interactive {
+      border-color: rgb(112 176 206 / 0.17);
+      background-image: radial-gradient(circle, rgb(112 185 219 / 0.045) 1px, transparent 1.15px);
+      box-shadow: 0 12px 28px rgb(0 0 0 / 0.17);
+    }
+
+    .card-interactive:hover {
+      border-color: rgb(228 173 74 / 0.3);
+      box-shadow: 0 22px 44px rgb(0 0 0 / 0.28);
+    }
+
+    .filter-bar {
+      border-color: rgb(48 58 72 / 0.9);
+      background: linear-gradient(135deg, rgb(29 36 48 / 0.92), rgb(24 30 39 / 0.88));
+      box-shadow: 0 14px 34px rgb(0 0 0 / 0.15);
+    }
+
+    .user-pagination {
+      border-color: rgb(48 58 72 / 0.92);
+      background: rgb(29 36 48 / 0.9);
+      box-shadow: 0 14px 32px rgb(0 0 0 / 0.22);
+    }
+
+    .user-empty-state {
+      border-color: rgb(220 170 62 / 0.18);
+      background: rgb(29 36 48 / 0.5);
+    }
+  }
 }
 
 @layer utilities {

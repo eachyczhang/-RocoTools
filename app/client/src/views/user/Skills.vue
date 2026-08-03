@@ -1,6 +1,11 @@
 <template>
   <div>
-    <h1 class="page-title">技能大全</h1>
+    <UserPageHeader
+      eyebrow="SKILL INDEX"
+      title="技能大全"
+      description="从属性、分类与战斗效果中筛选技能，查看威力、能耗和可学习精灵。"
+      :count-label="`收录 ${total} 条`"
+    />
 
     <div class="filter-bar">
       <div class="space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-3">
@@ -20,7 +25,7 @@
             <option v-for="k in keywordOptions" :key="k.value" :value="k.value">{{ k.label }}</option>
           </select>
         </div>
-        <span class="text-muted text-xs sm:text-sm self-center sm:ml-auto">共 {{ total }} 条</span>
+
       </div>
     </div>
 
@@ -129,7 +134,7 @@
       </router-link>
     </div>
 
-    <div class="flex justify-center items-center gap-3 sm:gap-4 mt-5 sm:mt-6 lg:mt-8" v-if="total > limit">
+    <div class="user-pagination flex justify-center items-center gap-3 sm:gap-4 mt-5 sm:mt-6 lg:mt-8" v-if="total > limit">
       <button @click="page > 1 && (page--, fetchData())" :disabled="page <= 1" class="btn-ghost text-sm">← 上一页</button>
       <span class="text-sm text-muted">{{ page }} / {{ Math.ceil(total / limit) }}</span>
       <button @click="page < Math.ceil(total / limit) && (page++, fetchData())"
@@ -142,6 +147,7 @@
 import { ref, onMounted } from 'vue'
 import { skillsApi, elementsApi } from '@/api'
 import SkillDescription from '@/components/user/SkillDescription.vue'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 import { categoryColor } from '@/constants/categoryColors'
 
 const skills = ref([])

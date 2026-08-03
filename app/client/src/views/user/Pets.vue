@@ -1,6 +1,11 @@
 <template>
   <div>
-    <h1 class="page-title">精灵图鉴</h1>
+    <UserPageHeader
+      eyebrow="ROCO ARCHIVE"
+      title="精灵图鉴"
+      description="按属性、形态和种族值浏览每一只精灵，快速进入详情查看完整培养信息。"
+      :count-label="`收录 ${total} 只`"
+    />
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
@@ -24,7 +29,7 @@
           <option value="has_boss_form">拥有首领形态</option>
           <option value="has_shiny">异色精灵</option>
         </select>
-        <span class="text-muted text-xs sm:text-sm self-center">共 {{ total }} 只</span>
+
       </div>
       <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
         <button @click="elementId = ''; filterChanged()"
@@ -46,7 +51,7 @@
     </div>
 
     <!-- 分页 - 常驻底部 -->
-    <div class="sticky bottom-0 z-30 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex justify-center items-center gap-3 sm:gap-4 mt-6 sm:mt-8 lg:mt-10" v-if="total > limit">
+    <div class="user-pagination sticky bottom-3 z-30 flex justify-center items-center gap-3 sm:gap-4 mt-6 sm:mt-8 lg:mt-10" v-if="total > limit">
       <button @click="page > 1 && (page--, fetchData())" :disabled="page <= 1" class="btn-ghost text-sm sm:text-base">← 上一页</button>
       <span class="text-sm text-muted">{{ page }} / {{ Math.ceil(total / limit) }}</span>
       <button @click="page < Math.ceil(total / limit) && (page++, fetchData())"
@@ -60,6 +65,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { petsApi, elementsApi } from '@/api'
 import PetCard from '@/components/shared/PetCard.vue'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 
 const route = useRoute()
 const router = useRouter()

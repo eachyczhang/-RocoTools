@@ -1,6 +1,10 @@
 <template>
   <div>
-    <h1 class="page-title">打击面分析</h1>
+    <UserPageHeader
+      eyebrow="BATTLE LAB"
+      title="打击面分析"
+      description="组合多个攻击属性，快速查看覆盖关系、盲点和适合当前打击面的精灵。"
+    />
 
     <!-- 技能格子 -->
     <div class="card mb-4 sm:mb-5 lg:mb-6">
@@ -143,6 +147,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { elementsApi, petsApi } from '@/api'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 
 const elements = ref([])
 const slots = ref([null, null, null, null])

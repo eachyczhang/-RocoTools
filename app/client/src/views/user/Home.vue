@@ -1,38 +1,37 @@
 <template>
-  <div>
-    <!-- 标题 -->
-    <h1 class="page-title">洛克王国世界 数据工具</h1>
+  <div class="home-page">
+    <section class="home-hero">
+      <div class="home-hero__content">
+        <span class="home-hero__eyebrow">ROCO WORLD DATABASE</span>
+        <h1>洛克王国世界<br class="sm:hidden"> 数据工具</h1>
+        <p>把精灵、技能与赛季资料，整理成一套轻松好用的冒险手册。</p>
+      </div>
+      <div class="home-hero__mark" aria-hidden="true">
+        <span>ROCO</span>
+        <strong>TOOLS</strong>
+      </div>
+    </section>
 
-    <!-- 赛季更新公告 -->
-    <div v-if="announcement.text" @click="showAnnouncement = true"
-      class="block mb-4 sm:mb-5 lg:mb-6 card !py-3 !px-4 border-l-4 border-l-primary-500 hover:border-primary-500/50 transition-colors group cursor-pointer">
+    <div v-if="announcement.text" @click="showAnnouncement = true" class="home-announcement-card group cursor-pointer">
       <div class="flex items-center gap-2">
-        <span class="text-base">📢</span>
-        <span class="text-sm sm:text-base font-medium group-hover:text-primary-500 transition-colors">{{ announcement.text }}</span>
-        <span class="text-xs text-muted ml-auto flex-shrink-0">查看详情 →</span>
+        <span class="home-announcement-card__icon">📢</span>
+        <span class="home-announcement-card__text">{{ announcement.text }}</span>
+        <span class="home-announcement-card__action">查看详情 <b>→</b></span>
       </div>
     </div>
 
-    <!-- 公告弹窗 -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showAnnouncement" class="fixed inset-0 z-[300] flex items-center justify-center p-4" @click.self="showAnnouncement = false">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-<div class="relative w-full max-w-5xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-            :class="isDark ? 'bg-gray-800' : 'bg-white'">
-            <!-- 顶部 -->
+          <div class="relative w-full max-w-5xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col" :class="isDark ? 'bg-gray-800' : 'bg-white'">
             <div class="flex items-center justify-between px-5 py-3 border-b" :class="isDark ? 'border-gray-700' : 'border-gray-100'">
               <h3 class="font-roco text-base text-primary-500">📢 赛季更新公告</h3>
               <button @click="showAnnouncement = false" class="text-muted hover:text-primary-500 text-xl leading-none">&times;</button>
             </div>
-            <!-- 正文 -->
             <div class="flex-1 overflow-y-auto px-5 py-4 prose-announcement" :class="isDark ? 'prose-dark' : 'prose-light'" v-html="announcementHtml"></div>
-            <!-- 底部 -->
             <div class="px-5 py-3 border-t flex items-center justify-between" :class="isDark ? 'border-gray-700' : 'border-gray-100'">
-              <a v-if="announcement.url" :href="announcement.url" target="_blank" rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white transition-colors">
-                📋 查看官方公告
-              </a>
+              <a v-if="announcement.url" :href="announcement.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white transition-colors">📋 查看官方公告</a>
               <span v-else></span>
               <button @click="showAnnouncement = false" class="px-4 py-1.5 rounded-lg text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors">关闭</button>
             </div>
@@ -41,111 +40,62 @@
       </Transition>
     </Teleport>
 
-    <!-- 官方链接 -->
-    <div class="flex flex-wrap gap-3 sm:gap-4 section-gap">
-      <a href="https://rocom.qq.com/" target="_blank" rel="noopener noreferrer"
-        class="card group flex items-center gap-2 !px-4 !py-3 hover:border-primary-500/30 transition-colors">
-        <span class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">🎮 洛克王国世界官网</span>
-      </a>
-      <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer"
-        class="card group flex items-center gap-2 !px-4 !py-3 hover:border-primary-500/30 transition-colors">
-        <span class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">📖 BWIKI 百科</span>
-      </a>
-      <a href="https://space.bilibili.com/626796832" target="_blank" rel="noopener noreferrer"
-        class="card group flex items-center gap-2 !px-4 !py-3 hover:border-primary-500/30 transition-colors">
-        <span class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">📺 官方B站</span>
-      </a>
-      <a href="https://weibo.com/u/7476327149" target="_blank" rel="noopener noreferrer"
-        class="card group flex items-center gap-2 !px-4 !py-3 hover:border-primary-500/30 transition-colors">
-        <span class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">🐦 官方微博</span>
-      </a>
-      <a href="https://www.taptap.cn/app/188212" target="_blank" rel="noopener noreferrer"
-        class="card group flex items-center gap-2 !px-4 !py-3 hover:border-primary-500/30 transition-colors">
-        <span class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">🎯 TapTap</span>
-      </a>
+    <div class="home-source-links section-gap">
+      <a href="https://rocom.qq.com/" target="_blank" rel="noopener noreferrer" class="home-source-link group"><span class="home-source-link__icon">🎮</span><span>洛克王国世界官网</span></a>
+      <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer" class="home-source-link group"><span class="home-source-link__icon">📖</span><span>BWIKI 百科</span></a>
+      <a href="https://space.bilibili.com/626796832" target="_blank" rel="noopener noreferrer" class="home-source-link group"><span class="home-source-link__icon">📺</span><span>官方 B 站</span></a>
+      <a href="https://weibo.com/u/7476327149" target="_blank" rel="noopener noreferrer" class="home-source-link group"><span class="home-source-link__icon">📣</span><span>官方微博</span></a>
+      <a href="https://www.taptap.cn/app/188212" target="_blank" rel="noopener noreferrer" class="home-source-link group"><span class="home-source-link__icon">🎯</span><span>TapTap</span></a>
     </div>
 
-    <!-- 数据概览 -->
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 section-gap">
-      <div class="card text-center" v-for="stat in stats" :key="stat.label">
-        <div class="font-roco text-2xl sm:text-3xl lg:text-4xl text-primary-500">{{ stat.value }}</div>
-        <div class="text-muted text-xs sm:text-sm mt-1">{{ stat.label }}</div>
+    <section class="home-section section-gap">
+      <div class="home-section-heading">
+        <div><span>DATA OVERVIEW</span><h2>数据概览</h2></div>
+        <p>冒险资料持续整理中</p>
       </div>
-    </div>
+      <div class="home-stat-grid">
+        <div class="home-stat-card" v-for="(stat, index) in stats" :key="stat.label">
+          <span class="home-stat-card__index">0{{ index + 1 }}</span>
+          <strong>{{ stat.value }}</strong>
+          <span>{{ stat.label }}</span>
+        </div>
+      </div>
+    </section>
 
-    <!-- 快速导航 -->
-    <h2 class="font-roco text-lg sm:text-xl lg:text-2xl text-primary-500 mb-3 sm:mb-4">快速导航</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 section-gap">
-      <router-link v-for="item in navCards" :key="item.path" :to="item.path" class="card group">
-        <div class="font-roco text-sm sm:text-base group-hover:text-primary-500 transition-colors">{{ item.title }}</div>
-        <div class="text-muted text-xs sm:text-sm mt-1.5 sm:mt-2">{{ item.desc }}</div>
-      </router-link>
-    </div>
+    <section class="home-section section-gap">
+      <div class="home-section-heading">
+        <div><span>QUICK ACCESS</span><h2>快速导航</h2></div>
+        <p>选择一张卡片开始探索</p>
+      </div>
+      <div class="home-nav-grid">
+        <router-link v-for="(item, index) in navCards" :key="item.path" :to="item.path" class="home-nav-card group">
+          <span class="home-nav-card__number">0{{ index + 1 }}</span>
+          <div class="home-nav-card__body"><h3>{{ item.title }}</h3><p>{{ item.desc }}</p></div>
+          <span class="home-nav-card__arrow">→</span>
+        </router-link>
+      </div>
+    </section>
 
-    <!-- 数据来源与声明 -->
-    <div class="card">
-      <h2 class="font-roco text-base sm:text-lg lg:text-xl text-primary-500 mb-3 sm:mb-4">数据来源与声明</h2>
-
+    <div class="home-disclaimer-card">
+      <div class="home-section-heading home-section-heading--compact">
+        <div><span>ABOUT THE DATA</span><h2>数据来源与声明</h2></div>
+      </div>
       <div class="space-y-3 sm:space-y-4 text-sm sm:text-base leading-relaxed">
         <div>
-          <h3 class="font-medium mb-1">📖 数据来源</h3>
+          <h3 class="home-disclaimer-title">📖 数据来源</h3>
           <div class="text-muted space-y-1.5">
-            <p>
-              精灵、技能等基础数据源自
-              <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer"
-                class="text-primary-500 hover:text-primary-600 underline underline-offset-2">洛克王国世界 BWIKI</a>，
-              经自动化爬虫采集、清洗并结构化入库，仅供学习与交流使用。
-            </p>
-            <p>
-              赛季、活动等运营数据部分来源于洛克王国世界官方在
-              <a href="https://space.bilibili.com/626796832" target="_blank" rel="noopener noreferrer"
-                class="text-primary-500 hover:text-primary-600 underline underline-offset-2">B站</a>、
-              <a href="https://weibo.com/u/7476327149" target="_blank" rel="noopener noreferrer"
-                class="text-primary-500 hover:text-primary-600 underline underline-offset-2">微博</a>、
-              <a href="https://www.taptap.cn/app/188212" target="_blank" rel="noopener noreferrer"
-                class="text-primary-500 hover:text-primary-600 underline underline-offset-2">TapTap</a>
-              等官方社区平台发布的公告与活动信息。
-            </p>
-            <p>
-              部分图片素材来源于
-              <a href="https://rocom.qq.com/" target="_blank" rel="noopener noreferrer"
-                class="text-primary-500 hover:text-primary-600 underline underline-offset-2">游戏官网</a>
-              及官方创作者素材库，相关版权归腾讯/洛克王国世界官方所有。
-            </p>
+            <p>精灵、技能等基础数据源自 <a href="https://wiki.biligame.com/rocom" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">洛克王国世界 BWIKI</a>，经自动化爬虫采集、清洗并结构化入库，仅供学习与交流使用。</p>
+            <p>赛季、活动等运营数据部分来源于洛克王国世界官方在 <a href="https://space.bilibili.com/626796832" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">B站</a>、<a href="https://weibo.com/u/7476327149" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">微博</a>、<a href="https://www.taptap.cn/app/188212" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">TapTap</a> 等官方社区平台发布的公告与活动信息。</p>
+            <p>部分图片素材来源于 <a href="https://rocom.qq.com/" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">游戏官网</a> 及官方创作者素材库，相关版权归腾讯/洛克王国世界官方所有。</p>
           </div>
         </div>
-
-        <div>
-          <h3 class="font-medium mb-1">⚠️ 数据准确性</h3>
-          <p class="text-muted">
-            部分数据经过二次处理（如属性克制倍率计算、打击面分析等），处理过程中可能存在偏差或错误。
-            <strong class="text-gray-700 dark:text-gray-200">如发现数据有误，欢迎指正，一切以洛克王国世界官方实际数据为准。</strong>
-          </p>
-        </div>
-
-        <div>
-          <h3 class="font-medium mb-1">📜 内容协议</h3>
-          <p class="text-muted">
-            BWIKI 内容遵循
-            <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer"
-              class="text-primary-500 hover:text-primary-600 underline underline-offset-2">CC BY-NC-SA 4.0</a>
-            协议。本站作为非商业性质的数据展示工具，遵循该协议进行内容引用与再分发。
-          </p>
-        </div>
-
-        <div>
-          <h3 class="font-medium mb-1">©️ 版权声明</h3>
-          <div class="text-muted space-y-1.5">
-            <p>© 2026 <span class="font-roco text-primary-500">Roco Tools</span> Developed by <a href="https://github.com/eachyczhang" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">@eachzhang</a></p>
-            <p>洛克王国世界游戏及相关IP版权归腾讯公司所有。</p>
-            <p>本项目仅用于学习交流，非官方应用，无任何商业用途。</p>
-          </div>
-        </div>
+        <div><h3 class="home-disclaimer-title">⚠️ 数据准确性</h3><p class="text-muted">部分数据经过二次处理（如属性克制倍率计算、打击面分析等），处理过程中可能存在偏差或错误。<strong class="text-gray-700 dark:text-gray-200">如发现数据有误，欢迎指正，一切以洛克王国世界官方实际数据为准。</strong></p></div>
+        <div><h3 class="home-disclaimer-title">📜 内容协议</h3><p class="text-muted">BWIKI 内容遵循 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">CC BY-NC-SA 4.0</a> 协议。本站作为非商业性质的数据展示工具，遵循该协议进行内容引用与再分发。</p></div>
+        <div><h3 class="home-disclaimer-title">©️ 版权声明</h3><div class="text-muted space-y-1.5"><p>© 2026 <span class="font-roco text-primary-500">Roco Tools</span> Developed by <a href="https://github.com/eachyczhang" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:text-primary-600 underline underline-offset-2">@eachzhang</a></p><p>洛克王国世界游戏及相关IP版权归腾讯公司所有。</p><p>本项目仅用于学习交流，非官方应用，无任何商业用途。</p></div></div>
       </div>
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { statsApi, seasonsApi } from '@/api'
@@ -304,6 +254,288 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ===== 首页卡面系统 ===== */
+.home-page {
+  --home-accent: #c98b2a;
+  --home-accent-soft: #f2d390;
+  --home-ink: #202a38;
+  --home-muted: #727b89;
+  --home-border: rgba(121, 90, 49, 0.15);
+  --home-surface: rgba(255, 254, 250, 0.94);
+  --home-shadow: 0 10px 26px rgba(86, 63, 34, 0.065);
+}
+
+.home-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 138px;
+  margin-bottom: 1.5rem;
+  padding: clamp(1.15rem, 2.8vw, 2rem);
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  border-radius: 1.55rem;
+  color: var(--home-ink);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 218, 137, 0.34), transparent 28%),
+    radial-gradient(circle at 88% 22%, rgba(119, 198, 207, 0.22), transparent 30%),
+    radial-gradient(circle, rgba(201, 139, 42, 0.05) 1px, transparent 1.2px),
+    linear-gradient(135deg, rgba(255, 253, 247, 0.98), rgba(245, 244, 237, 0.94));
+  background-size: auto, auto, 22px 22px, auto;
+  box-shadow: var(--home-shadow);
+}
+
+.home-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto 2.5rem -2.2rem auto;
+  width: 8rem;
+  height: 8rem;
+  border: 0.8rem solid rgba(201, 139, 42, 0.045);
+  border-radius: 50%;
+}
+
+.home-hero__content { position: relative; z-index: 1; }
+.home-hero__eyebrow,
+.home-section-heading span {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--home-accent);
+  font-family: 'MIANFEIZITI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+}
+
+.home-hero h1 {
+  margin: 0;
+  color: var(--home-ink);
+  font-family: 'MIANFEIZITI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: clamp(1.7rem, 3.5vw, 2.45rem);
+  line-height: 1.12;
+  letter-spacing: 0.03em;
+}
+
+.home-hero p {
+  max-width: 34rem;
+  margin-top: 0.5rem;
+  color: var(--home-muted);
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  line-height: 1.7;
+}
+
+.home-hero__mark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  width: clamp(5.5rem, 10vw, 7.5rem);
+  aspect-ratio: 1;
+  border: 1px solid rgba(201, 139, 42, 0.16);
+  border-radius: 50%;
+  color: var(--home-accent);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: inset 0 0 0 0.4rem rgba(255, 255, 255, 0.18);
+}
+
+.home-hero__mark span,
+.home-hero__mark strong {
+  font-family: 'MIANFEIZITI', sans-serif;
+  line-height: 1;
+}
+.home-hero__mark span { font-size: clamp(0.8rem, 1.6vw, 1.05rem); letter-spacing: 0.22em; }
+.home-hero__mark strong { margin-top: 0.2rem; font-size: clamp(1rem, 1.8vw, 1.45rem); }
+
+.home-announcement-card,
+.home-source-link,
+.home-stat-card,
+.home-nav-card,
+.home-disclaimer-card {
+  border: 1px solid var(--home-border);
+  background-color: var(--home-surface);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(241, 246, 240, 0.12));
+  background-size: auto;
+  box-shadow: var(--home-shadow);
+}
+
+.home-announcement-card {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1.25rem;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.home-announcement-card:hover { transform: translateY(-2px); border-color: rgba(201, 139, 42, 0.4); box-shadow: 0 20px 42px rgba(86, 63, 34, 0.13); }
+.home-announcement-card__icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 0.75rem; background: rgba(201, 139, 42, 0.1); }
+.home-announcement-card__text { overflow: hidden; color: var(--home-ink); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.home-announcement-card__action { margin-left: auto; flex: 0 0 auto; color: var(--home-muted); font-size: 0.8rem; }
+.home-announcement-card__action b { color: var(--home-accent); font-size: 1rem; }
+
+.home-source-links {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.home-source-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.35rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 1.15rem;
+  color: var(--home-ink);
+  font-family: 'MIANFEIZITI', 'PingFang SC', sans-serif;
+  font-size: 0.9rem;
+  text-align: center;
+  transition: transform 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+.home-source-link:hover { color: var(--home-accent); transform: translateY(-3px); border-color: rgba(201, 139, 42, 0.38); }
+.home-source-link__icon { margin-right: 0.45rem; font-family: sans-serif; font-size: 1rem; }
+
+.home-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.home-section-heading h2 {
+  position: relative;
+  margin: 0;
+  padding-left: 0.8rem;
+  color: var(--home-ink);
+  font-family: 'MIANFEIZITI', 'PingFang SC', sans-serif;
+  font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+  line-height: 1.15;
+}
+.home-section-heading h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 0.24rem;
+  height: 0.95em;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--home-accent), #72c5cf);
+}
+.home-section-heading p { margin: 0 0 0.1rem; color: var(--home-muted); font-size: 0.8rem; }
+.home-section-heading--compact { margin-bottom: 1.25rem; }
+
+.home-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+.home-stat-card,
+.home-nav-card {
+  position: relative;
+  isolation: isolate;
+}
+.home-stat-card::after,
+.home-nav-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  right: 0.75rem;
+  bottom: -0.2rem;
+  left: 0.75rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(114, 197, 207, 0.38), rgba(201, 139, 42, 0.34));
+  opacity: 0.46;
+}
+.home-stat-card {
+  display: flex;
+  min-height: 6.6rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 0.7rem;
+  border-radius: 1.4rem;
+}
+.home-stat-card__index { position: absolute; top: 0.75rem; left: 0.85rem; color: rgba(201, 139, 42, 0.35); font-family: 'MIANFEIZITI', sans-serif; font-size: 0.75rem; }
+.home-stat-card strong { color: var(--home-accent); font-family: 'MIANFEIZITI', sans-serif; font-size: clamp(1.65rem, 3vw, 2.15rem); line-height: 1; }
+.home-stat-card > span:last-child { margin-top: 0.65rem; color: var(--home-muted); font-size: 0.85rem; }
+
+.home-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.home-nav-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 6.6rem;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-radius: 1.45rem;
+  color: inherit;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.home-nav-card:hover { transform: translateY(-4px); border-color: rgba(201, 139, 42, 0.38); box-shadow: 0 23px 44px rgba(86, 63, 34, 0.14); }
+.home-nav-card__number { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border: 1px solid rgba(201, 139, 42, 0.2); border-radius: 0.9rem; color: var(--home-accent); font-family: 'MIANFEIZITI', sans-serif; background: rgba(201, 139, 42, 0.07); }
+.home-nav-card__body h3 { margin: 0; color: var(--home-ink); font-family: 'MIANFEIZITI', 'PingFang SC', sans-serif; font-size: 1.05rem; }
+.home-nav-card__body p { margin: 0.45rem 0 0; color: var(--home-muted); font-size: 0.8rem; line-height: 1.55; }
+.home-nav-card__arrow { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: var(--home-accent); background: rgba(201, 139, 42, 0.09); transition: transform 180ms ease, background 180ms ease; }
+.home-nav-card:hover .home-nav-card__arrow { transform: translateX(3px); background: rgba(201, 139, 42, 0.16); }
+
+.home-disclaimer-card {
+  padding: clamp(1.15rem, 3vw, 2rem);
+  border-radius: 1.65rem;
+}
+.home-disclaimer-title { margin-bottom: 0.35rem; color: var(--home-ink); font-family: 'MIANFEIZITI', 'PingFang SC', sans-serif; font-size: 0.95rem; }
+
+:global(.dark) .home-page {
+  --home-accent: #e4ad4a;
+  --home-accent-soft: #765a28;
+  --home-ink: #edf2f7;
+  --home-muted: #9aa8b9;
+  --home-border: rgba(121, 184, 215, 0.18);
+  --home-surface: rgba(26, 34, 45, 0.94);
+  --home-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+:global(.dark) .home-hero {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(224, 162, 57, 0.14), transparent 28%),
+    radial-gradient(circle at 88% 22%, rgba(80, 184, 227, 0.14), transparent 30%),
+    radial-gradient(circle, rgba(115, 183, 212, 0.12) 1px, transparent 1.2px),
+    linear-gradient(135deg, rgba(27, 35, 46, 0.98), rgba(22, 29, 39, 0.96));
+  background-size: auto, auto, 22px 22px, auto;
+}
+:global(.dark) .home-hero__mark { background: rgba(13, 19, 27, 0.32); box-shadow: inset 0 0 0 0.4rem rgba(255, 255, 255, 0.014); }
+:global(.dark) .home-announcement-card,
+:global(.dark) .home-source-link,
+:global(.dark) .home-stat-card,
+:global(.dark) .home-nav-card,
+:global(.dark) .home-disclaimer-card { background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.025), rgba(82, 149, 177, 0.025)); }
+:global(.dark) .home-stat-card::after,
+:global(.dark) .home-nav-card::after { opacity: 0.25; }
+
+@media (max-width: 1023px) {
+  .home-source-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-stat-grid { grid-template-columns: repeat(5, minmax(7rem, 1fr)); overflow-x: auto; padding: 0 0.35rem 0.65rem 0; }
+  .home-nav-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 639px) {
+  .home-hero { min-height: 0; grid-template-columns: 1fr; padding: 1.1rem; border-radius: 1.3rem; }
+  .home-hero__mark { position: absolute; right: -1.5rem; bottom: -2rem; width: 8rem; opacity: 0.18; }
+  .home-hero p { max-width: 82%; }
+  .home-announcement-card__action { font-size: 0; }
+  .home-announcement-card__action b { font-size: 1rem; }
+  .home-source-links { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+  .home-source-link { min-height: 3.5rem; padding: 0.65rem 0.55rem; font-size: 0.78rem; }
+  .home-source-link:first-child { grid-column: 1 / -1; }
+  .home-section-heading { align-items: start; }
+  .home-section-heading p { display: none; }
+  .home-stat-grid { grid-template-columns: repeat(5, 7rem); margin-right: -0.75rem; }
+  .home-stat-card { min-height: 6.2rem; border-radius: 1.1rem; }
+  .home-nav-grid { grid-template-columns: 1fr; gap: 0.85rem; }
+  .home-nav-card { min-height: 6rem; padding: 0.9rem; border-radius: 1.15rem; }
+  .home-nav-card__body h3 { font-size: 1rem; }
+  .home-disclaimer-card { border-radius: 1.4rem; }
+}
 /* Modal transition */
 .modal-enter-active, .modal-leave-active {
   transition: all 0.2s ease;

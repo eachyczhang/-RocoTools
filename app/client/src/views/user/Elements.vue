@@ -1,6 +1,10 @@
 <template>
   <div>
-    <h1 class="page-title">属性克制关系</h1>
+    <UserPageHeader
+      eyebrow="ELEMENT MATRIX"
+      title="属性克制关系"
+      description="切换单属性、双属性与选择器视图，直观查看攻击和防御倍率。"
+    />
 
     <!-- Tab 切换 -->
     <div class="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-5 lg:mb-6 overflow-x-auto">
@@ -144,6 +148,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { elementsApi } from '@/api'
+import UserPageHeader from '@/components/user/UserPageHeader.vue'
 import { useTheme } from '@/composables/useTheme'
 import ElementSelectorMatchup from '@/components/shared/ElementSelectorMatchup.vue'
 
